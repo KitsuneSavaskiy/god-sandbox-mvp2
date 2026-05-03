@@ -14,6 +14,7 @@ GodSandbox の Claude 系 agent 向け共通運用メモです。
 
 ## 参照ドキュメント
 
+- `docs/product/godsandbox-user-flow.md`
 - `docs/agent-operating-rules.md`
 - `docs/agent-pr-checklists.md`
 

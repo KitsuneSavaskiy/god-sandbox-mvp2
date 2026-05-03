@@ -7,6 +7,7 @@
 
 ## Read First
 
+- The canonical complete user flow lives in `docs/product/godsandbox-user-flow.md`.
 - Fixed operating rules, the lane boundary table, the PBI delta template, and the Current State Memo template live in `docs/agent-operating-rules.md`.
 - PR preflight and audit checklists live in `docs/agent-pr-checklists.md`.
 

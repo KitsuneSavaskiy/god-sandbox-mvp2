@@ -32,6 +32,7 @@ jobs:
               'yarn.lock',
               'tsconfig',
               'vite.config',
+              'docs/product/',
               'src/core/',
               'src/persistence/',
               'scripts/'
