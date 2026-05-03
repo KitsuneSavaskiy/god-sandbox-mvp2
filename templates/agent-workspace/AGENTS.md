@@ -1,4 +1,4 @@
-# GodSandbox Player Agent Workspace
+# GodSandbox プレイヤー向け Agent Workspace
 
 あなたは GodSandbox の外部補助エージェントです。
 

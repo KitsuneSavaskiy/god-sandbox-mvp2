@@ -1,127 +1,127 @@
-# GodSandbox Complete User Flow
+# GodSandbox 完成版ユーザーフロー
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-Managed files:
+管理対象ファイル:
 
 - `docs/product/godsandbox-user-flow.md`
 - `docs/product/godsandbox-user-flow.drawio`
 
-Change control:
+変更管理:
 
-- Treat this flow as the product source of truth for `god-sandbox-mvp2`.
-- Update the Markdown and Draw.io files together in the same PR.
-- Route changes through `manual-review-required`.
+- このフローを `god-sandbox-mvp2` のプロダクト正本として扱う。
+- Markdown と Draw.io は同じ PR で更新する。
+- 変更は `manual-review-required` を通す。
 
-## Purpose
+## 目的
 
-This document defines the completed user flow for GodSandbox.
-If implementation, planning docs, or lane instructions diverge from this flow, this document wins unless the Product Owner explicitly redefines the product flow first.
+この文書は GodSandbox の完成版ユーザーフローを定義する。
+実装、計画文書、レーン指示がこのフローと食い違った場合は、Product Owner が先にフローを再定義しない限り、この文書を優先する。
 
-## Core product rules
+## プロダクトの中核ルール
 
-- The player watches the sandbox from a god viewpoint.
-- The sandbox always starts with four default characters.
-- `activeSlots` always has exactly four occupied entries.
-- The maximum visible character count is four.
-- `roster` is the complete owned character set. There is no archive or hidden-character concept.
-- Characters live, move, and talk inside the sandbox.
-- Events, not a single focused character, are the main gameplay focus.
-- The UI uses `focusedEvent` as the canonical gameplay focus. `selectedCharacter` is not a primary UI state.
-- An event can involve one or more characters.
-- The player intervenes with `Watch`, `Help`, or `Trial`.
-- Character change is a core payoff of the loop.
-- Character age is configurable profile data and does not advance over time.
-- Character creation for the initial four and for newly added characters uses the same editor flow and the same data model.
-- Adding a new character inserts that character into `roster` immediately while keeping the current active four unchanged until the player later chooses a replacement.
-- The main route should reach Character Passport issuance within roughly 30 minutes.
-- MVP persistence is fully local-file based. Login only provides the player display name shown inside the game.
+- プレイヤーは神視点で箱庭を見守る。
+- 箱庭は常にデフォルト4名で開始する。
+- `activeSlots` は常に4枠すべて埋まっている。
+- 最大表示キャラクター数は4名である。
+- `roster` は所有キャラクターの全集合であり、アーカイブや非表示の概念は持たない。
+- キャラクターは箱庭の中で生活し、移動し、会話する。
+- ゲームプレイの中心は単体キャラクターではなくイベントである。
+- UI の正本フォーカスは `focusedEvent` とし、`selectedCharacter` は主状態にしない。
+- 1つのイベントには1名以上のキャラクターが関わる。
+- プレイヤーは `見守る`、`助ける`、`試練` で介入する。
+- キャラクター変化はループの主要な報酬である。
+- キャラクター年齢は設定可能なプロフィール値であり、時間経過で進まない。
+- 初回4名設定と新規キャラクター追加は、同じエディタフローと同じデータモデルを使う。
+- 新キャラクター追加時は、そのキャラクターを即座に `roster` へ入れつつ、既存の active な4名は後で入れ替えるまで維持する。
+- メイン導線ではおおむね30分以内に Character Passport 発行まで到達できるようにする。
+- MVP の保存は完全ローカルファイルベースとし、ログインはゲーム内表示名の取得だけに使う。
 
-## Flow sections
+## フロー区分
 
-### 1. Entry and first tutorial
+### 1. 導入と初回チュートリアル
 
-1. Log in.
-2. Start the introduction tutorial.
-3. Begin the sandbox with the default four characters.
-4. Watch the sandbox and observe the four characters living and talking.
-5. An event occurs.
-6. The UI focuses on the event.
-   - One or more characters can be involved.
-7. The player intervenes.
-   - Watch
-   - Help
-   - Trial
-8. Characters change.
-   - Example outputs include status values, personality vector shifts, relationship score changes, appearance updates, and narrative role changes.
-9. This completes the first tutorial.
+1. ログインする。
+2. 導入チュートリアルを開始する。
+3. デフォルト4名で箱庭を始める。
+4. 4名が生活し会話する箱庭を観察する。
+5. イベントが発生する。
+6. UI がイベントへフォーカスする。
+   - 1名以上のキャラクターが関わりうる。
+7. プレイヤーが介入する。
+   - 見守る
+   - 助ける
+   - 試練
+8. キャラクターが変化する。
+   - 変化例: status 値、personality ベクトル、relation score、見た目、物語上の立場
+9. ここで初回チュートリアルを完了する。
 
-### 2. First-time character setup
+### 2. 初回キャラクター設定
 
-10. Start character creation after the first tutorial.
-11. Choose or edit templates for the default roster.
-12. Decide character settings.
-   - Appearance image
-   - Gender
-   - Personality
-   - Age
-   - Speech style
-13. The player may leave some fields at defaults and still continue.
-14. Repeat the setup flow four times for the initial four-character roster.
+10. 初回チュートリアル後にキャラクター作成へ進む。
+11. デフォルト編成用の template を選ぶ、または編集する。
+12. キャラクター設定を決める。
+   - 見た目画像
+   - 性別
+   - 性格
+   - 年齢
+   - 口調
+13. 一部項目はデフォルトのままでも先へ進める。
+14. 初期4名分の設定を同じ流れで繰り返す。
 
-### 3. Main loop
+### 3. メインループ
 
-15. Watch the sandbox.
-16. An event occurs.
-17. Focus the event.
-18. Intervene.
-   - Watch
-   - Help
-   - Trial
-19. Characters change.
-20. Some intervention results apply immediately and some create ongoing effects.
-21. Repeat this loop as the core play cycle.
+15. 箱庭を見る。
+16. イベントが発生する。
+17. イベントへフォーカスする。
+18. 介入する。
+   - 見守る
+   - 助ける
+   - 試練
+19. キャラクターが変化する。
+20. 介入結果には即時反映されるものと、継続効果になるものがある。
+21. このループを主なプレイサイクルとして繰り返す。
 
-### 4. Optional snapshot and passport route
+### 4. 任意の snapshot / passport 導線
 
-22. Record a character snapshot at any chosen point in the main loop.
-23. Add tags or notes to that fixed snapshot record later if needed.
-24. Issue a Character Passport from that snapshot on explicit user action.
-25. Use the passport in an external game.
-26. Return to the main loop after external play.
+22. メインループ中の任意の時点でキャラクター snapshot を記録する。
+23. 固定された snapshot に後から tag や note を追加できる。
+24. 明示的なユーザー操作で、その snapshot から Character Passport を発行する。
+25. 外部ゲームで passport を使う。
+26. 外部で遊んだ後はメインループへ戻る。
 
-### 5. Optional new character route
+### 5. 任意の新キャラクター追加導線
 
-27. Start new character addition from the main loop when the player wants to expand the cast.
-28. Start new character creation.
-29. Choose or edit a template.
-30. Decide the new character settings.
-   - Appearance image
-   - Gender
-   - Personality
-   - Age
-   - Speech style
-31. Save the new character into `roster` without breaking the current active four.
-32. Start the second tutorial only on the first use of this route.
-33. At any later point, choose which four characters should be active.
-34. Replace one of the currently active four characters when the player is ready.
-35. Return to the main loop.
+27. メインループ中、キャストを増やしたいタイミングで新キャラクター追加を始める。
+28. 新キャラクター作成を開始する。
+29. template を選ぶ、または編集する。
+30. 新キャラクター設定を決める。
+   - 見た目画像
+   - 性別
+   - 性格
+   - 年齢
+   - 口調
+31. 現在の active な4名を崩さず、新キャラクターを `roster` に保存する。
+32. この導線の初回だけ第2チュートリアルを始める。
+33. その後の任意の時点で、どの4名を active にするか選べる。
+34. プレイヤーの準備ができたら active な4名のうち1名を入れ替える。
+35. メインループへ戻る。
 
-### 6. Session exit
+### 6. セッション終了
 
-36. Log out.
+36. ログアウトする。
 
-## State implications
+## 状態設計への含意
 
-- The product needs a distinction between all owned characters and the active four shown in the sandbox.
-- `activeSlots` is fixed-length and always fully occupied.
-- Event focus is a first-class state.
-- `currentEventId` points to exactly one focused event at a time.
-- Snapshot recording is distinct from passport issuance.
-- The new character route is optional and separate from the default onboarding route.
-- The same editor flow is reused for initial roster setup and later character creation.
-- See `docs/architecture/system-spec.md`, `docs/architecture/event-and-intervention-spec.md`, `docs/architecture/snapshot-passport-spec.md`, `docs/architecture/local-persistence-spec.md`, and `docs/architecture/ui-state-model.md` for the canonical design details.
+- 所有キャラクター全体と、箱庭に出ている active な4名は分けて持つ必要がある。
+- `activeSlots` は固定長で常に4名が埋まる。
+- イベントフォーカスは第一級の状態である。
+- `currentEventId` は常に1件のフォーカス中イベントを指す。
+- snapshot 記録と passport 発行は別ステップである。
+- 新キャラクター導線は初回オンボーディングとは別の任意導線である。
+- 初回4名設定と後続のキャラクター作成では同じエディタフローを再利用する。
+- 詳細設計は `docs/architecture/system-spec.md`、`docs/architecture/event-and-intervention-spec.md`、`docs/architecture/snapshot-passport-spec.md`、`docs/architecture/local-persistence-spec.md`、`docs/architecture/ui-state-model.md` を参照する。
 
-## Line planning note
+## 実装責務メモ
 
-For implementation ownership based on this flow, use `docs/architecture/line-responsibilities.md`.
+このフローを前提にした実装責務の分担は `docs/architecture/line-responsibilities.md` を参照する。

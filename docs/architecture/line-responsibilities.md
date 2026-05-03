@@ -1,6 +1,6 @@
-# Line Responsibilities For god-sandbox-mvp2
+# `god-sandbox-mvp2` の Line 別責務
 
-Source of truth:
+正本参照:
 
 - `docs/product/godsandbox-user-flow.md`
 - `docs/product/godsandbox-user-flow.drawio`
@@ -10,76 +10,76 @@ Source of truth:
 - `docs/architecture/local-persistence-spec.md`
 - `docs/architecture/ui-state-model.md`
 
-This document defines the initial implementation boundaries for the new repository.
-The goal is to reduce overlap while keeping each line responsible for a vertical slice of the completed product flow.
+この文書は新 repository における初期の実装責務境界を定義する。
+完成版ユーザーフローを縦に切りつつ、PR の混線を減らすことを目的とする。
 
 ## Line 1: App Platform / Shell / Auth
 
-Owns:
+担当:
 
-- Login and logout flow
-- App bootstrap
-- Routing
-- Global layout
-- Top menu and shell navigation
-- Modal, drawer, and panel infrastructure
-- Responsive viewport behavior
-- Shared UI primitives
-- Sandbox page frame that hosts the feature slices
+- ログインとログアウト導線
+- アプリ起動処理
+- ルーティング
+- グローバルレイアウト
+- 上部メニューと shell ナビゲーション
+- modal、drawer、panel の基盤
+- レスポンシブ viewport 挙動
+- 共通 UI プリミティブ
+- 各 feature slice を載せる sandbox 画面の枠組み
 
-Primary directories:
+主ディレクトリ:
 
 - `src/app/**`
 - `src/routes/**`
 - `src/ui/**`
 - `src/platform/**`
 
-Does not define:
+意味を決めないもの:
 
-- Event generation rules
-- Character creation semantics
-- Passport issuance semantics
+- イベント生成ルール
+- キャラクター作成仕様
+- passport 発行仕様
 
 ## Line 2: Core Runtime / Domain / Persistence
 
-Owns:
+担当:
 
-- Canonical models for `Character`, `SandboxSession`, `WorldEvent`, `Intervention`, `CharacterSnapshot`, and `CharacterPassport`
-- `roster` and `active four` separation
-- Event state and intervention application
-- Character change calculation
-- Save and load behavior
-- Seed data and default session bootstrap
-- Short architecture decision records tied to the canonical flow
+- `Character`、`SandboxSession`、`WorldEvent`、`Intervention`、`CharacterSnapshot`、`CharacterPassport` の正本モデル
+- `roster` と active な4名の分離
+- イベント状態と介入適用
+- キャラクター変化計算
+- save / load 挙動
+- seed data とデフォルト session bootstrap
+- 正本フローに結びつく短い architecture decision record
 
-Primary directories:
+主ディレクトリ:
 
 - `src/domain/**`
 - `src/state/**`
 - `src/persistence/**`
 - `docs/adr/**`
 
-Does not define:
+意味を決めないもの:
 
-- Screen layout
-- Tutorial staging
-- Character creator UI experience
+- 画面レイアウト
+- tutorial 演出
+- character creator UI 体験
 
 ## Line 3: Character Lifecycle / Roster / Passport
 
-Owns:
+担当:
 
-- Initial character setup after the first tutorial
-- Default four template selection and editing
-- Character creation and editing UI
-- The shared editor flow used by both first-time setup and later character creation
-- Active four selection
-- Deferred one-for-one replacement flow after new character addition
-- Snapshot recording UI
-- Character Passport issuance UI
-- External game handoff UI
+- 初回 tutorial 後のキャラクター設定
+- デフォルト4名の template 選択と編集
+- キャラクター作成 UI と再編集 UI
+- 初回設定と後続追加で共通の editor フロー
+- active な4名の選択
+- 新キャラクター追加後の遅延入れ替え導線
+- snapshot 記録 UI
+- Character Passport 発行 UI
+- 外部ゲームへの持ち出し UI
 
-Primary directories:
+主ディレクトリ:
 
 - `src/features/character-creator/**`
 - `src/features/roster/**`
@@ -87,58 +87,58 @@ Primary directories:
 - `src/features/passport/**`
 - `src/features/external-handoff/**`
 
-Does not define:
+意味を決めないもの:
 
-- Main event loop semantics
-- App shell behavior
-- Intro tutorial orchestration
+- メインイベントループの意味
+- app shell の挙動
+- 導入 tutorial 全体の進行管理
 
 ## Line 4: Event Experience / Tutorial / Narrative
 
-Owns:
+担当:
 
-- Introduction tutorial
-- Event occurrence presentation
-- Event focus UI
-- `focusedEvent`-first sandbox interaction design
-- Intervention UI for `Watch`, `Help`, and `Trial`
-- Result presentation after intervention
-- Story log presentation
-- Multi-character event wording and display
-- Second tutorial for first-time new character addition
-- Highlight, scroll lock, and guidance behavior
+- 導入 tutorial
+- イベント発生の見せ方
+- イベントフォーカス UI
+- `focusedEvent` 中心の sandbox 体験設計
+- `見守る`、`助ける`、`試練` の介入 UI
+- 介入後の結果表示
+- 物語ログ表示
+- 複数参加イベントの文言と見せ方
+- 新キャラクター追加時の第2 tutorial
+- ハイライト、scroll lock、ガイド演出
 
-Primary directories:
+主ディレクトリ:
 
 - `src/features/events/**`
 - `src/features/tutorial/**`
 - `src/features/story/**`
 
-Does not define:
+意味を決めないもの:
 
-- Canonical stored state
-- Character creator form semantics
-- App-wide platform setup
+- 正本の保存状態
+- character creator のフォーム仕様
+- アプリ全体の platform 設定
 
-## Boundary rules
+## 境界ルール
 
-- Line 1 owns the host frame, not the gameplay meaning.
-- Line 2 defines the canonical product state and data contracts.
-- Line 3 owns the character lifecycle from setup to export.
-- Line 4 owns the event loop experience from onboarding through repeated intervention.
-- If a line must touch another line's area for integration, keep the change minimal and do not redefine ownership in that PR.
+- Line 1 は器を持ち、ゲームプレイの意味は持たない。
+- Line 2 は正本の product state と data contract を定義する。
+- Line 3 はキャラクターの設定、入れ替え、持ち出しまでのライフサイクルを持つ。
+- Line 4 は onboarding から反復介入までのイベント体験を持つ。
+- 他 Line 領域に触れる必要がある場合も、接続に必要な最小変更に留め、その PR で責務定義自体を書き換えない。
 
-## Recommended implementation order
+## 推奨実装順
 
-1. Line 2 establishes canonical runtime models and session state.
-2. Line 1 establishes shell structure and integration points.
-3. Line 4 establishes event-first onboarding and repeated event interaction.
-4. Line 3 establishes initial setup, roster replacement, snapshot, and passport flows.
+1. Line 2 が runtime model と session state の正本を固める。
+2. Line 1 が shell 構造と接続点を整える。
+3. Line 4 が event-first の onboarding とイベント体験を整える。
+4. Line 3 が初回設定、入れ替え、snapshot、passport 導線を整える。
 
-## Review focus
+## 監査観点
 
-- `active four` stays distinct from the owned roster.
-- Event focus remains first-class across UI and state.
-- Snapshot and passport remain separate steps.
-- The new character route adds to `roster` immediately while allowing deferred replacement of the active four.
-- Line ownership stays clear enough to avoid mixed PRs with unrelated scope.
+- active な4名と `roster` が明確に分離されているか
+- イベントフォーカスが UI と state の両方で第一級になっているか
+- snapshot と passport が別ステップのまま保たれているか
+- 新キャラクター追加で `roster` には即時追加しつつ、active な4名の入れ替えは遅延できるか
+- Line ごとの責務が混ざりすぎず、PR scope が明確に保たれているか

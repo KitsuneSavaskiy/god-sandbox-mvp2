@@ -1,8 +1,8 @@
-# GodSandbox System Spec
+# GodSandbox システム仕様
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-Source hierarchy:
+参照階層:
 
 1. `docs/product/godsandbox-user-flow.md`
 2. `docs/architecture/system-spec.md`
@@ -12,28 +12,28 @@ Source hierarchy:
 6. `docs/architecture/ui-state-model.md`
 7. `docs/architecture/testing-strategy.md`
 
-This document fixes the major gameplay, state, and architecture decisions for `god-sandbox-mvp2`.
+この文書は `god-sandbox-mvp2` の主要なゲーム仕様、状態仕様、アーキテクチャ方針を固定する。
 
-## Product-wide decisions
+## 全体方針
 
-- `activeSlots` is always a four-entry occupied array.
-- `roster` is the complete owned character set.
-- There is no archive, hidden, or retired character state in MVP.
-- One user owns one local sandbox session.
-- Login is not account authentication. It only captures the player display name used inside the game.
-- The application is local-first in a strong sense: the canonical source of truth is the local world directory.
-- React UI must not manipulate save files directly.
-- The application uses four layers: `domain`, `application`, `ui`, and `persistence`.
-- `domain` must stay React-free and be implemented as pure TypeScript modules.
-- `application` owns event generation, intervention application, snapshot issuance, passport issuance, and migration orchestration.
-- The canonical intervention enum is `watch | help | trial`.
-- `selectedCharacter` is not a primary gameplay state. `focusedEvent` is.
+- `activeSlots` は常に4枠すべて埋まっている。
+- `roster` は所有キャラクターの全集合である。
+- MVP に archive、hidden、retired の状態は持たない。
+- 1ユーザーにつき1つのローカル sandbox session を持つ。
+- ログインはアカウント認証ではなく、ゲーム内表示名の取得だけに使う。
+- アプリは強い意味で local-first とし、正本データはローカル world directory に置く。
+- React UI は save file を直接操作しない。
+- レイヤーは `domain`、`application`、`ui`、`persistence` の4層で分ける。
+- `domain` は React 非依存の pure TypeScript module とする。
+- `application` はイベント生成、介入適用、snapshot 発行、passport 発行、migration 制御を持つ。
+- 介入 enum の正本は `watch | help | trial` とする。
+- `selectedCharacter` は主な gameplay state にしない。主状態は `focusedEvent` とする。
 
-## Canonical domain model
+## 正本ドメインモデル
 
 ### CharacterTemplate
 
-The template system is dynamic and field-driven so template authors can define which editable inputs exist.
+template は動的な field 定義を持ち、template 作成者が編集可能な入力欄を決められるようにする。
 
 ```ts
 type TemplateFieldType =
@@ -63,17 +63,16 @@ interface CharacterTemplate {
 }
 ```
 
-Rules:
+ルール:
 
-- Template field names and available inputs are variable.
-- Initial four-character setup and new character creation both use the same template model and editor flow.
-- Characters remain re-editable after creation.
+- template field 名と入力欄は可変でよい。
+- 初回4名設定と後続の新キャラクター作成は同じ template model と editor flow を使う。
+- 作成後もキャラクターは再編集可能である。
 
 ### Character
 
-`Character` is split into `profile` and `state`.
-`profile` holds descriptive, player-edited data.
-`state` holds gameplay-evolving values.
+`Character` は `profile` と `state` に分ける。
+`profile` は説明的でプレイヤーが編集する値を持ち、`state` はゲーム進行で変化する値を持つ。
 
 ```ts
 type CharacterId = string;
@@ -147,22 +146,22 @@ interface Character {
 }
 ```
 
-Rules:
+ルール:
 
-- `traits` does not exist in the MVP model.
-- Numerical status values are the primary mutable gameplay stats.
-- Image selection is required.
-- Personality, speech style, and age are optional inputs.
-- Appearance is not just a single image reference. The canonical appearance model supports:
-  - a primary asset ID
-  - expression variants
-  - generated sprite sheet references
-  - style metadata for future animation and video-linked updates
-- Asset IDs are the canonical reference. Filenames are secondary.
+- MVP の model に `traits` は置かない。
+- 可変の gameplay stat は数値 status を中心に表現する。
+- 画像選択は必須である。
+- personality、speech style、age は任意入力でよい。
+- appearance は単一画像参照だけではなく、次を扱える正本構造にする。
+  - primary asset ID
+  - 表情差分
+  - 生成済み sprite sheet 参照
+  - 将来の animation や動画連動更新に備える style metadata
+- asset の正本参照は asset ID であり、filename は副次情報である。
 
 ### Relation table
 
-Relations are stored independently from characters.
+relation は character 本体とは独立して保存する。
 
 ```ts
 type RelationId = string;
@@ -177,11 +176,11 @@ interface CharacterRelation {
 }
 ```
 
-Rules:
+ルール:
 
-- Relations are bidirectional.
-- Relation values use a single score.
-- Relation changes are recomputed from event and intervention history, while current scores are also materialized for fast reads.
+- relation は双方向である。
+- relation 値は単一 score を使う。
+- 現在値は高速参照のため materialize してよいが、変化の正本は event / intervention 履歴から再計算できるようにする。
 
 ### SandboxSession
 
@@ -202,24 +201,24 @@ interface SandboxSession {
 }
 ```
 
-Rules:
+ルール:
 
-- `activeSlots` is always fully occupied.
-- `activeSlots` order has no gameplay meaning.
-- `pendingActivationCharacterIds` tracks newly added roster characters that are not yet placed in the active four.
-- New character addition never breaks the active four requirement.
-- `currentEventId` always points to exactly one current event record.
-- If an event resolves, expires, or chains forward, the application must commit the next current event before the session save is considered complete.
-- Session state stores only current state, not the full historical log.
-- Autosave happens after event completion.
+- `activeSlots` は常に4名で埋まる。
+- `activeSlots` の順番に gameplay 上の意味は持たせない。
+- `pendingActivationCharacterIds` は `roster` に追加済みだが active な4名へまだ配置していないキャラクターを表す。
+- 新キャラクター追加で active な4名の必須条件を壊さない。
+- `currentEventId` は常に1件の current event record を指す。
+- event が resolved / expired / chained へ進むときは、session save 完了前に次の current event を commit する。
+- session は現在状態だけを持ち、全履歴そのものは持たない。
+- autosave は event 完了ごとに行う。
 
 ### WorldEvent
 
-Event generation is hybrid:
+event 生成はハイブリッド方式とする。
 
-- weighted by relationships, personality vectors, and world or situation tags
-- sourced from event templates and structured generation rules
-- optionally rendered with deterministic text templates or richer structured renderers
+- relation、personality vector、world / situation tag による重み付けを使う
+- event template と structured rule を起点にする
+- deterministic な text template と richer な structured renderer の両方を許す
 
 ```ts
 type EventStatus = "pending" | "active" | "resolved" | "expired" | "chained";
@@ -239,17 +238,17 @@ interface WorldEvent {
 }
 ```
 
-Rules:
+ルール:
 
-- The generator is not fully random.
-- `primaryCharacterId` is required in addition to `participantCharacterIds`.
-- The UI presents the primary character as the lead and other participants as supporting characters.
-- Events may remain unresolved or transition into expired or chained states.
-- `currentEventId` always points to exactly one focused event in session state.
+- generator は完全ランダムにしない。
+- `primaryCharacterId` は `participantCharacterIds` と別に必須で持つ。
+- UI では primary character を主役、他の参加者を脇役として扱う。
+- event は未解決のまま残ったり、expired / chained へ遷移したりできる。
+- session 上の `currentEventId` は常に1件の focused event を指す。
 
 ### OngoingEffectInstance
 
-Some intervention results are immediate and some remain active over time.
+介入結果には即時反映されるものと、継続効果として残るものがある。
 
 ```ts
 interface OngoingEffectInstance {
@@ -282,17 +281,17 @@ interface InterventionRecord {
 }
 ```
 
-Rules:
+ルール:
 
-- A player may intervene multiple times on the same event.
-- `watch` costs no god points.
-- `help` and `trial` consume finite god-point resources.
-- Intervention history is stored as independent records, not embedded directly into `WorldEvent`.
-- Player reasoning and memo fields are first-class because they influence preferred story direction and prompt generation.
+- 同じ event に複数回介入できる。
+- `watch` は god point を消費しない。
+- `help` と `trial` は有限の god point を消費する。
+- intervention 履歴は `WorldEvent` に埋め込まず、独立 record として保存する。
+- `playerReason` と `playerMemo` は、物語の誘導や prompt 生成に使える第一級データとして扱う。
 
 ### ChangeSet
 
-Changes are stored as append-only difference events.
+変化は append-only の差分イベントとして積む。
 
 ```ts
 type ChangeSetKind =
@@ -321,21 +320,21 @@ interface ChangeSet {
 }
 ```
 
-Rules:
+ルール:
 
-- `ChangeSet` is type-safe and classified by kind.
-- The system stores both the delta and a post-apply snapshot.
-- Appearance changes may record:
-  - updated asset IDs
-  - linked sprite sheet regeneration
-  - origin event references
-  - optional video-generation linkage metadata
-- Narrative role change is free text.
+- `ChangeSet` は kind ごとに型安全に分類する。
+- 差分だけでなく post-apply snapshot も保持する。
+- 見た目変化では次の情報を記録してよい。
+  - 更新された asset ID
+  - sprite sheet 再生成の情報
+  - event 由来情報
+  - 動画生成連動を見据えた metadata
+- 物語上の立場変化は自由文でよい。
 
 ### Snapshot
 
-Snapshots are fixed captures that remain reproducible later.
-Annotation metadata may be added after capture.
+snapshot は固定時点の記録であり、後から再生成可能である。
+annotation metadata は capture 後に追記できる。
 
 ```ts
 interface CharacterSnapshot {
@@ -354,23 +353,23 @@ interface CharacterSnapshot {
 }
 ```
 
-Rules:
+ルール:
 
-- Snapshot content is the fixed record of that moment.
-- Tags and notes may be added later as annotations.
-- Snapshot data must contain enough context for downstream role-playing in external tools.
-- The snapshot must include:
+- snapshot の capture 内容自体は固定記録とする。
+- tag や note は annotation として後から付けられる。
+- 外部 role-play に十分な context を含める必要がある。
+- 最低限次を含める。
   - character state
-  - relevant relations
+  - relevant relation
   - recent event context
-  - world-context references
-- Snapshots are reproducible and may be regenerated later from the same world state when needed.
-- Snapshot identity and provenance should remain stable enough to support future external-game import flows.
+  - world-context reference
+- snapshot は同じ world state から後で再生成できるようにする。
+- snapshot の identity と provenance は、将来の外部ゲーム連携や import 互換を妨げない形で安定させる。
 
 ### Passport
 
-Passport is a versioned export and display document derived from a snapshot.
-It is stable as a GodSandbox file format, but it is not a live remote API contract for external games.
+passport は snapshot から派生する versioned export / display document である。
+GodSandbox の保存形式としては安定させるが、外部ゲーム向けの live API contract にはしない。
 
 ```ts
 interface CharacterPassport {
@@ -387,41 +386,41 @@ interface CharacterPassport {
 }
 ```
 
-Rules:
+ルール:
 
-- Passport issuance is explicit user action.
-- Users may export a passport at any time from an eligible snapshot.
-- Passport is usually single-character based.
-- Four-character squad passport support may be added later.
-- External games are free to interpret the saved passport loosely.
-- File naming must include a stable string derived from the passport so external tools can match files reliably.
+- passport 発行は明示的なユーザー操作で行う。
+- 任意の eligible snapshot からいつでも export できる。
+- MVP は単体キャラクター passport を基本とする。
+- 将来的に4人編成 passport を追加してもよい。
+- 外部ゲームは passport を緩やかに解釈してよい。
+- file naming には downstream tool が照合できる stable token を必ず含める。
 
-## Character lifecycle rules
+## キャラクターライフサイクルのルール
 
-- The same UI and application flow is used for:
-  - initial four-character setup
-  - adding a new character later
-  - editing an existing character
-- Initial four characters may stay partially defaulted.
-- Image selection is mandatory before a character can be saved.
-- After a character is added to `roster`, it does not need to replace an active character immediately.
-- The second tutorial for new character addition is mandatory only the first time that route is used.
+- 同じ UI / application flow を次のすべてで使う。
+  - 初回4名設定
+  - 後からの新キャラクター追加
+  - 既存キャラクターの再編集
+- 初期4名は一部 default のまま開始してよい。
+- 画像選択なしでは save できない。
+- `roster` に追加された後も、すぐに active な4名へ入れ替える必要はない。
+- 新キャラクター追加時の第2 tutorial は初回だけ必須とする。
 
-## Event generation and content rendering
+## イベント生成とコンテンツ描画
 
-- Event generation is template-driven and context-weighted, not purely random and not purely free-form.
-- Deterministic text rendering is used where stability matters.
-- Richer narrative wording may be produced in parallel by player-operated external Codex or similar tooling.
-- The app itself does not call external AI APIs.
-- In-app data generation stops at:
-  - prompt generation
-  - export file generation
-  - deterministic structured content rendering
+- event 生成は template-driven かつ context-weighted であり、純ランダムにも完全自由文にも寄せない。
+- 安定性が必要な箇所では deterministic な text rendering を使う。
+- より豊かな narrative wording は、プレイヤーが並行起動する外部 Codex 等で補助生成してよい。
+- アプリ本体は外部 AI API を直接呼ばない。
+- アプリ内のデータ生成責務は次までに留める。
+  - prompt 生成
+  - export file 生成
+  - deterministic な structured content rendering
 
-## External AI and prompt/export policy
+## 外部AIと prompt / export 方針
 
-- External AI remains app-external support only.
-- API-key-based direct integration is out of scope.
-- Character speech style data lives in the character data files.
-- World context lives in world or chunk files.
-- Prompt packs and export data should assume those files are read together, rather than flattening every detail into one giant document.
+- 外部 AI は今後もアプリ外補助に留める。
+- API key を使う直接連携は対象外とする。
+- character の speech style data は character data file に持たせる。
+- world context は world / chunk file に持たせる。
+- prompt pack や export data は、必要な file を読み合わせる前提とし、全情報を1つの巨大 document に flatten しない。

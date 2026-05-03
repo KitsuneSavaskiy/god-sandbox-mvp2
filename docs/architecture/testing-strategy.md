@@ -1,63 +1,63 @@
-# Testing Strategy
+# テスト戦略
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-This document fixes the minimum test focus for `god-sandbox-mvp2`.
+この文書は `god-sandbox-mvp2` における最低限の重点テスト範囲を固定する。
 
-## Domain unit priorities
+## domain 単体テストの優先順位
 
-The highest-priority domain unit tests are:
+最優先で押さえる domain unit test:
 
 - event generation
 - intervention apply
 - roster replacement
 - snapshot issuance
 
-Rules:
+ルール:
 
-- Domain tests must run without React.
-- Weighted event generation should be testable with deterministic seeded inputs.
-- Relation recomputation from event history should be testable independently from UI.
-- ChangeSet application should verify both deltas and post-apply snapshots.
+- domain test は React なしで実行できるようにする。
+- 重み付き event generation は deterministic な seed 入力で再現テストできるようにする。
+- event 履歴からの relation 再計算は UI と独立に検証できるようにする。
+- `ChangeSet` 適用では delta と post-apply snapshot の両方を検証する。
 
-## UI verification priorities
+## UI 確認の優先順位
 
-The highest-priority UI checks are:
+最優先で押さえる UI check:
 
-- `390px` event-first flow
-- `360px` event-first flow
-- focused-event visibility
-- multi-panel desktop behavior
-- mobile bottom-sheet behavior
+- `390px` の event-first 導線
+- `360px` の event-first 導線
+- focused event の視認性
+- desktop の複数 panel 挙動
+- mobile の bottom sheet 挙動
 
-Rules:
+ルール:
 
-- Sandbox readability must be checked at both widths.
-- Event focus and intervention buttons must remain first-class at mobile sizes.
+- sandbox の読みやすさは両幅で確認する。
+- mobile でも event focus と intervention button を最前面に保つ。
 
-## Tutorial tests
+## tutorial テスト
 
-Tutorial testing must isolate:
+tutorial では次を分離して検証する。
 
-- anchor resolution
-- automatic scroll behavior
-- interaction lock behavior
-- step transition logic
+- anchor 解決
+- 自動 scroll 挙動
+- 操作 lock 挙動
+- step 遷移ロジック
 
-Rules:
+ルール:
 
-- Tutorial tests should not rely on one giant integration script only.
-- State-machine transitions should be testable without visual animation timing.
+- tutorial test を巨大な統合 script 1本だけに依存させない。
+- state machine の遷移は visual animation timing に依存せず確認できるようにする。
 
-## Passport tests
+## passport テスト
 
-- Passport exports must have schema snapshot tests.
-- Snapshot input changes should produce predictable export differences.
-- Export filenames must include the stable token required for downstream matching.
+- passport export には schema snapshot test を用意する。
+- snapshot 入力の差分に応じて予測可能な export 差分が出ることを確認する。
+- export filename に downstream matching 用の stable token が含まれることを確認する。
 
-## Persistence tests
+## persistence テスト
 
-- save-version migration tests are mandatory
-- chunk rollover behavior should be tested
-- asset ID to relative path resolution should be tested
-- current-state projection rebuild should be tested
+- save-version migration test を必須とする。
+- chunk rollover 挙動をテストする。
+- asset ID から relative path を引く解決処理をテストする。
+- current-state projection の再構築をテストする。

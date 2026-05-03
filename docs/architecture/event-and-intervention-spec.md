@@ -1,68 +1,68 @@
-# Event And Intervention Spec
+# イベントと介入の仕様
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-This document fixes the event-loop, intervention, and change-application rules for `god-sandbox-mvp2`.
+この文書は `god-sandbox-mvp2` のイベントループ、介入、変化適用ルールを固定する。
 
-## Event generation policy
+## イベント生成方針
 
-- Event generation is hybrid, not purely random and not purely free-form.
-- The generator starts from curated templates and structured rules.
-- Template selection is weighted by:
-  - relation scores
-  - personality vectors
-  - world or situation tags
-  - ongoing effects
+- event 生成は純ランダムでも完全自由文でもなく、ハイブリッド方式とする。
+- generator は curated template と structured rule を起点にする。
+- template 選択は次の要素で重み付けする。
+  - relation score
+  - personality vector
+  - world / situation tag
+  - ongoing effect
   - recent event history
-- The generator must be deterministic when given the same seed, world state, and weighted inputs.
+- 同じ seed、world state、weighted input を与えた場合は deterministic に再現できるようにする。
 
-Recommended pipeline:
+推奨 pipeline:
 
-1. Read the current session projection.
-2. Collect candidate characters from `activeSlots`.
-3. Expand candidate relations and world-context tags.
-4. Score eligible event templates.
-5. Build one current event with one `primaryCharacterId` and one or more `participantCharacterIds`.
-6. Persist the new event and point `currentEventId` to it.
+1. 現在の session projection を読む。
+2. `activeSlots` から candidate character を集める。
+3. relation と world-context tag を広げる。
+4. eligible な event template を score 付けする。
+5. `primaryCharacterId` を1件、`participantCharacterIds` を1件以上持つ current event を構築する。
+6. 新 event を保存し、`currentEventId` をその event へ向ける。
 
-## Current event rule
+## current event ルール
 
-- `SandboxSession.currentEventId` always points to exactly one current event record.
-- The current event may be in `pending`, `active`, `resolved`, `expired`, or `chained` status.
-- When one event completes its role as the current focus, the application must assign the next current event before finalizing the post-event autosave.
+- `SandboxSession.currentEventId` は常に1件の current event record を指す。
+- current event の status は `pending`、`active`、`resolved`、`expired`、`chained` を取りうる。
+- 1つの event が current focus としての役割を終えるときは、post-event autosave を確定する前に次の current event を割り当てる。
 
-## Participant model
+## 参加者モデル
 
-- Every event has one `primaryCharacterId`.
-- Every event has one or more `participantCharacterIds`.
-- The primary character must also appear in `participantCharacterIds`.
-- UI wording uses:
-  - primary character as the lead
-  - all other participants as supporting characters
+- すべての event は `primaryCharacterId` を1件持つ。
+- すべての event は `participantCharacterIds` を1件以上持つ。
+- primary character は必ず `participantCharacterIds` にも含める。
+- UI 文言では次のルールを使う。
+  - primary character を主役として表示する
+  - それ以外の参加者を脇役として表示する
 
-## Event rendering policy
+## event 描画方針
 
-Two rendering paths are allowed:
+許可する描画経路は2つある。
 
-- deterministic template rendering for stable, testable event text
-- structured-data rendering for richer UI composition and downstream prompt generation
+- 安定してテストできる deterministic template rendering
+- richer な UI 合成や prompt 生成に使う structured-data rendering
 
-Rules:
+ルール:
 
-- Event storage must keep enough structured data to regenerate deterministic wording.
-- Free-form external AI output is not the canonical event record.
-- If richer narrative text is generated outside the app, it is supplemental text only.
+- event storage は deterministic な文面を再生成できるだけの structured data を持つ。
+- 外部 AI が作った自由文は正本の event record にしない。
+- アプリ外で richer narrative text を生成しても、それは補助表示に留める。
 
-## Intervention rules
+## 介入ルール
 
-- The canonical intervention enum is `watch | help | trial`.
-- A player may intervene multiple times on the same event.
-- `watch` costs `0` god points.
-- `help` and `trial` consume finite god-point resources.
-- Resource validation must happen in the application layer before persistence commits.
-- Intervention history is stored in independent `InterventionRecord` entries.
+- 介入 enum の正本は `watch | help | trial` とする。
+- 同じ event に複数回介入できる。
+- `watch` の resourceCost は `0` である。
+- `help` と `trial` は有限の god point を消費する。
+- resource 検証は persistence commit 前に application layer で行う。
+- intervention 履歴は `InterventionRecord` を独立保存する。
 
-Recommended `InterventionRecord` expansion:
+推奨 `InterventionRecord` 拡張:
 
 ```ts
 interface InterventionRecord {
@@ -79,56 +79,56 @@ interface InterventionRecord {
 }
 ```
 
-## Player steering signals
+## プレイヤー誘導シグナル
 
-- `playerReason` and `playerMemo` are canonical player-authored signals.
-- These fields are stored because the player may use them to steer future story generation or external prompt generation.
-- The app may consume these fields in deterministic weighting rules.
-- External AI prompt builders may include these fields, but the game must remain playable without any external AI step.
+- `playerReason` と `playerMemo` はプレイヤー自身が書く正本シグナルとして扱う。
+- これらは今後の story generation や外部 prompt generation をプレイヤーが誘導するために保存する。
+- application は deterministic な重み付けルールの入力として使ってよい。
+- 外部 AI 用の prompt builder がこの値を含めることはできるが、ゲーム本体はそれなしでも成立しなければならない。
 
-## Change application model
+## 変化適用モデル
 
-- Character changes are stored as append-only `ChangeSet` records.
-- `ChangeSet` is type-safe and kind-classified.
-- Each `ChangeSet` stores:
-  - the delta patch
-  - the target character
-  - the source event
-  - the optional source intervention
-  - the post-apply snapshot
-  - optional origin metadata
+- キャラクター変化は append-only の `ChangeSet` record として積む。
+- `ChangeSet` は kind ごとに型安全に分類する。
+- 各 `ChangeSet` は次を持つ。
+  - delta patch
+  - target character
+  - source event
+  - optional な source intervention
+  - post-apply snapshot
+  - optional な origin metadata
 
-Recommended `ChangeSet.patch` expectations by kind:
+`ChangeSet.patch` の想定:
 
-- `status-delta`: changed numeric status keys and amounts
-- `personality-delta`: changed personality axes and amounts
-- `relation-delta`: relation score delta inputs
-- `appearance-update`: asset changes, sprite regeneration hints, source linkage
-- `speech-style-update`: next speech style template ID
-- `narrative-role-update`: free-text role change
-- `ongoing-effect-created`: newly materialized effect payload
+- `status-delta`: 変更した数値 status key と差分量
+- `personality-delta`: personality axis と差分量
+- `relation-delta`: relation score 差分の入力
+- `appearance-update`: asset 更新、sprite 再生成 hint、由来 linkage
+- `speech-style-update`: 次の speech style template ID
+- `narrative-role-update`: 自由文の立場更新
+- `ongoing-effect-created`: 生成された継続効果 payload
 
-## Immediate and ongoing effects
+## 即時効果と継続効果
 
-- Some interventions only emit immediate `ChangeSet` records.
-- Some interventions also create `OngoingEffectInstance` records.
-- Ongoing effects are resolved by future event completions, event counts, or explicit trigger exhaustion.
-- Ongoing effects are canonical gameplay state, not UI-only decorations.
+- 一部の介入は即時 `ChangeSet` だけを出す。
+- 一部の介入は `OngoingEffectInstance` も生成する。
+- 継続効果は future event completion、event count、trigger exhaustion などで解消する。
+- 継続効果は UI 演出ではなく canonical gameplay state として扱う。
 
-## Relation recomputation rule
+## relation 再計算ルール
 
-- Relation scores are stored as current materialized values for fast reads.
-- The canonical derivation path is still historical:
+- relation score は高速参照のため current 値を materialize してよい。
+- ただし正本の導出経路は履歴側に置く。
   - event history
   - intervention history
-  - relation-oriented `ChangeSet` entries
-- Recompute jobs must be possible from recorded history when repair or migration is needed.
+  - relation 系 `ChangeSet`
+- repair や migration 時には履歴から再計算できるようにする。
 
-## External narrative policy
+## 外部 narrative 方針
 
-- The app does not call external AI APIs directly.
-- External Codex or similar tooling may generate parallel narrative text outside the app.
-- Canonical app responsibilities stop at:
-  - deterministic event data generation
-  - deterministic render text
-  - prompt/export packet generation
+- アプリ本体は外部 AI API を直接呼ばない。
+- 外部 Codex などで parallel narrative text を生成してよい。
+- ただしアプリ内の正本責務は次までに留める。
+  - deterministic な event data 生成
+  - deterministic な render text
+  - prompt / export packet 生成

@@ -1,30 +1,30 @@
-# Local Persistence Spec
+# ローカル永続化仕様
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-This document defines how `god-sandbox-mvp2` stores its authoritative data on the local filesystem.
+この文書は `god-sandbox-mvp2` が正本データをローカル filesystem にどう保存するかを定義する。
 
-## Goals
+## 目的
 
-- Keep the world local and lightweight.
-- Avoid a single giant JSON file.
-- Keep data human-inspectable when possible.
-- Make migration practical from the beginning.
-- Keep React UI away from direct filesystem mutation.
+- world をローカルに軽量保存する。
+- 1つの巨大な JSON file を避ける。
+- 可能な範囲で人が読めるデータ構造にする。
+- migration を最初から現実的に運用できるようにする。
+- React UI から直接 filesystem mutation しない。
 
-## Persistence rules
+## 永続化ルール
 
-- MVP uses local filesystem storage only.
-- There is no DBMS.
-- The world directory is the application source of truth.
-- Persistence is accessed through the `persistence` layer only.
-- The application layer orchestrates reads, writes, autosave, and migration.
-- Autosave is guaranteed after event completion.
-- Explicit save actions such as character edit confirmation, snapshot creation, and passport export may also write files immediately.
+- MVP はローカル filesystem 保存のみを使う。
+- DBMS は使わない。
+- world directory をアプリケーションの正本データソースとする。
+- 永続化アクセスは `persistence` layer のみが行う。
+- `application` layer が read、write、autosave、migration を統括する。
+- autosave は event 完了ごとに保証する。
+- character 編集確定、snapshot 作成、passport export などの明示操作では即時 write を行ってよい。
 
-## World layout
+## world directory 構成
 
-The canonical save root is a world directory.
+正本 save root は world directory とする。
 
 ```text
 worlds/
@@ -72,30 +72,30 @@ worlds/
           <asset-slug>--<asset-id>.json
 ```
 
-## Why this layout
+## この構成にする理由
 
-- `world.json` stores high-level metadata and versioning.
-- `session/current.json` stores the current gameplay projection.
-- `characters/` stores each character independently so editing one character does not rewrite the whole world.
-- `relations/` stores pairwise relation records independently.
-- `events/`, `interventions/`, and `changes/` are chunked by month and sequence to avoid one huge history file.
-- `events/current/` isolates currently active event state from long-term history.
-- `world-context/chunks/` stores world-side context that prompt builders and exports can reference without flattening everything into one document.
-- `assets/manifest.json` is the canonical asset registry.
+- `world.json` は高レベル metadata と version を持つ。
+- `session/current.json` は現在の gameplay projection を持つ。
+- `characters/` を個別 file 化することで、1人の編集で world 全体を書き換えずに済む。
+- `relations/` は pairwise relation を独立保存できる。
+- `events/`、`interventions/`、`changes/` は月別と連番 chunk に分けて、履歴 file の肥大化を防ぐ。
+- `events/current/` は current event を長期履歴から分離する。
+- `world-context/chunks/` は prompt builder や export が参照する世界文脈を分割管理できる。
+- `assets/manifest.json` は media asset の正本 registry である。
 
-## Canonical IDs and filenames
+## canonical ID と filename
 
-- IDs are the canonical references.
-- Filenames are human-readable helpers and must include the ID.
-- The system must never depend on filename-only matching.
+- 正本参照は ID で行う。
+- filename は人が読みやすくする補助情報であり、必ず ID を含める。
+- システムは filename だけの一致に依存してはならない。
 
-Recommended filename pattern:
+推奨 filename pattern:
 
 ```text
 <human-readable-slug>--<stable-id>.<ext>
 ```
 
-Examples:
+例:
 
 ```text
 aki--chr_01JABC123.json
@@ -103,15 +103,15 @@ happy-front--ast_01JXYZ456.png
 aki-passport--psp_01JPPP789.json
 ```
 
-Rules:
+ルール:
 
-- Save data references asset IDs, character IDs, world IDs, and passport IDs.
-- The filename may include a readable name token, but the ID is the canonical key.
-- Exported passport filenames must include a passport-specific stable token.
+- save data は asset ID、character ID、world ID、passport ID を参照する。
+- filename に可読 token を入れてよいが、canonical key は ID である。
+- export された passport filename には passport 固有の stable token を必ず含める。
 
 ## world.json
 
-`world.json` is the top-level metadata file.
+`world.json` は top-level metadata file とする。
 
 ```ts
 interface WorldMetaFile {
@@ -126,25 +126,25 @@ interface WorldMetaFile {
 }
 ```
 
-Rules:
+ルール:
 
-- `saveVersion` is mandatory.
-- `world.json` is not a dump of the whole world.
-- `activeCharacterIds` is duplicated here for quick load hints, but `session/current.json` remains the detailed runtime projection.
+- `saveVersion` は必須である。
+- `world.json` は world 全体の dump にはしない。
+- `activeCharacterIds` は quick load hint として重複保持してよいが、詳細な runtime projection は `session/current.json` を正本とする。
 
-## Session projection
+## session projection
 
-`session/current.json` holds the current gameplay state only.
+`session/current.json` は current gameplay state だけを持つ。
 
-- It does not replace historical event, intervention, or change records.
-- It is a materialized projection for fast startup and gameplay reads.
-- It can be rebuilt from source records if repair or migration requires it.
+- event、intervention、change の履歴全体を置き換えるものではない。
+- 高速起動と gameplay read のための materialized projection である。
+- repair や migration 時には source record から再構築できるようにする。
 
-## History chunk format
+## history chunk 形式
 
-Chunk files are append-friendly bounded files.
+chunk file は append-friendly でサイズを抑えた file とする。
 
-Example shape:
+例:
 
 ```ts
 interface HistoryChunk<T> {
@@ -157,16 +157,16 @@ interface HistoryChunk<T> {
 }
 ```
 
-Rules:
+ルール:
 
-- Chunk size should stay bounded by item count and file size.
-- The persistence layer may roll to a new chunk when either threshold is hit.
-- Chunking is logical, not spatial terrain chunking.
-- The design is inspired by Minecraft's world-file pragmatism: many bounded files instead of one monolith.
+- chunk size は item 数と file size の両面で上限を持たせる。
+- `persistence` layer はどちらかの閾値に達した時点で新 chunk へ切り替えてよい。
+- ここでいう chunk は地形 chunk ではなく、履歴分割の論理単位である。
+- 設計思想は Minecraft の world file 運用にならい、1つの巨大 file より複数の bounded file を優先する。
 
-## Asset registry
+## asset registry
 
-`assets/manifest.json` is the authoritative registry for media assets.
+`assets/manifest.json` は media asset の authoritative registry とする。
 
 ```ts
 interface AssetManifestEntry {
@@ -179,37 +179,37 @@ interface AssetManifestEntry {
 }
 ```
 
-Rules:
+ルール:
 
-- Asset IDs are canonical.
-- Save data and passports reference asset IDs, not naked filenames.
-- Sprite sheets and future video-linked assets are registered as generated derivatives.
+- canonical な参照は asset ID とする。
+- save data と passport は filename だけでなく asset ID を使う。
+- sprite sheet や将来の動画連動 asset も generated derivative として登録する。
 
-## Migration strategy
+## migration 戦略
 
-Migration support is mandatory from the beginning.
+migration 対応は初期段階から必須とする。
 
-Rules:
+ルール:
 
-- Every world has `saveVersion`.
-- The application must keep a stepwise migration registry.
-- Migrations run in order from the stored version to the current version.
-- Each migration must be idempotent when rerun on the same version boundary.
-- A backup copy or restore checkpoint should be created before destructive migration steps.
+- すべての world は `saveVersion` を持つ。
+- アプリケーションは stepwise な migration registry を持つ。
+- migration は保存 version から current version まで順番に実行する。
+- 各 migration は同じ version 境界で再実行されても破綻しない idempotent な性質を目指す。
+- 破壊的な migration 前には backup か restore checkpoint を作る。
 
-Recommended migration flow:
+推奨 migration flow:
 
-1. Read `world.json`.
-2. Compare `saveVersion` with app-supported version.
-3. If upgrade is needed, create a backup marker.
-4. Run registered migrations in order.
-5. Rewrite touched files through the persistence layer.
-6. Update `saveVersion`.
-7. Rebuild any materialized projections if necessary.
+1. `world.json` を読む。
+2. `saveVersion` と app 側の対応 version を比較する。
+3. upgrade が必要なら backup marker を作る。
+4. 登録済み migration を順に実行する。
+5. 変更対象 file を `persistence` layer 経由で書き戻す。
+6. `saveVersion` を更新する。
+7. 必要なら materialized projection を再構築する。
 
-## Application boundary
+## application 境界
 
-- React components never open, write, rename, or delete files directly.
-- UI dispatches intents to application services.
-- Application services call persistence gateways.
-- Persistence gateways own directory creation, file naming, chunk rollover, and atomic write strategy.
+- React component は file の open、write、rename、delete を直接行わない。
+- UI は intent を application service へ渡す。
+- application service は persistence gateway を呼ぶ。
+- persistence gateway が directory 作成、file naming、chunk rollover、atomic write 戦略を持つ。

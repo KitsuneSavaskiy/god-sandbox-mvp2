@@ -1,24 +1,24 @@
-# Snapshot And Passport Spec
+# Snapshot と Passport の仕様
 
-Status: canonical managed document
+状態: 管理対象の正本ドキュメント
 
-This document fixes how character snapshots and passports are captured, annotated, regenerated, and exported.
+この文書は character snapshot と passport をどう記録し、注記し、再生成し、export するかを固定する。
 
-## Core policy
+## 基本方針
 
-- Snapshot capture and passport export are separate steps.
-- Snapshot is the fixed in-world capture.
-- Passport is the derived display or export artifact built from a snapshot.
-- Passport is a stable GodSandbox file format, not a rigid live contract for every external game.
+- snapshot 記録と passport export は別ステップとする。
+- snapshot はゲーム世界内の固定記録である。
+- passport は snapshot から派生する表示 / export artifact である。
+- passport は GodSandbox の stable file format だが、すべての外部ゲームに対する rigid な live contract にはしない。
 
-## Snapshot rules
+## snapshot ルール
 
-- A snapshot is captured for one character at a chosen moment.
-- The captured moment is fixed.
-- Tags and memo annotations may be added later without changing the captured source payload.
-- The system must be able to regenerate the snapshot payload later from canonical world data when needed.
+- snapshot は任意の時点の単体 character に対して記録する。
+- 記録時点そのものは固定される。
+- capture 後でも tag や memo の annotation は追加できる。
+- 必要なら canonical world data から後で snapshot payload を再生成できるようにする。
 
-Recommended snapshot shape:
+推奨 snapshot 形状:
 
 ```ts
 interface CharacterSnapshot {
@@ -40,41 +40,41 @@ interface CharacterSnapshot {
 }
 ```
 
-## Snapshot content minimum
+## snapshot の最低保持内容
 
-Snapshots must carry enough context for downstream role-play or prompt-driven external use.
+snapshot は外部 role-play や prompt-driven な後続利用に十分な context を持つ必要がある。
 
-Minimum content:
+最低限含めるもの:
 
 - character profile
 - current character state
 - recent relation context
 - recent event context
-- world-context references
-- asset references by canonical ID
-- speech-style reference
+- world-context reference
+- canonical ID による asset 参照
+- speech-style 参照
 
-Rules:
+ルール:
 
-- Character speech style should resolve from character-side data files.
-- World context should resolve from world or chunk files.
-- Prompt builders and export tools may read both sources together instead of flattening everything into one record.
+- character の speech style は character 側 data file から解決できるようにする。
+- world context は world / chunk file から解決できるようにする。
+- prompt builder や export tool は、必要に応じて両方の file を読み合わせてよい。
 
-## Snapshot regeneration and future import compatibility
+## snapshot 再生成と将来 import 互換
 
-- Snapshot regeneration is allowed and expected.
-- Regeneration must preserve snapshot identity or record traceable provenance to the original capture.
-- The format should remain friendly to future import of externally evolved character state.
-- MVP does not need full round-trip import yet, but IDs and provenance fields must not block it.
+- snapshot の再生成は許可し、想定機能とする。
+- 再生成時も snapshot identity を保つか、元の capture へ trace できる provenance を残す。
+- 形式は、将来の外部ゲーム側で変化した character state を import する拡張を妨げないようにする。
+- MVP の時点では完全な round-trip import は不要だが、ID や provenance の持ち方で将来を塞がない。
 
-## Passport rules
+## passport ルール
 
-- Passport issuance happens only on explicit user action.
-- The user may export from any eligible snapshot at any time.
-- Single-character passports are the primary MVP case.
-- Squad-level passports may be added later without invalidating the single-character model.
+- passport 発行は明示的なユーザー操作で行う。
+- どの eligible snapshot からでも任意タイミングで export できる。
+- MVP では単体 character passport を基本とする。
+- 4人編成 passport は将来追加してよいが、単体 model を壊さない。
 
-Recommended passport shape:
+推奨 passport 形状:
 
 ```ts
 interface CharacterPassport {
@@ -92,30 +92,30 @@ interface CharacterPassport {
 }
 ```
 
-## Passport file naming
+## passport のファイル命名
 
-- Passport filenames must remain human-readable.
-- Passport filenames must also include a stable token that downstream tools can match reliably.
-- Filenames are not the canonical identifier by themselves.
+- passport filename は人が読める形を保つ。
+- 同時に downstream tool が安定照合できる stable token も含める。
+- filename 自体を canonical identifier にはしない。
 
-Recommended pattern:
+推奨 pattern:
 
 ```text
 <character-slug>--<passport-file-token>.json
 ```
 
-## External use policy
+## 外部利用方針
 
-- External games are free to interpret a passport loosely.
-- GodSandbox does not promise one strict runtime schema for every external consumer.
-- The passport is stable enough for file-based exchange and prompt-driven role-play workflows.
-- Asset matching should rely on canonical IDs carried in the passport, not only display filenames.
+- 外部ゲームは passport を緩やかに解釈してよい。
+- GodSandbox は、すべての外部 consumer に対して1つの strict runtime schema を約束しない。
+- passport は file 交換と prompt-driven role-play に十分な安定性を持てばよい。
+- asset matching は display filename だけでなく passport 内の canonical ID を使う。
 
-## Annotation and export boundary
+## annotation と export の境界
 
-- Later snapshot annotations do not rewrite the original capture payload.
-- A newly exported passport may include the latest annotations that belong to that snapshot.
-- Export tools must clearly distinguish:
-  - fixed capture data
-  - later user annotations
-  - derived display formatting
+- 後から追加した snapshot annotation は、元の capture payload 自体は書き換えない。
+- 新しく export する passport には、その snapshot に紐づく最新 annotation を反映してよい。
+- export tool は次を明確に区別して扱う。
+  - 固定された capture data
+  - 後から追加された user annotation
+  - export 時の derived display formatting
