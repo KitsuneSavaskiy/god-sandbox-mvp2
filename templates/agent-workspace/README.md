@@ -1,4 +1,4 @@
-# GodSandbox Player Agent Workspace Template
+# GodSandbox プレイヤー向け Agent Workspace テンプレート
 
 このフォルダは、GodSandbox のプレイヤーが自分用にコピーして使う agent workspace テンプレートです。
 

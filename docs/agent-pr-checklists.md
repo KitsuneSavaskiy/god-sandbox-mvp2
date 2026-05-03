@@ -1,13 +1,15 @@
 # PR作成・監査チェックリスト
 
-## Route Reminder
+## ルート確認
 
 - `agent-routine` は、小規模、可逆、低リスクで、policy、agent instruction、workflow、permission、secret、billing、dependency、protected path に触れない変更に限る。
 - docs-only でも、運用ルールや protected path に触れる場合は `manual-review-required` を使う。
+- `docs/product/**` の正本ユーザーフロー更新は docs-only でも `manual-review-required` を使う。
+- `docs/architecture/**` の正本仕様更新も docs-only でも `manual-review-required` を使う。
 - 原則として agent は自分の判断で merge しない。
 - 例外として、PO が明示許可した監査役だけが、blocker なし・CI 成功・scope 確認済みの場合に限り approve / merge してよい。
 
-## PR preflight checklist
+## PR事前確認チェックリスト
 
 ### 1. branch と作業ツリー
 
@@ -38,7 +40,7 @@ git diff --check origin/main...HEAD
 
 - [ ] trailing whitespace と conflict marker がない。
 
-### 4. required verification
+### 4. 必須確認
 
 ```bash
 npm run typecheck
@@ -57,12 +59,14 @@ npm run build
 - [ ] PR 本文に `Closes #<issue-number>` がある。
 - [ ] PR 本文に branch、changed files、今回やったこと、今回やらないこと、scope 外変更がないこと、確認コマンド結果、監査役に見てほしい点がある。
 - [ ] label が `agent-routine` または `manual-review-required` のどちらかで、実際の risk と一致している。
+- [ ] `docs/product/godsandbox-user-flow.md` を更新した場合、`docs/product/godsandbox-user-flow.drawio` も同じ PR で整合している。
+- [ ] `docs/architecture/` を更新した場合、対応する product flow や line responsibility と矛盾していない。
 - [ ] `AGENTS.md`、`CLAUDE.md`、commit する docs に個人パス、secret、API key、token、ローカル環境名、個別アカウント設定が入っていない。
 - [ ] `AGENTS.md` / `CLAUDE.md` は参照導線と最重要ルール中心で、詳細は `docs/` に寄せている。
 - [ ] `.logs/` やローカル補助ファイルを、PBI scope なしに追加していない。
 - [ ] アート生成プロンプトを Git 管理する場合、`docs/art-prompts/` に置いている。
 
-## PR audit checklist
+## PR監査チェックリスト
 
 ### 1. role と紐づけ
 
@@ -112,9 +116,9 @@ git diff --check origin/main...HEAD
 - [ ] review comment の未解消事項がない、または PO が明示的に許可している。
 - [ ] merge 順依存がある場合、その前提が解消されている。
 
-### 4.5 GodSandbox severity
+### 4.5 GodSandbox 深刻度
 
-| severity | 判定 |
+| 深刻度 | 判定 |
 | --- | --- |
 | P0 blocker | secret漏えい、個人情報混入、package/CI の無許可変更、起動不能、データ破壊、重大なscope逸脱 |
 | P1 blocker | 受け入れ条件の主要未達、初見導線を壊すUI、スマホで主要操作不能、Passport contract破壊、レビュー必須scopeの未確認 |

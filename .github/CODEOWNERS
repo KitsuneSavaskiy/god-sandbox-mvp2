@@ -8,6 +8,8 @@
 /yarn.lock              @SongDaZC
 /tsconfig*.json         @SongDaZC
 /vite.config.*          @SongDaZC
+/docs/product/          @SongDaZC
+/docs/architecture/     @SongDaZC
 /src/core/              @SongDaZC
 /src/persistence/       @SongDaZC
 /scripts/               @SongDaZC

@@ -1,4 +1,4 @@
-# gitleaks CI / local pre-commit guide
+# gitleaks CI / ローカル pre-commit ガイド
 
 この文書は、GodSandbox に secret / token / API key を混入させないための最小運用です。
 検出結果を共有する時も、secret の実値は PR 本文、Issue、docs、チャットに貼らないでください。
@@ -55,7 +55,7 @@ gitleaks protect --staged --verbose --redact
 gitleaks detect --source . --no-git --redact
 ```
 
-## false positive の扱い
+## 誤検知の扱い
 
 - 実値っぽい文字列は、可能なら明らかな placeholder に置き換える。
 - PR コメントには secret 値を貼らない。

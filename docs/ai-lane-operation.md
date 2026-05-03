@@ -28,7 +28,7 @@ PBI 着手前に必ず確認してください。
    着手中ブランチのファイルが不明な場合は、オーナーに確認してから作業する。
 
 4. **保護パスの変更は manual-review-required ルートを使う。**
-   `.github/**`、`AGENTS.md`、`src/core/**`、`src/persistence/**` など AGENTS.md に列挙された保護パスへの変更は、必ず `manual-review-required` ラベルを付与して人間のレビューを待つ。
+   `.github/**`、`AGENTS.md`、`docs/product/**`、`docs/architecture/**`、`src/core/**`、`src/persistence/**` など AGENTS.md に列挙された保護パスへの変更は、必ず `manual-review-required` ラベルを付与して人間のレビューを待つ。
 
 ## PR ラベルルール
 

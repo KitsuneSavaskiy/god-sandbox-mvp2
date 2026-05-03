@@ -1,4 +1,4 @@
-# TruffleHog scheduled secret sweep
+# TruffleHog 定期 secret sweep
 
 この文書は、TruffleHog による定期または手動の secret 履歴スキャン運用をまとめます。
 
@@ -7,9 +7,9 @@
 Git 履歴に残った有効な secret 候補を検出します。
 通常の PR ごとに全履歴を重く検証するのではなく、週次の定期実行と手動実行で確認します。
 
-## workflow
+## ワークフロー
 
-workflow: `.github/workflows/trufflehog-scheduled-sweep.yml`
+対象 workflow: `.github/workflows/trufflehog-scheduled-sweep.yml`
 
 実行タイミング:
 
