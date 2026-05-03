@@ -33,6 +33,7 @@ jobs:
               'tsconfig',
               'vite.config',
               'docs/product/',
+              'docs/architecture/',
               'src/core/',
               'src/persistence/',
               'scripts/'

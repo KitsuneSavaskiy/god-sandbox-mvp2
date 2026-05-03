@@ -4,6 +4,11 @@ Source of truth:
 
 - `docs/product/godsandbox-user-flow.md`
 - `docs/product/godsandbox-user-flow.drawio`
+- `docs/architecture/system-spec.md`
+- `docs/architecture/event-and-intervention-spec.md`
+- `docs/architecture/snapshot-passport-spec.md`
+- `docs/architecture/local-persistence-spec.md`
+- `docs/architecture/ui-state-model.md`
 
 This document defines the initial implementation boundaries for the new repository.
 The goal is to reduce overlap while keeping each line responsible for a vertical slice of the completed product flow.
@@ -67,8 +72,9 @@ Owns:
 - Initial character setup after the first tutorial
 - Default four template selection and editing
 - Character creation and editing UI
+- The shared editor flow used by both first-time setup and later character creation
 - Active four selection
-- One-for-one replacement flow after new character addition
+- Deferred one-for-one replacement flow after new character addition
 - Snapshot recording UI
 - Character Passport issuance UI
 - External game handoff UI
@@ -94,6 +100,7 @@ Owns:
 - Introduction tutorial
 - Event occurrence presentation
 - Event focus UI
+- `focusedEvent`-first sandbox interaction design
 - Intervention UI for `Watch`, `Help`, and `Trial`
 - Result presentation after intervention
 - Story log presentation
@@ -133,5 +140,5 @@ Does not define:
 - `active four` stays distinct from the owned roster.
 - Event focus remains first-class across UI and state.
 - Snapshot and passport remain separate steps.
-- The new character route always returns to a four-character active sandbox.
+- The new character route adds to `roster` immediately while allowing deferred replacement of the active four.
 - Line ownership stays clear enough to avoid mixed PRs with unrelated scope.

@@ -5,6 +5,7 @@
 - `agent-routine` は、小規模、可逆、低リスクで、policy、agent instruction、workflow、permission、secret、billing、dependency、protected path に触れない変更に限る。
 - docs-only でも、運用ルールや protected path に触れる場合は `manual-review-required` を使う。
 - `docs/product/**` の正本ユーザーフロー更新は docs-only でも `manual-review-required` を使う。
+- `docs/architecture/**` の正本仕様更新も docs-only でも `manual-review-required` を使う。
 - 原則として agent は自分の判断で merge しない。
 - 例外として、PO が明示許可した監査役だけが、blocker なし・CI 成功・scope 確認済みの場合に限り approve / merge してよい。
 
@@ -59,6 +60,7 @@ npm run build
 - [ ] PR 本文に branch、changed files、今回やったこと、今回やらないこと、scope 外変更がないこと、確認コマンド結果、監査役に見てほしい点がある。
 - [ ] label が `agent-routine` または `manual-review-required` のどちらかで、実際の risk と一致している。
 - [ ] `docs/product/godsandbox-user-flow.md` を更新した場合、`docs/product/godsandbox-user-flow.drawio` も同じ PR で整合している。
+- [ ] `docs/architecture/` を更新した場合、対応する product flow や line responsibility と矛盾していない。
 - [ ] `AGENTS.md`、`CLAUDE.md`、commit する docs に個人パス、secret、API key、token、ローカル環境名、個別アカウント設定が入っていない。
 - [ ] `AGENTS.md` / `CLAUDE.md` は参照導線と最重要ルール中心で、詳細は `docs/` に寄せている。
 - [ ] `.logs/` やローカル補助ファイルを、PBI scope なしに追加していない。
