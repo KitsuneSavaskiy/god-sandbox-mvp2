@@ -51,6 +51,94 @@
   background: rgba(255, 254, 248, 0.96);
 }
 
+.character-editor__image-picker {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(55, 76, 53, 0.2);
+  border-radius: 18px;
+  background: rgba(255, 254, 248, 0.72);
+}
+
+.character-editor__file-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(43, 73, 49, 0.2);
+  border-radius: 999px;
+  color: #1f2d1c;
+  font-weight: 900;
+  background: rgba(222, 239, 201, 0.95);
+  cursor: pointer;
+}
+
+.character-editor__file-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.character-editor__image-summary,
+.character-editor__image-save-guide,
+.character-editor__image-message {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  color: #607057;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.character-editor__image-summary strong {
+  color: #31442d;
+}
+
+.character-editor__image-preview {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 220px);
+  margin: 0;
+  color: #607057;
+  font-size: 0.84rem;
+}
+
+.character-editor__image-preview img {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border: 1px solid rgba(55, 76, 53, 0.18);
+  border-radius: 16px;
+  background:
+    linear-gradient(45deg, rgba(82, 101, 73, 0.1) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(82, 101, 73, 0.1) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(82, 101, 73, 0.1) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(82, 101, 73, 0.1) 75%);
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+  background-size: 16px 16px;
+}
+
+.character-editor__image-save-guide {
+  align-items: start;
+}
+
+.character-editor__image-save-guide .ui-button {
+  justify-self: start;
+}
+
 .character-editor__field textarea {
   min-height: 104px;
   resize: vertical;
@@ -98,5 +186,14 @@
 
   .character-editor__header h2 {
     font-size: 1.35rem;
+  }
+
+  .character-editor__image-picker {
+    padding: 12px;
+  }
+
+  .character-editor__file-button,
+  .character-editor__image-save-guide .ui-button {
+    width: 100%;
   }
 }
