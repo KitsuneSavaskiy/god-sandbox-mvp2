@@ -140,6 +140,10 @@
   animation: event-first-drift 5.8s ease-in-out infinite;
 }
 
+.event-first-sandbox__resident--clickable {
+  cursor: pointer;
+}
+
 .event-first-sandbox__resident::after {
   position: absolute;
   right: 12%;
@@ -229,6 +233,19 @@
   text-align: center;
 }
 
+.event-first-sandbox__emote--event-alert {
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.82), transparent 28%),
+    linear-gradient(135deg, #ff3f2f, #ff9d1f 58%, #ffd45c);
+  box-shadow:
+    0 14px 28px rgba(163, 47, 22, 0.32),
+    0 0 0 6px rgba(255, 188, 68, 0.22);
+  color: #fffaf0;
+  font-size: 1.08rem;
+  text-shadow: 0 1px 3px rgba(100, 32, 12, 0.38);
+}
+
 .event-first-sandbox__resident-card {
   position: relative;
   display: grid;
@@ -244,6 +261,19 @@
     0 2px 0 rgba(255, 255, 255, 0.78) inset,
     0 16px 34px var(--sandbox-shadow);
   transform: rotate(-0.5deg);
+}
+
+.event-first-sandbox__resident--clickable:hover .event-first-sandbox__resident-card,
+.event-first-sandbox__resident--clickable:focus-visible .event-first-sandbox__resident-card {
+  border-color: rgba(169, 112, 38, 0.42);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.86) inset,
+    0 18px 38px rgba(80, 55, 20, 0.24),
+    0 0 0 4px rgba(255, 204, 103, 0.24);
+}
+
+.event-first-sandbox__resident--clickable:focus-visible {
+  outline: none;
 }
 
 .event-first-sandbox__resident--two .event-first-sandbox__resident-card,
