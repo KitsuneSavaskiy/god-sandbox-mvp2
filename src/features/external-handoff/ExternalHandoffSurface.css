@@ -1,0 +1,71 @@
+.external-handoff {
+  display: grid;
+  gap: 16px;
+}
+
+.external-handoff__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 14px;
+}
+
+.external-handoff__steps,
+.external-handoff__bundle {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgba(58, 80, 53, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 252, 242, 0.9);
+}
+
+.external-handoff__steps ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.external-handoff__download-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.external-handoff__download {
+  min-height: 42px;
+  border-radius: 999px;
+  padding: 10px 15px;
+  color: #fffdf3;
+  background: linear-gradient(135deg, #476b38, #789e55);
+  text-decoration: none;
+  box-shadow: 0 12px 22px rgba(61, 95, 45, 0.22);
+}
+
+.external-handoff textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 300px;
+  border: 1px solid rgba(55, 76, 53, 0.22);
+  border-radius: 14px;
+  padding: 12px;
+  color: #1f2d1c;
+  background: rgba(255, 254, 248, 0.96);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+@media (max-width: 840px) {
+  .external-handoff__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .external-handoff__download {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+}

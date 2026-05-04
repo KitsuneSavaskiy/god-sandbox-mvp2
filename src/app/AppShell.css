@@ -20,7 +20,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -194,6 +196,9 @@ input {
   background: transparent;
 }
 
+.route-stage--stack {
+  align-content: stretch;
+}
 .desktop-panels {
   display: grid;
   align-content: start;

@@ -5,6 +5,7 @@ export type AppRouteId =
   | "logs"
   | "passports"
   | "passport-detail"
+  | "handoff"
   | "character-editor"
   | "not-found";
 
@@ -20,7 +21,8 @@ export const navigationRoutes: AppRoute[] = [
   { id: "roster", path: "/roster", label: "住民" },
   { id: "relations", path: "/relations", label: "関係" },
   { id: "logs", path: "/logs", label: "ログ" },
-  { id: "passports", path: "/passports", label: "Passport" }
+  { id: "passports", path: "/passports", label: "Passport" },
+  { id: "handoff", path: "/handoff", label: "持ち出し" }
 ];
 
 export function parseRoute(pathname: string): AppRoute {
@@ -42,6 +44,10 @@ export function parseRoute(pathname: string): AppRoute {
 
   if (pathname === "/passports") {
     return { id: "passports", path: "/passports", label: "Passport" };
+  }
+
+  if (pathname === "/handoff") {
+    return { id: "handoff", path: "/handoff", label: "持ち出し" };
   }
 
   const passportMatch = pathname.match(/^\/passports\/([^/]+)$/);

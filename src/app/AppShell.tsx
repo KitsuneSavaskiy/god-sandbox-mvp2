@@ -1,11 +1,31 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { createSeedRuntimeWorld } from "../application/runtimeBootstrap.js";
 import {
+  issueCharacterPassportCommand,
+  issueCharacterSnapshotCommand,
+  replaceActiveSlotCommand,
+} from "../application/runtimeCommands.js";
+import {
   selectActiveCharacters,
   selectCurrentEvent,
   selectObservationPreset,
+  selectPendingActivationCharacters,
+  selectRoster,
 } from "../application/runtimeSelectors.js";
+import type { CharacterId } from "../domain/models.js";
+import { addCharacterToRoster } from "../domain/session.js";
+import { CharacterEditor } from "../features/character-creator/CharacterEditor";
+import {
+  applyDraftToCharacter,
+  createCharacterFromDraft,
+  type CharacterDraft,
+} from "../features/character-creator/characterDraft";
+import { LINE3_CHARACTER_TEMPLATE } from "../features/character-creator/characterTemplate";
 import { EventFirstSandbox, type ActiveResidentPreview } from "../features/events/EventFirstSandbox.js";
+import { ExternalHandoffSurface } from "../features/external-handoff/ExternalHandoffSurface";
+import { PassportSurface } from "../features/passport/PassportSurface";
+import { RosterSurface } from "../features/roster/RosterSurface";
+import { SnapshotSurface } from "../features/snapshot/SnapshotSurface";
 import { StoryLogPanel, type StoryLogEntry } from "../features/story/StoryLogPanel.js";
 import { NewCharacterTutorialSurface } from "../features/tutorial/NewCharacterTutorialSurface.js";
 import {
@@ -208,6 +228,67 @@ export function AppShell() {
     }));
   }
 
+  function saveCharacterDraft(draft: CharacterDraft) {
+    const now = new Date().toISOString();
+
+    setRuntimeState((current) => {
+      const characters = new Map(current.characters);
+
+      if (draft.id && characters.has(draft.id)) {
+        const existing = characters.get(draft.id);
+        if (!existing) {
+          return current;
+        }
+
+        characters.set(draft.id, applyDraftToCharacter(existing, draft, LINE3_CHARACTER_TEMPLATE, now));
+        return createRuntimeWorldState({ ...current, characters });
+      }
+
+      const characterId = createCharacterId(draft.displayName, now);
+      const character = createCharacterFromDraft(draft, LINE3_CHARACTER_TEMPLATE, characterId, now);
+      characters.set(character.id, character);
+
+      return createRuntimeWorldState({
+        ...current,
+        characters,
+        session: addCharacterToRoster(current.session, character.id),
+      });
+    });
+
+    navigate("/roster");
+  }
+
+  function replaceActiveCharacter(slotIndex: number, characterId: CharacterId) {
+    setRuntimeState((current) => replaceActiveSlotCommand(current, { slotIndex, characterId }));
+  }
+
+  function issueSnapshot(input: { characterId: CharacterId; memo?: string; tags: string[] }) {
+    setRuntimeState(
+      (current) =>
+        issueCharacterSnapshotCommand(current, {
+          characterId: input.characterId,
+          snapshotId: createRecordId("snp", input.characterId),
+          now: new Date().toISOString(),
+          sourceEventId: current.session.currentEventId,
+          annotationTags: input.tags,
+          memo: input.memo,
+        }).state,
+    );
+  }
+
+  function issuePassport(snapshotId: string) {
+    setRuntimeState(
+      (current) =>
+        issueCharacterPassportCommand(current, {
+          snapshotId,
+          passportId: createRecordId("psp", snapshotId),
+          fileNameToken: createPassportFileNameToken(current, snapshotId),
+          schemaVersion: 1,
+          now: new Date().toISOString(),
+        }).state,
+    );
+  }
+
   if (!playerDisplayName) {
     return (
       <main className="login-screen">
@@ -274,7 +355,13 @@ export function AppShell() {
             onActiveResidentsChange={handleActiveResidentsChange}
             onTutorialStateChange={handleTutorialStateChange}
             onAcknowledgeNewcomerTutorial={acknowledgeNewcomerTutorial}
+            onCancelEditor={() => navigate("/roster")}
+            onEdit={(characterId) => navigate(`/character-editor/${encodeURIComponent(characterId)}`)}
+            onIssuePassport={issuePassport}
+            onIssueSnapshot={issueSnapshot}
             onNavigate={navigate}
+            onReplaceActiveSlot={replaceActiveCharacter}
+            onSaveCharacter={saveCharacterDraft}
           />
         </section>
 
@@ -343,7 +430,13 @@ type PrimaryRouteSurfaceProps = {
   onActiveResidentsChange: (residents: ActiveResidentPreview[]) => void;
   onTutorialStateChange: (tutorialStateId: string | null) => void;
   onAcknowledgeNewcomerTutorial: () => void;
+  onCancelEditor: () => void;
+  onEdit: (characterId: CharacterId) => void;
+  onIssuePassport: (snapshotId: string) => void;
+  onIssueSnapshot: (input: { characterId: CharacterId; memo?: string; tags: string[] }) => void;
   onNavigate: (path: string) => void;
+  onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
+  onSaveCharacter: (draft: CharacterDraft) => void;
 };
 
 function PrimaryRouteSurface({
@@ -359,7 +452,13 @@ function PrimaryRouteSurface({
   onActiveResidentsChange,
   onTutorialStateChange,
   onAcknowledgeNewcomerTutorial,
+  onCancelEditor,
+  onEdit,
+  onIssuePassport,
+  onIssueSnapshot,
   onNavigate,
+  onReplaceActiveSlot,
+  onSaveCharacter,
 }: PrimaryRouteSurfaceProps) {
   if (route.id === "sandbox") {
     return (
@@ -377,51 +476,62 @@ function PrimaryRouteSurface({
     );
   }
 
-  if (route.id === "character-editor" && route.params?.characterId === "new") {
+  if (route.id === "roster") {
     return (
-      <NewCharacterTutorialSurface
-        isFirstVisit={!newcomerTutorialCompleted}
-        onAcknowledge={onAcknowledgeNewcomerTutorial}
-        onReturnToSandbox={() => onNavigate("/sandbox")}
+      <RosterSurface
+        state={runtimeState}
+        onAddNew={() => onNavigate("/character-editor/new")}
+        onEdit={onEdit}
+        onReplaceActiveSlot={onReplaceActiveSlot}
       />
     );
   }
 
-  if (route.id === "logs") {
-    return <StoryLogPanel entries={storyEntries} />;
-  }
+  if (route.id === "character-editor") {
+    const characterId = route.params?.characterId;
+    const character = characterId && characterId !== "new" ? runtimeState.characters.get(characterId) : undefined;
+    const mode =
+      character && runtimeState.session.activeSlots.includes(character.id)
+        ? "initial"
+        : character
+          ? "edit"
+          : "new";
 
-  if (route.id === "roster") {
-    const activeCharacters = selectActiveCharacters(runtimeState);
-    const pendingCount = runtimeState.session.pendingActivationCharacterIds.length;
+    if (characterId === "new" && !newcomerTutorialCompleted) {
+      return (
+        <NewCharacterTutorialSurface
+          isFirstVisit
+          onAcknowledge={onAcknowledgeNewcomerTutorial}
+          onReturnToSandbox={() => onNavigate("/sandbox")}
+        />
+      );
+    }
 
     return (
-      <Panel title="住民の見取り図">
-        <div className="route-stack">
-          <p className="panel-note">
-            activeSlots[4] は常に 4 名です。新しい住民は、まず住民一覧へ入り、あとで 1 名だけ入れ替えます。
-          </p>
-          <div className="roster-preview__list">
-            {activeCharacters.map((character) => (
-              <article key={character.id} className="roster-preview__card">
-                <strong>{character.profile.displayName}</strong>
-                <span>活力 {character.state.status.vitality}</span>
-                <span>調和 {character.state.status.harmony}</span>
-              </article>
-            ))}
-          </div>
-          <p className="panel-route-note">待機中の新しい住民: {pendingCount}名</p>
-          <div className="panel-action-stack">
-            <Button type="button" variant="primary" onClick={() => onNavigate("/character-editor/new")}>
-              新しい住民を迎える
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => onNavigate("/sandbox")}>
-              箱庭へ戻る
-            </Button>
-          </div>
-        </div>
-      </Panel>
+      <CharacterEditor
+        character={character}
+        mode={mode}
+        onCancel={onCancelEditor}
+        onSave={onSaveCharacter}
+      />
     );
+  }
+
+  if (route.id === "passports" || route.id === "passport-detail") {
+    return (
+      <div className="route-stage route-stage--stack">
+        <SnapshotSurface state={runtimeState} onIssueSnapshot={onIssueSnapshot} />
+        <PassportSurface state={runtimeState} onIssuePassport={onIssuePassport} />
+      </div>
+    );
+  }
+
+  if (route.id === "handoff") {
+    return <ExternalHandoffSurface state={runtimeState} />;
+  }
+
+  if (route.id === "logs") {
+    return <StoryLogPanel entries={storyEntries} />;
   }
 
   if (route.id === "relations") {
@@ -485,6 +595,8 @@ function ShellPanel({
   }
 
   if (panelId === "roster") {
+    const roster = selectRoster(runtimeState);
+    const pending = selectPendingActivationCharacters(runtimeState);
     const fallbackResidents = selectActiveCharacters(runtimeState).map((character) => ({
       id: character.id,
       displayName: character.profile.displayName,
@@ -504,7 +616,8 @@ function ShellPanel({
       <Panel title="住民">
         <div className="roster-preview">
           <p className="panel-note">
-            いま箱庭に出ている 4 人です。主役と脇役の見分けは sandbox 側と揃えています。
+            roster {roster.length}名 / pending {pending.length}名 / activeSlots{" "}
+            {runtimeState.session.activeSlots.length}名。
           </p>
           <div className="roster-preview__list">
             {residents.map((resident) => (
@@ -557,14 +670,20 @@ function ShellPanel({
     );
   }
 
+  const snapshots = [...runtimeState.snapshots.values()];
+  const passports = [...runtimeState.passports.values()];
+
   return (
     <Panel title="記録">
       <div className="panel-action-stack">
         <p className="panel-note">
-          Snapshot と Passport は別ステップのままです。この PBI では発行 UI へ踏み込みません。
+          Snapshot {snapshots.length}件 / Passport {passports.length}件。記録と発行は別操作です。
         </p>
         <Button type="button" variant="ghost" onClick={() => onNavigate("/passports")}>
           記録 route を開く
+        </Button>
+        <Button type="button" variant="ghost" onClick={() => onNavigate("/handoff")}>
+          持ち出しを見る
         </Button>
       </div>
     </Panel>
@@ -596,4 +715,26 @@ function areResidentPreviewsEqual(
       resident.statusSummary.join("|") === other.statusSummary.join("|")
     );
   });
+}
+
+function createCharacterId(displayName: string, now: string): CharacterId {
+  const slug = displayName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `chr_${slug || "resident"}_${Date.parse(now).toString(36)}`;
+}
+
+function createRecordId(prefix: string, sourceId: string): string {
+  return `${prefix}_${sourceId.replace(/[^a-zA-Z0-9]+/g, "_")}_${Date.now().toString(36)}`;
+}
+
+function createPassportFileNameToken(state: RuntimeWorldState, snapshotId: string): string {
+  const snapshot = state.snapshots.get(snapshotId);
+  const name = String(snapshot?.character.profile.displayName ?? "character")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `${name || "character"}--${snapshotId}`;
 }
