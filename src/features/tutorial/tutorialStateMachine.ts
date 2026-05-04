@@ -19,6 +19,7 @@ export interface TutorialState {
 export interface TutorialContext {
   routePath: string;
   stage?: SandboxExperienceStage;
+  eventWindowOpen?: boolean;
 }
 
 export interface TutorialBinding {
@@ -44,7 +45,7 @@ const bindings: Record<TutorialStepId, TutorialBinding> = {
     requiredStage: "focused-event",
   },
   intervene: {
-    anchorId: "tutorial-anchor-interventions",
+    anchorId: "tutorial-anchor-event-entry",
     routePath: "/sandbox",
     requiredStage: "focused-event",
   },
@@ -125,12 +126,23 @@ export function getTutorialBinding(
     return null;
   }
 
+  if (state.currentStepId === "intervene" && context.eventWindowOpen) {
+    return {
+      ...binding,
+      anchorId: "tutorial-anchor-event-interventions",
+    };
+  }
+
   return binding;
 }
 
 export function advanceTutorialStep(
   currentState: TutorialState,
-  action: "continue" | "intervened" | "result-reviewed" | "newcomer-acknowledged",
+  action:
+    | "continue"
+    | "intervened"
+    | "result-reviewed"
+    | "newcomer-acknowledged",
 ): TutorialState {
   if (!currentState.currentStepId) {
     return currentState;
