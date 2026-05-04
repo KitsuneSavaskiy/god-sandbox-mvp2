@@ -182,7 +182,10 @@ export function EventFirstSandbox({
   const tutorialBinding = getTutorialBinding(tutorialState, {
     routePath,
     stage: sandboxStage,
+    eventWindowOpen,
   });
+  const eventWindowInterventionTutorialActive =
+    tutorialState.currentStepId === "intervene" && eventWindowOpen && !latestOutcome;
 
   useEffect(() => {
     onFocusedEventIdChange(currentEvent.id);
@@ -212,6 +215,17 @@ export function EventFirstSandbox({
   useEffect(() => {
     persistTutorialState(tutorialState);
   }, [tutorialState]);
+
+  useEffect(() => {
+    if (!tutorialBinding) {
+      return;
+    }
+
+    const target = document.querySelector(
+      `[data-tutorial-anchor="${tutorialBinding.anchorId}"]`,
+    );
+    target?.scrollIntoView({ block: "center", inline: "nearest" });
+  }, [tutorialBinding]);
 
   function handleTutorialContinue() {
     setTutorialState((current) => advanceTutorialStep(current, "continue"));
@@ -375,6 +389,10 @@ export function EventFirstSandbox({
             type="button"
             variant="primary"
             className="event-first-sandbox__event-entry-button"
+            data-tutorial-anchor="tutorial-anchor-event-entry"
+            data-tutorial-highlighted={
+              tutorialBinding?.anchorId === "tutorial-anchor-event-entry" || undefined
+            }
             disabled={eventWindowOpen || !!latestOutcome}
             onClick={() => setEventWindowOpen(true)}
           >
@@ -444,7 +462,14 @@ export function EventFirstSandbox({
                   ))}
                 </div>
               </div>
-              <div className="event-first-sandbox__interventions" aria-label="イベントへの関わり方">
+              <div
+                className="event-first-sandbox__interventions"
+                aria-label="イベントへの関わり方"
+                data-tutorial-anchor="tutorial-anchor-event-interventions"
+                data-tutorial-highlighted={
+                  tutorialBinding?.anchorId === "tutorial-anchor-event-interventions" || undefined
+                }
+              >
                 {(Object.keys(interventionLabels) as InterventionKind[]).map((type) => (
                   <Button
                     key={type}
@@ -494,13 +519,31 @@ export function EventFirstSandbox({
       {tutorialState.currentStepId === "intervene" ? (
         <TutorialOverlay
           stepId="03 / 04"
-          title="今は関わり方を選ぶ番です"
-          body="初回は 助ける がいちばん分かりやすい流れです。押すと変化が結果カードへ出ます。"
-          anchorLabel="見守る / 助ける / 試練"
+          title={
+            eventWindowInterventionTutorialActive
+              ? "子画面の中で関わり方を選びます"
+              : "出来事の詳しい声を聞く番です"
+          }
+          body={
+            eventWindowInterventionTutorialActive
+              ? "見守る / 助ける / 試練 は、このイベント子画面の中だけにあります。いまの出来事カードには戻しません。"
+              : "気になる出来事を開くと、神様がどう関わるかを選べます。見守る / 助ける / 試練 は、イベント子画面の中だけに表示されます。"
+          }
+          anchorLabel={
+            eventWindowInterventionTutorialActive
+              ? "見守る / 助ける / 試練"
+              : "! イベント詳細を見る"
+          }
           placement="top"
+          primaryActionLabel={eventWindowInterventionTutorialActive ? undefined : "イベント詳細を見る"}
+          onPrimaryAction={
+            eventWindowInterventionTutorialActive ? undefined : () => setEventWindowOpen(true)
+          }
           trailingContent={
             <span className="event-first-sandbox__tutorial-note">
-              どれか 1 つ押すと次へ進みます
+              {eventWindowInterventionTutorialActive
+                ? "子画面内の選択肢を1つ押すと結果へ進みます"
+                : "まずは ! マーク付きの詳細ボタンを開きます"}
             </span>
           }
         />

@@ -244,6 +244,13 @@
   font-weight: 800;
 }
 
+.event-first-sandbox__event-entry-button[data-tutorial-highlighted="true"],
+.event-first-sandbox__interventions[data-tutorial-highlighted="true"] {
+  border-radius: 12px;
+  outline-offset: 6px;
+  scroll-margin: 180px 0 220px;
+}
+
 .event-first-sandbox__event-details p {
   margin: 10px 0 8px;
   color: #53624a;
