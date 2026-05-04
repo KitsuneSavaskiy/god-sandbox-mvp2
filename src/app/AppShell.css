@@ -196,6 +196,36 @@ textarea {
   gap: 4px;
 }
 
+.roster-preview__name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.roster-preview__name-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-icon-placeholder {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(79, 104, 62, 0.18);
+  border-radius: 10px;
+  color: #476039;
+  background:
+    radial-gradient(circle at 38% 30%, rgba(255, 236, 172, 0.8), transparent 35%),
+    linear-gradient(145deg, rgba(238, 247, 223, 0.95), rgba(193, 218, 165, 0.86));
+  box-shadow: inset 0 -8px 14px rgba(83, 113, 65, 0.08);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
 .preset-preview__tags,
 .panel-toggle-row,
 .mobile-sheet-dock__buttons {
@@ -337,6 +367,24 @@ textarea {
 
 .edge-drawer--logs .edge-drawer__panel {
   width: min(460px, calc(100vw - 72px));
+  overflow: hidden;
+  background: rgba(255, 252, 242, 0.42);
+  backdrop-filter: blur(6px) saturate(1.08);
+}
+
+.edge-drawer--roster .edge-drawer__panel {
+  position: fixed;
+  top: 50%;
+  right: auto;
+  left: 58px;
+  width: min(360px, calc(100vw - 82px));
+  height: auto;
+  max-height: min(74vh, 680px);
+  padding: 12px;
+  transform: translateY(-50%);
+  border-radius: 24px;
+  background: rgba(255, 252, 242, 0.96);
+  backdrop-filter: blur(10px);
 }
 
 .edge-drawer__header {
@@ -351,6 +399,29 @@ textarea {
   border-radius: 14px;
   background: rgba(255, 252, 242, 0.78);
   box-shadow: none;
+}
+
+.edge-drawer--logs .edge-drawer__panel .ui-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  border-color: rgba(58, 80, 53, 0.12);
+  background: rgba(255, 252, 242, 0.12);
+}
+
+.edge-drawer--logs .edge-drawer__panel .ui-panel__body {
+  min-height: 0;
+}
+
+.edge-drawer--logs .story-log-panel {
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.edge-drawer--roster .edge-drawer__panel .ui-panel {
+  border-radius: 20px;
+  background: rgba(255, 252, 242, 0.72);
 }
 
 @media (max-width: 760px) {
@@ -399,6 +470,14 @@ textarea {
 
   .edge-drawer--logs .edge-drawer__panel {
     width: calc(100vw - 58px);
+  }
+
+  .edge-drawer--roster .edge-drawer__panel {
+    top: 50%;
+    left: 52px;
+    width: min(330px, calc(100vw - 64px));
+    height: auto;
+    max-height: 64vh;
   }
 }
 

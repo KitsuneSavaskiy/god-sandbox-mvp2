@@ -20,9 +20,6 @@ export function StoryLogPanel({ entries }: StoryLogPanelProps) {
   return (
     <Panel title="物語ログ">
       <div className="story-log-panel">
-        <p className="story-log-panel__summary">
-          主画面は出来事を見続けたまま、ここには流れだけを短く残します。
-        </p>
         {entries.length === 0 ? (
           <p className="story-log-panel__empty">
             まだ新しい記録はありません。出来事を見て、ひとつ介入すると流れがここに残ります。

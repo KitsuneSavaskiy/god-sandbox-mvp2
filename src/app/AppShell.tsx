@@ -617,7 +617,12 @@ function ShellPanel({
           <div className="roster-preview__list">
             {residents.map((resident) => (
               <article key={resident.id} className="roster-preview__card">
-                <strong>{resident.displayName}</strong>
+                <div className="roster-preview__name-row">
+                  <span className="character-icon-placeholder" aria-hidden="true">
+                    {resident.displayName.slice(0, 1)}
+                  </span>
+                  <strong>{resident.displayName}</strong>
+                </div>
                 <span>{resident.zoneLabel}</span>
                 <span>
                   {resident.isPrimary
