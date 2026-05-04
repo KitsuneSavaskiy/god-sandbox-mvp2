@@ -19,6 +19,7 @@
   position: relative;
   min-height: clamp(420px, 62vh, 760px);
   overflow: hidden;
+  cursor: crosshair;
   background:
     radial-gradient(circle at 22% 12%, rgba(255, 221, 146, 0.3), transparent 22%),
     linear-gradient(180deg, #a6d0eb 0%, #edf3ce 48%, #8eb273 100%);
@@ -87,6 +88,39 @@
 .event-first-sandbox__resident--four {
   left: 72%;
   top: 50%;
+}
+
+.event-first-sandbox__apostle-runner {
+  --apostle-frame-size: 72px;
+  --apostle-sheet-width: 432px;
+  --apostle-sheet-height: 576px;
+  --apostle-sheet-x-end: -432px;
+  --apostle-row-idle: 0;
+  --apostle-row-run: -216px;
+
+  position: absolute;
+  z-index: 5;
+  width: var(--apostle-frame-size);
+  height: var(--apostle-frame-size);
+  background-image: url("/art/apostle/apostle-sprite-sheet-alpha.png");
+  background-repeat: no-repeat;
+  background-size: var(--apostle-sheet-width) var(--apostle-sheet-height);
+  filter: drop-shadow(0 12px 16px rgba(37, 54, 29, 0.24));
+  pointer-events: none;
+  transform: translate(-50%, -76%);
+}
+
+.event-first-sandbox__apostle-runner--idle {
+  animation: event-first-apostle-idle 0.95s steps(6) infinite;
+}
+
+.event-first-sandbox__apostle-runner--moving-right {
+  animation: event-first-apostle-run 0.52s steps(6) infinite;
+}
+
+.event-first-sandbox__apostle-runner--moving-left {
+  animation: event-first-apostle-run 0.52s steps(6) infinite;
+  transform: translate(-50%, -76%) scaleX(-1);
 }
 
 .event-first-sandbox__emote {
@@ -419,6 +453,26 @@
   }
 }
 
+@keyframes event-first-apostle-idle {
+  from {
+    background-position: 0 var(--apostle-row-idle);
+  }
+
+  to {
+    background-position: var(--apostle-sheet-x-end) var(--apostle-row-idle);
+  }
+}
+
+@keyframes event-first-apostle-run {
+  from {
+    background-position: 0 var(--apostle-row-run);
+  }
+
+  to {
+    background-position: var(--apostle-sheet-x-end) var(--apostle-row-run);
+  }
+}
+
 @media (max-width: 760px) {
   .event-first-sandbox__viewport {
     min-height: 40vh;
@@ -435,6 +489,14 @@
   .event-first-sandbox__resident-card {
     min-width: 104px;
     padding: 10px;
+  }
+
+  .event-first-sandbox__apostle-runner {
+    --apostle-frame-size: 58px;
+    --apostle-sheet-width: 348px;
+    --apostle-sheet-height: 464px;
+    --apostle-sheet-x-end: -348px;
+    --apostle-row-run: -174px;
   }
 
   .event-first-sandbox__resident-row,

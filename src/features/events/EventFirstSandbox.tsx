@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
   selectActiveCharacters,
@@ -62,6 +62,15 @@ type InterventionOutcome = {
   nextEventHeadline: string;
 };
 
+type ApostleMotionState = {
+  x: number;
+  y: number;
+  targetX: number;
+  targetY: number;
+  isMoving: boolean;
+  facing: "left" | "right";
+};
+
 interface EventFirstSandboxProps {
   runtimeState: RuntimeWorldState;
   routePath: string;
@@ -116,6 +125,15 @@ const emoteLabels: Record<EmoteKind, string> = {
   "event-alert": "注",
 };
 
+const initialApostleMotion: ApostleMotionState = {
+  x: 82,
+  y: 74,
+  targetX: 82,
+  targetY: 74,
+  isMoving: false,
+  facing: "left",
+};
+
 export function EventFirstSandbox({
   runtimeState,
   routePath,
@@ -140,6 +158,9 @@ export function EventFirstSandbox({
   );
   const [eventWindowOpen, setEventWindowOpen] = useState(false);
   const [latestOutcome, setLatestOutcome] = useState<InterventionOutcome | null>(null);
+  const [apostleMotion, setApostleMotion] =
+    useState<ApostleMotionState>(initialApostleMotion);
+  const apostleMotionRef = useRef(apostleMotion);
 
   const currentEvent = selectCurrentEvent(runtimeState);
   const observationPreset = selectObservationPreset(runtimeState);
@@ -186,6 +207,49 @@ export function EventFirstSandbox({
   });
   const eventWindowInterventionTutorialActive =
     tutorialState.currentStepId === "intervene" && eventWindowOpen && !latestOutcome;
+
+  useEffect(() => {
+    apostleMotionRef.current = apostleMotion;
+  }, [apostleMotion]);
+
+  useEffect(() => {
+    if (!apostleMotion.isMoving) {
+      return;
+    }
+
+    let animationFrameId = 0;
+
+    function moveApostleTowardTarget() {
+      const current = apostleMotionRef.current;
+      const deltaX = current.targetX - current.x;
+      const deltaY = current.targetY - current.y;
+      const distance = Math.hypot(deltaX, deltaY);
+
+      if (distance < 0.35) {
+        setApostleMotion({
+          ...current,
+          x: current.targetX,
+          y: current.targetY,
+          isMoving: false,
+        });
+        return;
+      }
+
+      setApostleMotion({
+        ...current,
+        x: current.x + deltaX * 0.08,
+        y: current.y + deltaY * 0.08,
+        isMoving: true,
+      });
+      animationFrameId = window.requestAnimationFrame(moveApostleTowardTarget);
+    }
+
+    animationFrameId = window.requestAnimationFrame(moveApostleTowardTarget);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [apostleMotion.isMoving, apostleMotion.targetX, apostleMotion.targetY]);
 
   useEffect(() => {
     onFocusedEventIdChange(currentEvent.id);
@@ -304,10 +368,25 @@ export function EventFirstSandbox({
     );
   }
 
+  function handleViewportClick(event: MouseEvent<HTMLDivElement>) {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const nextX = clamp(((event.clientX - bounds.left) / bounds.width) * 100, 8, 92);
+    const nextY = clamp(((event.clientY - bounds.top) / bounds.height) * 100, 18, 88);
+
+    setApostleMotion((current) => ({
+      ...current,
+      targetX: nextX,
+      targetY: nextY,
+      isMoving: true,
+      facing: nextX < current.x ? "left" : "right",
+    }));
+  }
+
   return (
     <section className="event-first-sandbox">
       <div
         className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage}`}
+        onClick={handleViewportClick}
         data-tutorial-anchor="tutorial-anchor-world"
         data-tutorial-highlighted={
           tutorialBinding?.anchorId === "tutorial-anchor-world" || undefined
@@ -344,6 +423,17 @@ export function EventFirstSandbox({
             </div>
           </article>
         ))}
+        <div
+          className={`event-first-sandbox__apostle-runner event-first-sandbox__apostle-runner--${
+            apostleMotion.isMoving ? `moving-${apostleMotion.facing}` : "idle"
+          }`}
+          aria-label="使徒が箱庭の中を小走りで移動しています"
+          role="img"
+          style={{
+            left: `${apostleMotion.x}%`,
+            top: `${apostleMotion.y}%`,
+          }}
+        />
       </div>
 
       <section
@@ -578,6 +668,10 @@ function createInitialStoryEntries(state: RuntimeWorldState): StoryLogEntry[] {
 
 function createTimestamp(stepIndex: number): string {
   return `2026-05-04T08:${String(stepIndex).padStart(2, "0")}:00.000Z`;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }
 
 function createEventHeadline(event: WorldEvent, primaryCharacterName: string): string {
