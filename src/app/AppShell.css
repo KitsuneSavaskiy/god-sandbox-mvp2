@@ -281,31 +281,46 @@ textarea {
 
 .edge-drawer {
   position: fixed;
-  top: 50%;
-  right: 12px;
+  inset: 0;
   z-index: 24;
-  display: grid;
-  justify-items: end;
-  gap: 10px;
-  transform: translateY(-50%);
   pointer-events: none;
 }
 
 .edge-drawer__buttons {
-  display: grid;
-  gap: 8px;
-  pointer-events: auto;
+  display: contents;
 }
 
 .edge-drawer__buttons .ui-button {
+  position: fixed;
   writing-mode: vertical-rl;
   min-width: 42px;
   padding: 12px 8px;
   border-radius: 999px;
-  background: rgba(255, 252, 242, 0.92);
+  background: rgba(255, 252, 242, 0.86);
+  box-shadow:
+    inset 0 0 0 1px rgba(55, 76, 53, 0.18),
+    0 10px 24px rgba(37, 54, 29, 0.14);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+
+.edge-drawer__resident-button {
+  top: 50%;
+  left: max(8px, env(safe-area-inset-left));
+  transform: translateY(-50%);
+}
+
+.edge-drawer__log-button {
+  top: 50%;
+  right: max(8px, env(safe-area-inset-right));
+  transform: translateY(-50%);
 }
 
 .edge-drawer__panel {
+  position: fixed;
+  top: 50%;
+  right: 58px;
+  transform: translateY(-50%);
   width: min(360px, calc(100vw - 58px));
   max-height: min(74vh, 680px);
   overflow: auto;
@@ -356,11 +371,8 @@ textarea {
     display: none;
   }
 
-  .edge-drawer {
-    right: 8px;
-  }
-
   .edge-drawer__panel {
+    right: 52px;
     width: min(330px, calc(100vw - 54px));
     max-height: 64vh;
   }
