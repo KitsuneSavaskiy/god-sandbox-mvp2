@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AppearanceVariant, Character } from "../../domain/models.js";
+import type { Character } from "../../domain/models.js";
+import type {
+  CharacterAssetBundleReadModel,
+  CharacterExpressionSlot,
+  ResolvedCharacterAssetRef,
+} from "../../application/characterAssetBundles.js";
 import { Button } from "../../ui/Button.js";
 import {
   createCharacterDetailReadModel,
   getExpressionLabel,
-  type CharacterDetailAssetBundle,
+  type CharacterExpressionKey,
   type CharacterDetailInfoItem,
 } from "./characterDetailReadModel.js";
 import "./CharacterDetailPanel.css";
@@ -26,36 +31,46 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
     () => createCharacterDetailReadModel(character),
     [character],
   );
-  const detailBundle = readModel.assetBundle;
-  const expressionVariants = readModel.expressions;
-  const [selectedExpressionId, setSelectedExpressionId] = useState<string | null>(
-    () => expressionVariants[0]?.id ?? null,
+  const assetReadModel = readModel.assetReadModel;
+  const expressionSlots = readModel.expressionSlots;
+  const [selectedExpressionKey, setSelectedExpressionKey] =
+    useState<CharacterExpressionKey>(
+      () => expressionSlots[0]?.key ?? "neutral",
   );
   const [expressionFailed, setExpressionFailed] = useState(false);
-  const portraitSource = useMemo(
-    () => resolveDisplayAssetUrl(character, detailBundle),
-    [character, detailBundle],
-  );
+  const portraitSource = assetReadModel.portrait.path;
   const selectedExpression =
-    expressionVariants.find((variant) => variant.id === selectedExpressionId) ??
-    expressionVariants[0];
+    expressionSlots.find((slot) => slot.key === selectedExpressionKey) ??
+    expressionSlots[0];
   const selectedExpressionSource = selectedExpression
-    ? resolveExpressionAssetUrl(character, selectedExpression, detailBundle)
+    ? resolveExpressionDisplayPath(selectedExpression, expressionFailed)
     : null;
-  const references = createAssetReferences(character, expressionVariants, detailBundle);
+  const selectedExpressionUsesFallback = Boolean(
+    selectedExpression?.isPlaceholder ||
+      (expressionFailed &&
+        selectedExpression?.fallbackPath &&
+        selectedExpression.fallbackPath !== selectedExpression.path),
+  );
+  const selectedExpressionCanRender = Boolean(
+    selectedExpressionSource &&
+      (!expressionFailed ||
+        (selectedExpression?.fallbackPath &&
+          selectedExpression.fallbackPath !== selectedExpression.path)),
+  );
+  const references = createAssetReferences(assetReadModel, expressionSlots);
 
   useEffect(() => {
     setPortraitFailed(false);
   }, [character.id, portraitSource]);
 
   useEffect(() => {
-    setSelectedExpressionId(expressionVariants[0]?.id ?? null);
+    setSelectedExpressionKey(expressionSlots[0]?.key ?? "neutral");
     setExpressionFailed(false);
-  }, [character.id, expressionVariants]);
+  }, [character.id, expressionSlots]);
 
   useEffect(() => {
     setExpressionFailed(false);
-  }, [selectedExpressionId, selectedExpressionSource]);
+  }, [selectedExpressionKey, selectedExpression?.path, selectedExpression?.fallbackPath]);
 
   return (
     <aside
@@ -119,10 +134,10 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
 
         <section className="character-detail-panel__section" aria-labelledby="character-detail-expressions">
           <h3 id="character-detail-expressions">表情差分</h3>
-          {expressionVariants.length ? (
+          {expressionSlots.length ? (
             <>
               <div className="character-detail-panel__expression-viewer">
-                {selectedExpressionSource && !expressionFailed && selectedExpression ? (
+                {selectedExpressionCanRender && selectedExpressionSource && selectedExpression ? (
                   <img
                     src={selectedExpressionSource}
                     alt={`${readModel.displayName}の${getExpressionLabel(selectedExpression)}`}
@@ -138,21 +153,32 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
                     <small>生成とasset登録はLine 4の成果物を参照します。</small>
                   </div>
                 )}
+                {selectedExpression ? (
+                  <ExpressionStatus slot={selectedExpression} isFallback={selectedExpressionUsesFallback} />
+                ) : null}
               </div>
               <div className="character-detail-panel__expression-switcher" aria-label="表情差分切り替え">
-                {expressionVariants.map((variant) => (
+                {expressionSlots.map((slot) => (
                   <button
-                    key={variant.id}
+                    key={slot.key}
                     type="button"
                     className={
-                      variant.id === selectedExpression?.id
-                        ? "character-detail-panel__expression-button character-detail-panel__expression-button--active"
-                        : "character-detail-panel__expression-button"
+                      slot.key === selectedExpression?.key
+                        ? `character-detail-panel__expression-button character-detail-panel__expression-button--active${
+                            slot.isPlaceholder ? " character-detail-panel__expression-button--fallback" : ""
+                          }`
+                        : `character-detail-panel__expression-button${
+                            slot.isPlaceholder ? " character-detail-panel__expression-button--fallback" : ""
+                          }`
                     }
-                    onClick={() => setSelectedExpressionId(variant.id)}
+                    onClick={() => setSelectedExpressionKey(slot.key)}
                   >
-                    <span>{getExpressionLabel(variant)}</span>
-                    <small>{variant.assetId}</small>
+                    <span>{getExpressionLabel(slot)}</span>
+                    <small>
+                      {slot.isPlaceholder
+                        ? `未生成 / neutral fallback中 (${getMissingReasonLabel(slot.missingReason)})`
+                        : slot.assetId}
+                    </small>
                   </button>
                 ))}
               </div>
@@ -178,6 +204,37 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
         </section>
       </div>
     </aside>
+  );
+}
+
+function ExpressionStatus({
+  slot,
+  isFallback,
+}: {
+  slot: CharacterExpressionSlot;
+  isFallback: boolean;
+}) {
+  if (slot.isPlaceholder) {
+    return (
+      <p className="character-detail-panel__expression-status">
+        {getExpressionLabel(slot)} は未生成です。neutral fallback中です。
+        {slot.missingReason ? ` 理由: ${getMissingReasonLabel(slot.missingReason)}。` : null}
+      </p>
+    );
+  }
+
+  if (isFallback) {
+    return (
+      <p className="character-detail-panel__expression-status">
+        画像を読み込めなかったため、neutral fallback中です。
+      </p>
+    );
+  }
+
+  return (
+    <p className="character-detail-panel__expression-status">
+      {getExpressionLabel(slot)} の実画像を表示しています。
+    </p>
   );
 }
 
@@ -220,93 +277,76 @@ function SourceBadge({ source }: { source: CharacterDetailInfoItem["source"] }) 
 }
 
 function createAssetReferences(
-  character: Character,
-  expressionVariants: AppearanceVariant[],
-  detailBundle: CharacterDetailAssetBundle | null,
+  assetReadModel: CharacterAssetBundleReadModel,
+  expressionSlots: CharacterExpressionSlot[],
 ): AssetReference[] {
+  const readyExpressionCount = expressionSlots.filter((slot) => !slot.isPlaceholder).length;
+  const fallbackExpressionCount = expressionSlots.length - readyExpressionCount;
+
   return [
     {
       label: "立ち絵 / portrait",
-      value: detailBundle?.portraitAssetId ?? character.profile.appearance.primaryAssetId,
-      note: detailBundle
-        ? "Sprint7標準住民画像のportrait asset IDです。"
-        : "表示できる画像pathが登録されていれば上の枠に出ます。",
+      value: formatAssetValue(assetReadModel.portrait),
+      note: createAssetNote(assetReadModel.portrait, "Line 4 asset manifest のportrait参照です。"),
     },
     {
       label: "icon",
-      value: detailBundle?.iconAssetId ?? (readStringField(character, "iconAssetId") || "未生成"),
-      note: "未ロードなら名前の頭文字placeholderを使います。",
+      value: formatAssetValue(assetReadModel.icon),
+      note: createAssetNote(assetReadModel.icon, "未登録なら名前の頭文字placeholderを使います。"),
     },
     {
       label: "sprite sheet",
-      value: detailBundle?.spriteSheetAssetId ?? character.profile.appearance.spriteSheetAssetId ?? "未生成",
-      note: "箱庭内spriteはLine 4のasset登録後に参照します。",
+      value: formatAssetValue(assetReadModel.spriteSheet),
+      note: createAssetNote(assetReadModel.spriteSheet, "今Sprintは参照枠とfallbackまでに留めます。"),
     },
     {
       label: "表情差分",
-      value: expressionVariants.length ? `${expressionVariants.length}件` : "未登録",
-      note: "画像生成とasset登録はLine 4の成果物を参照します。",
+      value: `${readyExpressionCount}/5 実画像`,
+      note:
+        fallbackExpressionCount > 0
+          ? `${fallbackExpressionCount}件はneutral fallback中です。`
+          : "5件すべてLine 4 read modelで解決されています。",
     },
   ];
 }
 
-function readStringField(character: Character, fieldId: string): string {
-  const value = character.profile.templateFieldValues[fieldId];
-  if (typeof value === "string") {
-    return value.trim();
-  }
-  if (typeof value === "number") {
-    return String(value);
-  }
-  return "";
-}
-
-function resolveDisplayAssetUrl(
-  character: Character,
-  detailBundle: CharacterDetailAssetBundle | null,
+function resolveExpressionDisplayPath(
+  slot: CharacterExpressionSlot,
+  hasImageFailed: boolean,
 ): string | null {
-  const assetId = character.profile.appearance.primaryAssetId;
-  if (assetId.startsWith("/") || assetId.startsWith("data:")) {
-    return assetId;
+  if (hasImageFailed && slot.fallbackPath && slot.fallbackPath !== slot.path) {
+    return slot.fallbackPath;
   }
 
-  if (assetId.startsWith("http://") || assetId.startsWith("https://")) {
-    return assetId;
-  }
-
-  if (detailBundle) {
-    return `/art/residents/${detailBundle.bundleId}/portrait-neutral.png`;
-  }
-
-  return `/art/residents/${character.id}/standing.png`;
+  return slot.path ?? slot.fallbackPath;
 }
 
-function resolveExpressionAssetUrl(
-  character: Character,
-  variant: AppearanceVariant,
-  detailBundle: CharacterDetailAssetBundle | null,
-): string | null {
-  const assetId = variant.assetId;
-  if (assetId.startsWith("/") || assetId.startsWith("data:")) {
-    return assetId;
+function formatAssetValue(asset: ResolvedCharacterAssetRef): string {
+  if (!asset.assetId) {
+    return "未生成";
   }
 
-  if (assetId.startsWith("http://") || assetId.startsWith("https://")) {
-    return assetId;
-  }
-
-  const fileToken = toAssetFileToken(variant.emotion || variant.id);
-  if (detailBundle) {
-    return `/art/residents/${detailBundle.bundleId}/expressions/${fileToken}.png`;
-  }
-
-  return `/art/residents/${character.id}/expressions/${fileToken}.png`;
+  return asset.assetId;
 }
 
-function toAssetFileToken(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "expression";
+function createAssetNote(
+  asset: ResolvedCharacterAssetRef,
+  fallbackNote: string,
+): string {
+  if (asset.path) {
+    return `${fallbackNote} path: ${asset.path}`;
+  }
+
+  return `${fallbackNote} path未登録`;
+}
+
+function getMissingReasonLabel(reason: CharacterExpressionSlot["missingReason"]): string {
+  switch (reason) {
+    case "not-generated-yet":
+      return "未生成";
+    case "asset-not-registered":
+      return "asset未登録";
+    default:
+      return "未設定";
+  }
 }

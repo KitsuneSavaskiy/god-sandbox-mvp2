@@ -110,6 +110,7 @@
 .character-detail-panel__asset-row small,
 .character-detail-panel__expression-button small,
 .character-detail-panel__expression-placeholder small,
+.character-detail-panel__expression-status,
 .character-detail-panel__source-note {
   margin: 0;
   color: #5b6d50;
@@ -198,6 +199,7 @@
 
 .character-detail-panel__expression-viewer {
   display: grid;
+  gap: 8px;
 }
 
 .character-detail-panel__expression-viewer img,
@@ -254,6 +256,19 @@
   outline: 2px solid rgba(97, 128, 78, 0.2);
   outline-offset: 2px;
   background: rgba(239, 249, 225, 0.94);
+}
+
+.character-detail-panel__expression-button--fallback {
+  border-style: dashed;
+  background: rgba(255, 250, 229, 0.74);
+}
+
+.character-detail-panel__expression-status {
+  padding: 9px 10px;
+  border: 1px solid rgba(185, 137, 62, 0.18);
+  border-radius: 14px;
+  color: #73572f;
+  background: rgba(255, 247, 220, 0.72);
 }
 
 .roster-preview__icon-button {
