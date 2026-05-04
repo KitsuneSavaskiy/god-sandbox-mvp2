@@ -647,7 +647,7 @@ function ShellPanel({
       <Panel title="住民">
         <div className="roster-preview">
           <p className="panel-note">
-            roster {roster.length}名 / pending {pending.length}名 / activeSlots{" "}
+            住民一覧 {roster.length}名 / 待機中 {pending.length}名 / 箱庭にいる住民{" "}
             {runtimeState.session.activeSlots.length}名。
           </p>
           <div className="roster-preview__list">
