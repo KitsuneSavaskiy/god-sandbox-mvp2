@@ -24,6 +24,7 @@ import { LINE3_CHARACTER_TEMPLATE } from "../features/character-creator/characte
 import { EventFirstSandbox, type ActiveResidentPreview } from "../features/events/EventFirstSandbox.js";
 import { ExternalHandoffSurface } from "../features/external-handoff/ExternalHandoffSurface";
 import { PassportSurface } from "../features/passport/PassportSurface";
+import { CharacterDetailPanel } from "../features/residents/CharacterDetailPanel";
 import { RosterSurface } from "../features/roster/RosterSurface";
 import { SnapshotSurface } from "../features/snapshot/SnapshotSurface";
 import { StoryLogPanel, type StoryLogEntry } from "../features/story/StoryLogPanel.js";
@@ -45,6 +46,7 @@ const PLAYER_DISPLAY_NAME_STORAGE_KEY = "godsandbox.player-display-name.v1";
 
 interface SandboxUiState {
   focusedEventId: string | null;
+  detailCharacterId: CharacterId | null;
   drawerPanel: PanelId | null;
   routePath: string;
   tutorialStateId: string | null;
@@ -96,6 +98,7 @@ export function AppShell() {
   const [route, setRoute] = useState<AppRoute>(() => getCurrentRoute());
   const [uiState, setUiState] = useState<SandboxUiState>(() => ({
     focusedEventId: createInitialRuntimeState().session.currentEventId,
+    detailCharacterId: null,
     drawerPanel: null,
     routePath: getCurrentRoute().path,
     tutorialStateId: null,
@@ -205,6 +208,20 @@ export function AppShell() {
     }));
   }
 
+  function openCharacterDetail(characterId: CharacterId) {
+    setUiState((current) => ({
+      ...current,
+      detailCharacterId: characterId,
+    }));
+  }
+
+  function closeCharacterDetail() {
+    setUiState((current) => ({
+      ...current,
+      detailCharacterId: null,
+    }));
+  }
+
   function acknowledgeNewcomerTutorial() {
     const existing = readTutorialState();
     const next: TutorialState = {
@@ -282,6 +299,10 @@ export function AppShell() {
     );
   }
 
+  const detailCharacter = uiState.detailCharacterId
+    ? runtimeState.characters.get(uiState.detailCharacterId)
+    : undefined;
+
     if (!playerDisplayName) {
       return (
         <main className="login-screen">
@@ -349,6 +370,7 @@ export function AppShell() {
             onFocusedEventIdChange={handleFocusedEventIdChange}
             onStoryEntriesChange={handleStoryEntriesChange}
             onActiveResidentsChange={handleActiveResidentsChange}
+            onOpenCharacterDetail={openCharacterDetail}
             onTutorialStateChange={handleTutorialStateChange}
             onAcknowledgeNewcomerTutorial={acknowledgeNewcomerTutorial}
             onCancelEditor={() => navigate("/roster")}
@@ -402,11 +424,19 @@ export function AppShell() {
                 runtimeState={runtimeState}
                 storyEntries={storyEntries}
                 activeResidents={activeResidents}
+                onOpenCharacterDetail={openCharacterDetail}
                 onNavigate={navigate}
               />
             </div>
           ) : null}
         </aside>
+      ) : null}
+
+      {detailCharacter ? (
+        <CharacterDetailPanel
+          character={detailCharacter}
+          onClose={closeCharacterDetail}
+        />
       ) : null}
     </div>
   );
@@ -423,6 +453,7 @@ type PrimaryRouteSurfaceProps = {
   onFocusedEventIdChange: (focusedEventId: string) => void;
   onStoryEntriesChange: (entries: StoryLogEntry[]) => void;
   onActiveResidentsChange: (residents: ActiveResidentPreview[]) => void;
+  onOpenCharacterDetail: (characterId: CharacterId) => void;
   onTutorialStateChange: (tutorialStateId: string | null) => void;
   onAcknowledgeNewcomerTutorial: () => void;
   onCancelEditor: () => void;
@@ -445,6 +476,7 @@ function PrimaryRouteSurface({
   onFocusedEventIdChange,
   onStoryEntriesChange,
   onActiveResidentsChange,
+  onOpenCharacterDetail,
   onTutorialStateChange,
   onAcknowledgeNewcomerTutorial,
   onCancelEditor,
@@ -466,6 +498,7 @@ function PrimaryRouteSurface({
         onFocusedEventIdChange={onFocusedEventIdChange}
         onStoryEntriesChange={onStoryEntriesChange}
         onActiveResidentsChange={onActiveResidentsChange}
+        onOpenCharacterDetail={onOpenCharacterDetail}
         onTutorialStateChange={onTutorialStateChange}
       />
     );
@@ -477,6 +510,7 @@ function PrimaryRouteSurface({
         state={runtimeState}
         onAddNew={() => onNavigate("/character-editor/new")}
         onEdit={onEdit}
+        onOpenDetail={onOpenCharacterDetail}
         onReplaceActiveSlot={onReplaceActiveSlot}
       />
     );
@@ -577,12 +611,14 @@ function ShellPanel({
   runtimeState,
   storyEntries,
   activeResidents,
+  onOpenCharacterDetail,
   onNavigate,
 }: {
   panelId: PanelId;
   runtimeState: RuntimeWorldState;
   storyEntries: StoryLogEntry[];
   activeResidents: ActiveResidentPreview[];
+  onOpenCharacterDetail: (characterId: CharacterId) => void;
   onNavigate: (path: string) => void;
 }) {
   if (panelId === "logs") {
@@ -618,9 +654,14 @@ function ShellPanel({
             {residents.map((resident) => (
               <article key={resident.id} className="roster-preview__card">
                 <div className="roster-preview__name-row">
-                  <span className="character-icon-placeholder" aria-hidden="true">
+                  <button
+                    type="button"
+                    className="character-icon-placeholder roster-preview__icon-button"
+                    aria-label={`${resident.displayName}の詳細を開く`}
+                    onClick={() => onOpenCharacterDetail(resident.id)}
+                  >
                     {resident.displayName.slice(0, 1)}
-                  </span>
+                  </button>
                   <strong>{resident.displayName}</strong>
                 </div>
                 <span>{resident.zoneLabel}</span>

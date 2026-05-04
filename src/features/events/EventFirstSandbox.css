@@ -272,6 +272,18 @@
   color: #667553;
 }
 
+.event-first-sandbox__character-icon-button {
+  padding: 0;
+  border: 1px solid rgba(79, 104, 62, 0.18);
+  cursor: pointer;
+}
+
+.event-first-sandbox__character-icon-button:hover,
+.event-first-sandbox__character-icon-button:focus-visible {
+  outline: 2px solid rgba(97, 128, 78, 0.42);
+  outline-offset: 3px;
+}
+
 .event-first-sandbox__group-label {
   color: #667553;
   font-size: 0.78rem;
