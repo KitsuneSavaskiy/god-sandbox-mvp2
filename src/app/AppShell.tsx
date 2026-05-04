@@ -364,7 +364,9 @@ export function AppShell() {
 
       {showSandboxDrawerButtons ? (
         <aside
-          className={`edge-drawer${uiState.drawerPanel ? " edge-drawer--open" : ""}`}
+          className={`edge-drawer${uiState.drawerPanel ? " edge-drawer--open" : ""}${
+            uiState.drawerPanel ? ` edge-drawer--${uiState.drawerPanel}` : ""
+          }`}
           aria-label="右端ドロワー"
         >
           <div className="edge-drawer__buttons">
