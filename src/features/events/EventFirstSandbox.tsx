@@ -337,6 +337,14 @@ export function EventFirstSandbox({
         }
       >
         <p className="eyebrow">いまの出来事</p>
+        <div className="event-first-sandbox__event-meta">
+          <span className="event-first-sandbox__event-mark">出来事</span>
+          <span>
+            {currentEvent.situationTags.length > 0
+              ? currentEvent.situationTags.slice(0, 2).join(" / ")
+              : "変化の気配"}
+          </span>
+        </div>
         <h2>{createEventHeadline(currentEvent, primaryResident?.displayName ?? "住民")}</h2>
         <p className="event-first-sandbox__focus-summary">{currentEvent.summary}</p>
         <div className="event-first-sandbox__resident-groups">
@@ -359,8 +367,8 @@ export function EventFirstSandbox({
             </p>
           </div>
         </div>
-        <div className="event-first-sandbox__preset-summary">
-          <strong>観察プリセット</strong>
+        <details className="event-first-sandbox__event-details">
+          <summary>イベント詳細を見る</summary>
           <p>{observationPreset.summary}</p>
           <div className="event-first-sandbox__tag-row">
             {observationPreset.worldStatusTags.map((tag) => (
@@ -370,37 +378,7 @@ export function EventFirstSandbox({
               <span key={`event-${tag}`}>出来事: {tag}</span>
             ))}
           </div>
-        </div>
-        <div className="event-first-sandbox__preset-grid">
-          {activeResidents.map((resident) => (
-            <div key={`${resident.id}-preset`} className="event-first-sandbox__preset-card">
-              <strong>{resident.displayName}</strong>
-              <span>{resident.presetLabel}</span>
-              <span>滞在感: {resident.zoneLabel}</span>
-              <span>alert 優先度: {resident.alertPriority}</span>
-            </div>
-          ))}
-        </div>
-        <div
-          className="event-first-sandbox__interventions"
-          data-tutorial-anchor="tutorial-anchor-interventions"
-          data-tutorial-highlighted={
-            tutorialBinding?.anchorId === "tutorial-anchor-interventions" || undefined
-          }
-        >
-          <Button type="button" onClick={() => handleIntervention("watch")}>
-            見守る
-          </Button>
-          <Button type="button" variant="primary" onClick={() => handleIntervention("help")}>
-            助ける
-          </Button>
-          <Button type="button" onClick={() => handleIntervention("trial")}>
-            試練
-          </Button>
-        </div>
-        <p className="event-first-sandbox__hint">
-          まず出来事を読み、次に 3 つの関わり方から 1 つを押すだけで流れが進みます。
-        </p>
+        </details>
       </section>
 
       {latestOutcome ? (

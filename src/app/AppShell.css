@@ -150,9 +150,9 @@ textarea {
 
 .shell-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
-  gap: 18px;
-  padding: 18px clamp(16px, 4vw, 36px) 40px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px clamp(14px, 3vw, 30px) 34px;
 }
 
 .shell-layout--single {
@@ -279,6 +279,52 @@ textarea {
   display: none;
 }
 
+.edge-drawer {
+  position: fixed;
+  top: 50%;
+  right: 12px;
+  z-index: 24;
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.edge-drawer__buttons {
+  display: grid;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.edge-drawer__buttons .ui-button {
+  writing-mode: vertical-rl;
+  min-width: 42px;
+  padding: 12px 8px;
+  border-radius: 999px;
+  background: rgba(255, 252, 242, 0.92);
+}
+
+.edge-drawer__panel {
+  width: min(360px, calc(100vw - 58px));
+  max-height: min(74vh, 680px);
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid rgba(58, 80, 53, 0.18);
+  border-radius: 24px;
+  background: rgba(255, 252, 242, 0.96);
+  box-shadow: 0 22px 80px rgba(31, 47, 27, 0.24);
+  pointer-events: auto;
+}
+
+.edge-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
 @media (max-width: 760px) {
   .top-shell {
     flex-direction: column;
@@ -295,7 +341,7 @@ textarea {
   .shell-layout,
   .shell-layout--single {
     display: block;
-    padding: 12px 12px 92px;
+    padding: 10px 10px 22px;
   }
 
   .desktop-panels {
@@ -307,27 +353,16 @@ textarea {
   }
 
   .mobile-sheet-dock {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 30;
-    display: block;
-    padding: 10px 10px max(10px, env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(246, 240, 226, 0), rgba(246, 240, 226, 0.98) 26%);
+    display: none;
   }
 
-  .mobile-sheet-dock__buttons {
-    justify-content: center;
+  .edge-drawer {
+    right: 8px;
   }
 
-  .mobile-sheet {
-    max-height: 48vh;
-    margin: 10px auto 0;
-    overflow: auto;
-    border-radius: 24px 24px 18px 18px;
-    background: #fffaf0;
-    box-shadow: 0 -18px 70px rgba(34, 49, 31, 0.2);
+  .edge-drawer__panel {
+    width: min(330px, calc(100vw - 54px));
+    max-height: 64vh;
   }
 }
 

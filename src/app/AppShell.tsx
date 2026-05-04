@@ -39,23 +39,20 @@ import { createRuntimeWorldState, type RuntimeWorldState } from "../state/runtim
 import { Button } from "../ui/Button.js";
 import { Panel } from "../ui/Panel.js";
 
-type PanelId = "roster" | "relations" | "logs" | "passport";
+type PanelId = "roster" | "logs";
 
 const PLAYER_DISPLAY_NAME_STORAGE_KEY = "godsandbox.player-display-name.v1";
 
 interface SandboxUiState {
   focusedEventId: string | null;
-  openPanels: PanelId[];
-  mobileSheet: PanelId | null;
+  drawerPanel: PanelId | null;
   routePath: string;
   tutorialStateId: string | null;
 }
 
 const panelLabels: Record<PanelId, string> = {
   roster: "住民",
-  relations: "観察",
   logs: "ログ",
-  passport: "記録",
 };
 
 function getCurrentRoute(): AppRoute {
@@ -99,8 +96,7 @@ export function AppShell() {
   const [route, setRoute] = useState<AppRoute>(() => getCurrentRoute());
   const [uiState, setUiState] = useState<SandboxUiState>(() => ({
     focusedEventId: createInitialRuntimeState().session.currentEventId,
-    openPanels: ["roster", "logs"],
-    mobileSheet: null,
+    drawerPanel: null,
     routePath: getCurrentRoute().path,
     tutorialStateId: null,
   }));
@@ -114,7 +110,7 @@ export function AppShell() {
     () => (manualSweep.enabled ? "?mode=manual-sweep" : ""),
     [manualSweep.enabled],
   );
-  const showSupplementaryPanels = route.id === "sandbox";
+  const showSandboxDrawerButtons = route.id === "sandbox";
 
   useEffect(() => {
     if (route.id === "character-editor" && route.params?.characterId === "new") {
@@ -129,7 +125,7 @@ export function AppShell() {
       setUiState((current) => ({
         ...current,
         tutorialStateId: null,
-        mobileSheet: null,
+        drawerPanel: null,
       }));
     }
   }, [newcomerTutorialCompleted, route]);
@@ -193,22 +189,19 @@ export function AppShell() {
     navigate("/sandbox");
   }
 
-  function togglePanel(panelId: PanelId) {
+  function toggleDrawer(panelId: PanelId) {
     setUiState((current) => {
-      const isOpen = current.openPanels.includes(panelId);
       return {
         ...current,
-        openPanels: isOpen
-          ? current.openPanels.filter((openPanel) => openPanel !== panelId)
-          : [...current.openPanels, panelId],
+        drawerPanel: current.drawerPanel === panelId ? null : panelId,
       };
     });
   }
 
-  function openMobileSheet(panelId: PanelId) {
+  function closeDrawer() {
     setUiState((current) => ({
       ...current,
-      mobileSheet: current.mobileSheet === panelId ? null : panelId,
+      drawerPanel: null,
     }));
   }
 
@@ -340,7 +333,7 @@ export function AppShell() {
         </nav>
       </header>
 
-      <main className={showSupplementaryPanels ? "shell-layout" : "shell-layout shell-layout--single"}>
+      <main className="shell-layout shell-layout--single">
         <section
           className={route.id === "sandbox" ? "sandbox-stage" : "route-stage"}
           aria-label={route.id === "sandbox" ? "箱庭主画面" : "現在の画面"}
@@ -367,46 +360,34 @@ export function AppShell() {
             onSaveCharacter={saveCharacterDraft}
           />
         </section>
-
-        {showSupplementaryPanels ? (
-          <aside className="desktop-panels" aria-label="補助パネル">
-            <div className="panel-toggle-row">
-              {(Object.keys(panelLabels) as PanelId[]).map((panelId) => (
-                <Button key={panelId} type="button" onClick={() => togglePanel(panelId)}>
-                  {uiState.openPanels.includes(panelId) ? "閉じる" : "開く"}{" "}
-                  {panelLabels[panelId]}
-                </Button>
-              ))}
-            </div>
-            <div className="desktop-panels__grid">
-              {uiState.openPanels.map((panelId) => (
-                <ShellPanel
-                  key={panelId}
-                  panelId={panelId}
-                  runtimeState={runtimeState}
-                  storyEntries={storyEntries}
-                  activeResidents={activeResidents}
-                  onNavigate={navigate}
-                />
-              ))}
-            </div>
-          </aside>
-        ) : null}
       </main>
 
-      {showSupplementaryPanels ? (
-        <footer className="mobile-sheet-dock" aria-label="モバイル補助シート">
-          <div className="mobile-sheet-dock__buttons">
+      {showSandboxDrawerButtons ? (
+        <aside
+          className={`edge-drawer${uiState.drawerPanel ? " edge-drawer--open" : ""}`}
+          aria-label="右端ドロワー"
+        >
+          <div className="edge-drawer__buttons">
             {(Object.keys(panelLabels) as PanelId[]).map((panelId) => (
-              <Button key={panelId} type="button" onClick={() => openMobileSheet(panelId)}>
+              <Button key={panelId} type="button" onClick={() => toggleDrawer(panelId)}>
                 {panelLabels[panelId]}
               </Button>
             ))}
           </div>
-          {uiState.mobileSheet ? (
-            <div className="mobile-sheet" role="dialog" aria-label={`${panelLabels[uiState.mobileSheet]}シート`}>
+          {uiState.drawerPanel ? (
+            <div
+              className="edge-drawer__panel"
+              role="dialog"
+              aria-label={`${panelLabels[uiState.drawerPanel]}ドロワー`}
+            >
+              <div className="edge-drawer__header">
+                <strong>{panelLabels[uiState.drawerPanel]}</strong>
+                <Button type="button" variant="ghost" onClick={closeDrawer}>
+                  閉じる
+                </Button>
+              </div>
               <ShellPanel
-                panelId={uiState.mobileSheet}
+                panelId={uiState.drawerPanel}
                 runtimeState={runtimeState}
                 storyEntries={storyEntries}
                 activeResidents={activeResidents}
@@ -414,7 +395,7 @@ export function AppShell() {
               />
             </div>
           ) : null}
-        </footer>
+        </aside>
       ) : null}
     </div>
   );
@@ -650,47 +631,7 @@ function ShellPanel({
     );
   }
 
-  if (panelId === "relations") {
-    const preset = selectObservationPreset(runtimeState);
-
-    return (
-      <Panel title="観察">
-        <div className="preset-preview">
-          <strong>{preset.summary}</strong>
-          <p className="panel-note">
-            観察プリセットは selector の返り値をそのまま使い、見た目だけ UI で差を付けています。
-          </p>
-          <div className="preset-preview__tags">
-            {preset.worldStatusTags.map((tag) => (
-              <span key={`world-${tag}`}>世界: {tag}</span>
-            ))}
-            {preset.eventSituationTags.map((tag) => (
-              <span key={`event-${tag}`}>出来事: {tag}</span>
-            ))}
-          </div>
-        </div>
-      </Panel>
-    );
-  }
-
-  const snapshots = [...runtimeState.snapshots.values()];
-  const passports = [...runtimeState.passports.values()];
-
-  return (
-    <Panel title="記録">
-      <div className="panel-action-stack">
-        <p className="panel-note">
-          Snapshot {snapshots.length}件 / Passport {passports.length}件。記録と発行は別操作です。
-        </p>
-        <Button type="button" variant="ghost" onClick={() => onNavigate("/passports")}>
-          記録 route を開く
-        </Button>
-        <Button type="button" variant="ghost" onClick={() => onNavigate("/handoff")}>
-          持ち出しを見る
-        </Button>
-      </div>
-    </Panel>
-  );
+  return <StoryLogPanel entries={storyEntries} />;
 }
 
 function areResidentPreviewsEqual(
