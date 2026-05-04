@@ -44,6 +44,7 @@ export function TutorialOverlay({
 
       const rect = target.getBoundingClientRect();
       const width = Math.min(320, window.innerWidth - 20);
+      const panelHeight = window.innerWidth <= 760 ? 190 : 220;
       const hasRightSpace = rect.right + width + 18 <= window.innerWidth;
       const left = hasRightSpace
         ? rect.right + 12
@@ -54,7 +55,7 @@ export function TutorialOverlay({
 
       setAnchorStyle({
         left,
-        top: Math.max(10, Math.min(top, window.innerHeight - 220)),
+        top: Math.max(10, Math.min(top, window.innerHeight - panelHeight)),
         width,
       });
     }
@@ -67,6 +68,48 @@ export function TutorialOverlay({
       window.removeEventListener("scroll", updatePosition, true);
     };
   }, [anchorId, placement]);
+
+  useEffect(() => {
+    if (placement === "anchor-right") {
+      return;
+    }
+
+    function updateMobilePosition() {
+      if (window.innerWidth > 760) {
+        setAnchorStyle(undefined);
+        return;
+      }
+
+      const target = document.querySelector('[data-tutorial-highlighted="true"]');
+      if (!target) {
+        setAnchorStyle(undefined);
+        return;
+      }
+
+      const rect = target.getBoundingClientRect();
+      const width = window.innerWidth - 20;
+      const panelHeight = window.innerWidth <= 390 ? 170 : 190;
+      const below = rect.bottom + 10;
+      const top =
+        below + panelHeight <= window.innerHeight - 10
+          ? below
+          : Math.max(10, rect.top - panelHeight - 10);
+
+      setAnchorStyle({
+        left: 10,
+        top: Math.max(10, Math.min(top, window.innerHeight - panelHeight - 10)),
+        width,
+      });
+    }
+
+    updateMobilePosition();
+    window.addEventListener("resize", updateMobilePosition);
+    window.addEventListener("scroll", updateMobilePosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMobilePosition);
+      window.removeEventListener("scroll", updateMobilePosition, true);
+    };
+  }, [placement, stepId]);
 
   return (
     <aside
