@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "apostle-asset-manifest-v1",
+  "assetId": "apostle-shikigami",
+  "displayName": "使徒式神",
+  "alphaRequired": true,
+  "sourceNote": "Past GodSandbox apostle sprite sheet was checked locally. This manifest tracks the alpha-ready handoff assets without storing personal paths.",
+  "assets": [
+    {
+      "assetId": "apostle-standing-alpha",
+      "displayName": "使徒立ち絵alpha",
+      "file": "/art/apostle/apostle-standing-alpha.png",
+      "kind": "standing",
+      "width": 181,
+      "height": 181,
+      "alphaRequired": true,
+      "sourceNote": "Extracted from the first idle frame of the alpha handoff sprite sheet."
+    },
+    {
+      "assetId": "apostle-sprite-sheet-alpha",
+      "displayName": "使徒sprite sheet alpha",
+      "file": "/art/apostle/apostle-sprite-sheet-alpha.png",
+      "kind": "spriteSheet",
+      "frameWidth": 96,
+      "frameHeight": 96,
+      "columns": 6,
+      "rows": 8,
+      "alphaRequired": true,
+      "animations": {
+        "idle": { "row": 0, "frames": 6 },
+        "flyRight": { "row": 1, "frames": 6 },
+        "flyLeft": { "row": 2, "frames": 6 },
+        "run": { "row": 3, "frames": 6 },
+        "fall": { "row": 4, "frames": 6 },
+        "guidePoint": { "row": 5, "frames": 6 },
+        "emotions": { "row": 6, "frames": 6 },
+        "bless": { "row": 7, "frames": 6 }
+      },
+      "motionAliases": {
+        "runRight": { "row": 1, "frames": 6, "note": "Right movement uses the flyRight row for the current MVP asset." },
+        "runLeft": { "row": 2, "frames": 6, "note": "Left movement uses the flyLeft row for the current MVP asset." },
+        "joy": { "row": 6, "startFrame": 0, "frames": 1 },
+        "angry": { "row": 6, "startFrame": 1, "frames": 1 },
+        "sad": { "row": 6, "startFrame": 2, "frames": 1 }
+      }
+    }
+  ]
+}
