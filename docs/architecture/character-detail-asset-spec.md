@@ -25,9 +25,11 @@ interface CharacterAssetBundle {
   portrait?: AssetReference;
   icon?: AssetReference;
   spriteSheet?: SpriteSheetReference;
-  expressions: Record<string, AssetReference>;
+  expressions: Partial<Record<CharacterExpressionKey, AssetReference>>;
   placeholderReason?: string;
 }
+
+type CharacterExpressionKey = "neutral" | "happy" | "angry" | "sad" | "surprised";
 
 interface AssetReference {
   assetId: string;
@@ -49,7 +51,9 @@ interface SpriteSheetReference extends AssetReference {
 - `portrait` はプロフィール、会話、イベント、キャラクター詳細の主画像に使う。
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
 - `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
-- `expressions` は表情差分であり、`normal`、`joy`、`sad` などを必要な範囲で持つ。
+- `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
+- `neutral` は添付元画像、または最初に登録された基準画像の表情を保つ。
+- 表情差分生成用promptは `.prompts/character-expressions/` に保存する。
 - `CharacterAssetBundle` は不足素材を許容する。不足時は placeholder を出し、設定を勝手に補完しない。
 - asset の正本参照は asset ID であり、file path は表示解決後の副次情報である。
 
@@ -59,12 +63,12 @@ interface SpriteSheetReference extends AssetReference {
 
 mapping ルール:
 
-| slot | asset bundle id | portrait asset id | 用途 |
+| slot | character | asset bundle id | portrait asset id | 用途 |
 | --- | --- | --- | --- |
-| 0 | `standard-resident-01` | `standard-resident-01-portrait` | 初期 active slot 1 の標準住民 |
-| 1 | `standard-resident-02` | `standard-resident-02-portrait` | 初期 active slot 2 の標準住民 |
-| 2 | `standard-resident-03` | `standard-resident-03-portrait` | 初期 active slot 3 の標準住民 |
-| 3 | `standard-resident-04` | `standard-resident-04-portrait` | 初期 active slot 4 の標準住民 |
+| 0 | Eve | `eve` | `eve-portrait-neutral` | 初期 active slot 1 の標準住民 |
+| 1 | Garan | `garan` | `garan-portrait-neutral` | 初期 active slot 2 の標準住民 |
+| 2 | Ryo | `ryo` | `ryo-portrait-neutral` | 初期 active slot 3 の標準住民 |
+| 3 | Suzu | `suzu` | `suzu-portrait-neutral` | 初期 active slot 4 の標準住民 |
 
 ルール:
 
@@ -72,6 +76,7 @@ mapping ルール:
 - 標準住民画像は立ち絵として登録する。
 - default 4 character の `portrait` は上表の asset ID で参照する。
 - `icon` は `<asset bundle id>-icon`、`spriteSheet` は `<asset bundle id>-sprite-sheet`、表情差分は `<asset bundle id>-expression-<emotion>` を推奨IDとする。
+- 表情差分の `<emotion>` は `neutral`、`happy`、`angry`、`sad`、`surprised` のいずれかにする。
 - `icon` は立ち絵から派生してよいが、派生方法が未実装なら placeholder を使う。
 - `spriteSheet` と `expressions` は存在する場合だけ表示する。
 - 画像から性格、出自、年齢、役職などの lore を断定しない。
