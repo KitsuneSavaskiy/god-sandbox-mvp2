@@ -540,7 +540,7 @@ export function EventFirstSandbox({
                     <span className="event-first-sandbox__event-entry-mark">!</span>
                     <span>
                       {eventWindowOpen || latestOutcome
-                        ? "イベント子画面を表示中"
+                        ? "詳細を表示中"
                         : "イベント詳細を見る"}
                     </span>
                   </Button>
@@ -593,16 +593,20 @@ export function EventFirstSandbox({
             </div>
           ) : (
             <div className="event-first-sandbox__event-window-body">
-              <div className="event-first-sandbox__event-window-copy">
-                <p className="eyebrow">イベント子画面</p>
-                <h2 id="event-first-sandbox-event-window-title">
-                  {createEventHeadline(currentEvent, primaryResident?.displayName ?? "住民")}
-                </h2>
-                <p>{currentEvent.summary}</p>
+              <div className="event-first-sandbox__event-window-status">
+                <strong id="event-first-sandbox-event-window-title">見守り中</strong>
+                <span>出来事の絵を確認してから、関わり方を選びます。</span>
+              </div>
+              <div
+                className="event-first-sandbox__event-image-placeholder"
+                aria-label="イベント画像の仮枠"
+              >
+                <strong>イベント画像</strong>
+                <span>ここに出来事の絵が入ります</span>
               </div>
               <div className="event-first-sandbox__event-details">
                 <strong>観察プリセット</strong>
-                <p>{observationPreset.summary}</p>
+                <p>小さな出来事を静かに見守ります。</p>
                 <div className="event-first-sandbox__tag-row">
                   {observationPreset.worldStatusTags.map((tag) => (
                     <span key={`world-${tag}`}>世界: {tag}</span>
