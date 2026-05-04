@@ -40,6 +40,7 @@ function getCurrentRoute(): AppRoute {
 }
 
 export function AppShell() {
+  const [manualSweep] = useState(() => getManualSweepState(window.location.search));
   const [playerDisplayName, setPlayerDisplayName] = useState("");
   const [draftDisplayName, setDraftDisplayName] = useState("");
   const [route, setRoute] = useState<AppRoute>(() => getCurrentRoute());
@@ -50,10 +51,11 @@ export function AppShell() {
     routePath: getCurrentRoute().path
   }));
 
-  const manualSweep = useMemo(() => getManualSweepState(window.location.search), []);
+  const manualSweepQuery = useMemo(() => (manualSweep.enabled ? "?mode=manual-sweep" : ""), [manualSweep.enabled]);
 
   function navigate(path: string) {
-    window.history.pushState({}, "", path);
+    const nextPath = path.includes("?") ? path : `${path}${manualSweepQuery}`;
+    window.history.pushState({}, "", nextPath);
     const nextRoute = parseRoute(window.location.pathname);
     setRoute(nextRoute);
     setUiState((current) => ({ ...current, routePath: nextRoute.path }));
