@@ -280,19 +280,23 @@ textarea {
 }
 
 .edge-drawer {
+  --edge-drawer-top: 104px;
+
   position: fixed;
-  top: 50%;
-  right: 12px;
+  top: var(--edge-drawer-top);
+  right: clamp(10px, 2vw, 20px);
+  bottom: 18px;
   z-index: 24;
-  display: grid;
-  justify-items: end;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
   gap: 10px;
-  transform: translateY(-50%);
   pointer-events: none;
 }
 
 .edge-drawer__buttons {
   display: grid;
+  align-content: start;
   gap: 8px;
   pointer-events: auto;
 }
@@ -306,15 +310,21 @@ textarea {
 }
 
 .edge-drawer__panel {
-  width: min(360px, calc(100vw - 58px));
-  max-height: min(74vh, 680px);
+  width: min(380px, calc(100vw - 72px));
+  height: calc(100dvh - var(--edge-drawer-top) - 18px);
+  max-height: none;
   overflow: auto;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid rgba(58, 80, 53, 0.18);
-  border-radius: 24px;
-  background: rgba(255, 252, 242, 0.96);
+  border-radius: 16px;
+  background: rgba(255, 252, 242, 0.9);
+  backdrop-filter: blur(12px);
   box-shadow: 0 22px 80px rgba(31, 47, 27, 0.24);
   pointer-events: auto;
+}
+
+.edge-drawer--logs .edge-drawer__panel {
+  width: min(460px, calc(100vw - 72px));
 }
 
 .edge-drawer__header {
@@ -323,6 +333,12 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.edge-drawer__panel .ui-panel {
+  border-radius: 14px;
+  background: rgba(255, 252, 242, 0.78);
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {
@@ -357,12 +373,20 @@ textarea {
   }
 
   .edge-drawer {
+    --edge-drawer-top: 152px;
+
     right: 8px;
+    bottom: 10px;
+    gap: 8px;
   }
 
   .edge-drawer__panel {
-    width: min(330px, calc(100vw - 54px));
-    max-height: 64vh;
+    width: calc(100vw - 58px);
+    height: calc(100dvh - var(--edge-drawer-top) - 10px);
+  }
+
+  .edge-drawer--logs .edge-drawer__panel {
+    width: calc(100vw - 58px);
   }
 }
 
