@@ -40,10 +40,27 @@ export type AppearanceVariant = {
   assetId: AssetId;
 };
 
+export type CharacterExpressionId =
+  | "neutral"
+  | "happy"
+  | "angry"
+  | "sad"
+  | "surprised";
+
+export type CharacterExpressionAssetRefs = Record<CharacterExpressionId, AssetId | null>;
+
+export type CharacterAssetBundle = {
+  portraitAssetId: AssetId;
+  iconAssetId: AssetId | null;
+  spriteSheetAssetId: AssetId | null;
+  expressions: CharacterExpressionAssetRefs;
+};
+
 export type CharacterAppearance = {
   primaryAssetId: AssetId;
   variantAssetIds: AppearanceVariant[];
   spriteSheetAssetId?: AssetId;
+  assetBundle?: CharacterAssetBundle;
   styleMetadata?: {
     artStyleId?: string;
     sourceImageKind?: "expression-sheet" | "sprite-sheet" | "portrait";

@@ -6,6 +6,11 @@ import {
 } from "../application/runtimeCommands.js";
 import { createSeedRuntimeWorld } from "../application/runtimeBootstrap.js";
 import {
+  selectActiveCharacterAssetBundleReadModels,
+  selectCharacterAssetBundleReadModel,
+  resolveCharacterAssetBundleReadModel,
+} from "../application/characterAssetBundles.js";
+import {
   selectActiveCharacters,
   selectCurrentEvent,
   selectObservationPreset,
@@ -349,25 +354,34 @@ function testRuntimeSelectorsAndCommands(): void {
   const state = createSeedRuntimeWorld();
   const focusedEvent = selectCurrentEvent(state);
   const activeCharacters = selectActiveCharacters(state);
+  const activeAssetBundles = selectActiveCharacterAssetBundleReadModels(state);
   const observationPreset = selectObservationPreset(state);
   const roster = selectRoster(state);
   const pending = selectPendingActivationCharacters(state);
+  const ryoAssetBundle = selectCharacterAssetBundleReadModel(state, "chr_ryo");
 
   assert.equal(focusedEvent.id, state.session.currentEventId);
   assert.equal(activeCharacters.length, 4);
+  assert.equal(activeAssetBundles.length, 4);
   assert.equal(observationPreset.focusedEventId, focusedEvent.id);
   assert.deepEqual(observationPreset.activeCharacterIds, state.session.activeSlots);
-  assert.equal(roster.length, 5);
   assert.deepEqual(
-    pending.map((character) => character.id),
-    ["chr_noa"],
+    roster.map((character) => character.profile.displayName),
+    ["Eve", "Garan", "Ryo", "Suzu"],
   );
-
-  const replaced = replaceActiveSlotCommand(state, {
-    slotIndex: 3,
-    characterId: "chr_noa",
-  });
-  assert.deepEqual(replaced.session.activeSlots, ["chr_ryo", "chr_mina", "chr_towa", "chr_noa"]);
+  assert.equal(pending.length, 0);
+  assert.equal(ryoAssetBundle.portrait.assetId, "ryo-portrait-neutral");
+  assert.equal(ryoAssetBundle.portrait.path, "/art/characters/defaults/ryo/portrait.png");
+  assert.equal(ryoAssetBundle.expressions.neutral.assetId, "ryo-portrait-neutral");
+  assert.equal(ryoAssetBundle.expressions.happy.assetId, "ryo-expression-happy");
+  assert.equal(ryoAssetBundle.expressions.happy.isPlaceholder, false);
+  assert.equal(ryoAssetBundle.expressions.surprised.assetId, "ryo-expression-surprised");
+  assert.equal(ryoAssetBundle.basicSettings.introduction.isPlaceholder, true);
+  assert.equal(ryoAssetBundle.basicSettings.introduction.source, "placeholder");
+  assert.equal(activeAssetBundles[0]?.portrait.ready, true);
+  assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
+  assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
+  assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
 
   const afterIntervention = applyFocusedEventInterventionCommand(state, {
     type: "help",
@@ -397,6 +411,67 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(issuedPassport.state.passports.size, 1);
 }
 
+function testCharacterAssetReadModelSeparatesIntroductionSources(): void {
+  const baseCharacter = character("chr_test", "Test");
+  baseCharacter.profile.appearance.assetBundle = {
+    portraitAssetId: "test-portrait-neutral",
+    iconAssetId: null,
+    spriteSheetAssetId: null,
+    expressions: {
+      neutral: "test-portrait-neutral",
+      happy: null,
+      angry: null,
+      sad: null,
+      surprised: null,
+    },
+  };
+
+  const placeholderReadModel = resolveCharacterAssetBundleReadModel(baseCharacter, {
+    saveVersion: CURRENT_SAVE_VERSION,
+    updatedAt: now,
+    entries: [
+      {
+        id: "test-portrait-neutral",
+        ownerCharacterId: "chr_test",
+        kind: "appearance-source",
+        relativePath: "art/characters/defaults/test/portrait.png",
+      },
+    ],
+  });
+  assert.equal(placeholderReadModel.basicSettings.introduction.isPlaceholder, true);
+  assert.equal(placeholderReadModel.basicSettings.introduction.source, "placeholder");
+  assert.equal(placeholderReadModel.basicSettings.introduction.needsUserConfirmation, false);
+
+  const generatedRecognitionCharacter = {
+    ...baseCharacter,
+    profile: {
+      ...baseCharacter.profile,
+      templateFieldValues: {
+        description: "花と緑を身につけた住民として見える",
+        descriptionSource: "generated-recognition",
+      },
+    },
+  };
+  const generatedRecognitionReadModel = resolveCharacterAssetBundleReadModel(
+    generatedRecognitionCharacter,
+    {
+      saveVersion: CURRENT_SAVE_VERSION,
+      updatedAt: now,
+      entries: [
+        {
+          id: "test-portrait-neutral",
+          ownerCharacterId: "chr_test",
+          kind: "appearance-source",
+          relativePath: "art/characters/defaults/test/portrait.png",
+        },
+      ],
+    },
+  );
+  assert.equal(generatedRecognitionReadModel.basicSettings.introduction.source, "generated-recognition");
+  assert.equal(generatedRecognitionReadModel.basicSettings.introduction.isPlaceholder, false);
+  assert.equal(generatedRecognitionReadModel.basicSettings.introduction.needsUserConfirmation, true);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -404,6 +479,7 @@ const tests: Array<[string, () => void]> = [
   ["snapshot and passport are separate artifacts", testSnapshotAndPassportAreSeparateArtifacts],
   ["persistence foundations", testPersistenceFoundations],
   ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
+  ["asset read model separates introduction sources", testCharacterAssetReadModelSeparatesIntroductionSources],
 ];
 
 for (const [name, test] of tests) {
