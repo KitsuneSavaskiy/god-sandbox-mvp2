@@ -52,10 +52,30 @@ interface SpriteSheetReference extends AssetReference {
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
 - `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
-- `neutral` は添付元画像、または最初に登録された基準画像の表情を保つ。
+- `neutral` は必須とし、添付元画像、または最初に登録された基準画像の表情を保つ。
+- `happy`、`angry`、`sad`、`surprised` は未生成でもよい。未生成の表情は `neutral` を fallback 表示する。
+- 未生成表情を fallback 表示する場合、UI向けの解決結果では `isPlaceholder: true` とし、必要に応じて `missingReason` を持たせる。
+- `missingReason` は `not-generated-yet` または `asset-not-registered` を想定する。
 - 表情差分生成用promptは `.prompts/character-expressions/` に保存する。
 - `CharacterAssetBundle` は不足素材を許容する。不足時は placeholder を出し、設定を勝手に補完しない。
 - asset の正本参照は asset ID であり、file path は表示解決後の副次情報である。
+
+## 説明sourceとplaceholder
+
+キャラクター詳細の説明文は、画像から勝手に公式設定を確定しないため、source を分けて扱う。
+
+source の分類:
+
+- `user-input`: ユーザーが入力または確認した説明。公式設定として扱ってよい。
+- `generated-recognition`: 画像や生成物から得たAI認識メモ。公式 lore ではなく、ユーザー確認待ちの補助メモとして扱う。
+- `placeholder`: まだ分からない項目。UIでは「未設定」「まだ分かっていません」などの仮表示に留める。
+
+表示ルール:
+
+- `generated-recognition` は、キャラクターの職業、出自、年齢、関係性を断定する根拠にしない。
+- `generated-recognition` を表示する場合は、ユーザー確認が必要な情報として扱う。
+- `isPlaceholder` は、表示値が仮置きかどうかを示す。
+- `missingReason` は、素材や表情差分が未生成なのか、登録漏れなのかを区別するために使う。
 
 ## Sprint7標準住民画像
 
