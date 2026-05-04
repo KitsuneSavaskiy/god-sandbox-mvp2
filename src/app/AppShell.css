@@ -31,18 +31,21 @@ textarea {
   min-height: 100vh;
   place-items: center;
   padding: 24px;
+  color: #f6f4ef;
   background:
-    radial-gradient(circle at top left, rgba(118, 174, 112, 0.28), transparent 30%),
-    linear-gradient(145deg, #f4f0e5 0%, #dcead3 100%);
+    radial-gradient(circle at top center, rgba(70, 92, 132, 0.12), transparent 28%),
+    linear-gradient(180deg, #101825 0%, #09111d 100%);
 }
 
 .login-card {
-  width: min(560px, 100%);
-  padding: 28px;
-  border: 1px solid rgba(58, 80, 53, 0.18);
-  border-radius: 28px;
-  background: rgba(255, 252, 243, 0.9);
-  box-shadow: 0 24px 80px rgba(66, 87, 57, 0.18);
+  width: min(520px, 100%);
+  padding: 34px 32px;
+  border: 1px solid rgba(146, 175, 199, 0.16);
+  border-radius: 24px;
+  background: rgba(10, 18, 30, 0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 22px 60px rgba(3, 8, 16, 0.4);
 }
 
 .login-card h1,
@@ -53,25 +56,68 @@ textarea {
 
 .login-form {
   display: grid;
-  gap: 10px;
-  margin-top: 22px;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.login-card__description {
+  margin: 0;
+  color: rgba(211, 220, 233, 0.78);
+  line-height: 1.8;
+}
+
+.login-form__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .login-form input {
   width: 100%;
-  padding: 13px 14px;
-  border: 1px solid rgba(55, 76, 53, 0.25);
-  border-radius: 16px;
-  background: #fffef8;
+  min-height: 56px;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  color: #f6f8fb;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.login-form input::placeholder {
+  color: rgba(187, 199, 216, 0.72);
+}
+
+.login-form input:focus {
+  outline: 2px solid rgba(134, 155, 231, 0.52);
+  outline-offset: 2px;
 }
 
 .eyebrow {
   margin: 0 0 6px;
-  color: #667454;
+  color: rgba(192, 204, 223, 0.78);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.login-card h1 {
+  color: #f3f6fb;
+  font-size: clamp(2rem, 4.2vw, 2.65rem);
+  line-height: 1.12;
+}
+
+.login-form .ui-button--primary {
+  min-width: 120px;
+  justify-self: start;
+  color: #f7fbff;
+  background: linear-gradient(135deg, #8ea6ff, #7f99f5);
+  box-shadow: 0 12px 26px rgba(80, 112, 208, 0.34);
 }
 
 .app-shell {

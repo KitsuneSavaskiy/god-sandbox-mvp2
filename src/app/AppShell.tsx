@@ -289,32 +289,35 @@ export function AppShell() {
     );
   }
 
-  if (!playerDisplayName) {
-    return (
-      <main className="login-screen">
-        <section className="login-card" aria-labelledby="login-title">
-          <p className="eyebrow">GodSandbox MVP2</p>
-          <h1 id="login-title">新米神様として箱庭を開く</h1>
-          <p>
-            ここでは、ログインは認証ではなくゲーム内表示名の入力だけです。入力した名前は、
-            物語や案内が呼びかけるために使います。
-          </p>
-          <form className="login-form" onSubmit={handleLogin}>
-            <label htmlFor="player-display-name">表示名</label>
-            <input
-              id="player-display-name"
-              value={draftDisplayName}
-              onChange={(event) => setDraftDisplayName(event.target.value)}
-              placeholder="例: 新米神様"
-            />
-            <Button type="submit" variant="primary">
-              箱庭へ入る
-            </Button>
-          </form>
-        </section>
-      </main>
-    );
-  }
+    if (!playerDisplayName) {
+      return (
+        <main className="login-screen">
+          <section className="login-card" aria-labelledby="login-title">
+            <p className="eyebrow">GOD SANDBOX MVP2</p>
+            <h1 id="login-title">ようこそ箱庭の神様</h1>
+            <p className="login-card__description">
+              あなたは、この小さな世界を見守る神です。
+              <br />
+              名前を入力して、箱庭に降臨してください
+            </p>
+            <form className="login-form" onSubmit={handleLogin}>
+              <label className="login-form__label" htmlFor="player-display-name">
+                表示名
+              </label>
+              <input
+                id="player-display-name"
+                value={draftDisplayName}
+                onChange={(event) => setDraftDisplayName(event.target.value)}
+                placeholder="神の名を入力..."
+              />
+              <Button type="submit" variant="primary">
+                はじめる
+              </Button>
+            </form>
+          </section>
+        </main>
+      );
+    }
 
   return (
     <div className="app-shell">
