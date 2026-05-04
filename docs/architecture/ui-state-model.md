@@ -108,3 +108,20 @@ interface TutorialAnchorBinding {
 - 複数参加イベントでは主役と脇役を見分けられるようにする。
 - story log と relation view は補助 surface であり、main sandbox focus ではない。
 - プレイヤーが介入を求められる前に、今の event が何かを理解できる必要がある。
+
+## キャラクター詳細の子画面ルール
+
+- キャラクター詳細は event-first 主画面の補助子画面である。
+- 「いまの出来事」と住民画面から開けるが、主状態は `focusedEvent` のまま維持する。
+- 詳細画面を開いても `selectedCharacter` を主導線へ戻さない。
+- 詳細画面では `portrait`、`icon`、`spriteSheet`、`expressions`、基本設定を確認できる。
+- lore が不足している項目は placeholder を表示し、画像の見た目から設定を断定しない。
+- 介入ボタンはイベント子画面側に集約し、詳細画面や「いまの出来事」に重複配置しない。
+- 死亡、寿命、勲章は Sprint7 の詳細画面では扱わない。
+
+## 使徒追従UIルール
+
+- 使徒sprite sheetは、箱庭内の案内役として使う。
+- Sprint7では click-to-move を必須にする。
+- プレイヤーが箱庭内をクリックした位置へ、使徒が小走りで追従する。
+- hover追従は将来拡張とし、Sprint7の必須導線にはしない。
