@@ -19,10 +19,7 @@ export interface AppRoute {
 export const navigationRoutes: AppRoute[] = [
   { id: "sandbox", path: "/sandbox", label: "箱庭" },
   { id: "roster", path: "/roster", label: "住民" },
-  { id: "relations", path: "/relations", label: "関係" },
-  { id: "logs", path: "/logs", label: "ログ" },
   { id: "passports", path: "/passports", label: "Passport" },
-  { id: "handoff", path: "/handoff", label: "持ち出し" }
 ];
 
 export function parseRoute(pathname: string): AppRoute {

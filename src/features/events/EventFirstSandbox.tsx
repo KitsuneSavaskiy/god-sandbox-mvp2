@@ -9,9 +9,7 @@ import type { InterventionKind, WorldEvent } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button.js";
 import type { StoryLogEntry } from "../story/StoryLogPanel.js";
-import { TutorialOverlay } from "../tutorial/TutorialOverlay.js";
 import {
-  advanceTutorialStep,
   ensureTutorialForContext,
   getTutorialBinding,
   persistTutorialState,
@@ -212,10 +210,6 @@ export function EventFirstSandbox({
     persistTutorialState(tutorialState);
   }, [tutorialState]);
 
-  function handleTutorialContinue() {
-    setTutorialState((current) => advanceTutorialStep(current, "continue"));
-  }
-
   function handleIntervention(type: InterventionKind) {
     const previousInterventionIds = new Set(runtimeState.interventions.keys());
     const previousChangeSetIds = new Set(runtimeState.changeSets.keys());
@@ -262,9 +256,6 @@ export function EventFirstSandbox({
       },
       ...currentEntries,
     ]);
-    setTutorialState((currentTutorial) =>
-      advanceTutorialStep(currentTutorial, "intervened"),
-    );
   }
 
   function handleResultReviewed() {
@@ -282,9 +273,6 @@ export function EventFirstSandbox({
     ]);
     setLatestOutcome(null);
     setSandboxStage("focused-event");
-    setTutorialState((currentTutorial) =>
-      advanceTutorialStep(currentTutorial, "result-reviewed"),
-    );
   }
 
   return (
@@ -337,6 +325,14 @@ export function EventFirstSandbox({
         }
       >
         <p className="eyebrow">いまの出来事</p>
+        <div className="event-first-sandbox__event-meta">
+          <span className="event-first-sandbox__event-mark">出来事</span>
+          <span>
+            {currentEvent.situationTags.length > 0
+              ? currentEvent.situationTags.slice(0, 2).join(" / ")
+              : "変化の気配"}
+          </span>
+        </div>
         <h2>{createEventHeadline(currentEvent, primaryResident?.displayName ?? "住民")}</h2>
         <p className="event-first-sandbox__focus-summary">{currentEvent.summary}</p>
         <div className="event-first-sandbox__resident-groups">
@@ -359,8 +355,8 @@ export function EventFirstSandbox({
             </p>
           </div>
         </div>
-        <div className="event-first-sandbox__preset-summary">
-          <strong>観察プリセット</strong>
+        <details className="event-first-sandbox__event-details">
+          <summary>イベント詳細を見る</summary>
           <p>{observationPreset.summary}</p>
           <div className="event-first-sandbox__tag-row">
             {observationPreset.worldStatusTags.map((tag) => (
@@ -370,37 +366,7 @@ export function EventFirstSandbox({
               <span key={`event-${tag}`}>出来事: {tag}</span>
             ))}
           </div>
-        </div>
-        <div className="event-first-sandbox__preset-grid">
-          {activeResidents.map((resident) => (
-            <div key={`${resident.id}-preset`} className="event-first-sandbox__preset-card">
-              <strong>{resident.displayName}</strong>
-              <span>{resident.presetLabel}</span>
-              <span>滞在感: {resident.zoneLabel}</span>
-              <span>alert 優先度: {resident.alertPriority}</span>
-            </div>
-          ))}
-        </div>
-        <div
-          className="event-first-sandbox__interventions"
-          data-tutorial-anchor="tutorial-anchor-interventions"
-          data-tutorial-highlighted={
-            tutorialBinding?.anchorId === "tutorial-anchor-interventions" || undefined
-          }
-        >
-          <Button type="button" onClick={() => handleIntervention("watch")}>
-            見守る
-          </Button>
-          <Button type="button" variant="primary" onClick={() => handleIntervention("help")}>
-            助ける
-          </Button>
-          <Button type="button" onClick={() => handleIntervention("trial")}>
-            試練
-          </Button>
-        </div>
-        <p className="event-first-sandbox__hint">
-          まず出来事を読み、次に 3 つの関わり方から 1 つを押すだけで流れが進みます。
-        </p>
+        </details>
       </section>
 
       {latestOutcome ? (
@@ -434,54 +400,6 @@ export function EventFirstSandbox({
           <strong>manual-sweep mode</strong>
           <span>runtime 出力先: {manualSweepRuntimeDirectory}</span>
         </aside>
-      ) : null}
-
-      {tutorialState.currentStepId === "observe-world" ? (
-        <TutorialOverlay
-          stepId="01 / 04"
-          title="まず箱庭を見る"
-          body="住民の位置と気配をざっと見れば十分です。主役は次のカードで分かります。"
-          anchorLabel="箱庭の見取り図"
-          primaryActionLabel="次へ"
-          onPrimaryAction={handleTutorialContinue}
-        />
-      ) : null}
-
-      {tutorialState.currentStepId === "inspect-event" ? (
-        <TutorialOverlay
-          stepId="02 / 04"
-          title="次は出来事を見る"
-          body="主役、脇役、いま起きていることの 3 つが読めれば、次の操作を決められます。"
-          anchorLabel="いまの出来事"
-          primaryActionLabel="介入へ"
-          onPrimaryAction={handleTutorialContinue}
-        />
-      ) : null}
-
-      {tutorialState.currentStepId === "intervene" ? (
-        <TutorialOverlay
-          stepId="03 / 04"
-          title="今は関わり方を選ぶ番です"
-          body="初回は 助ける がいちばん分かりやすい流れです。押すと変化が結果カードへ出ます。"
-          anchorLabel="見守る / 助ける / 試練"
-          placement="top"
-          trailingContent={
-            <span className="event-first-sandbox__tutorial-note">
-              どれか 1 つ押すと次へ進みます
-            </span>
-          }
-        />
-      ) : null}
-
-      {tutorialState.currentStepId === "read-result" && latestOutcome ? (
-        <TutorialOverlay
-          stepId="04 / 04"
-          title="最後に結果を見る"
-          body="ここで良い変化や次の出来事が分かれば、event-first の箱庭ループに入れます。"
-          anchorLabel="結果カード"
-          primaryActionLabel="結果を受け取る"
-          onPrimaryAction={handleResultReviewed}
-        />
       ) : null}
     </section>
   );

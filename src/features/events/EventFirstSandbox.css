@@ -16,7 +16,7 @@
 
 .event-first-sandbox__viewport {
   position: relative;
-  min-height: clamp(380px, 58vh, 680px);
+  min-height: clamp(420px, 62vh, 760px);
   overflow: hidden;
   background:
     radial-gradient(circle at 22% 12%, rgba(255, 221, 146, 0.3), transparent 22%),
@@ -122,8 +122,8 @@
 .event-first-sandbox__focus-card,
 .event-first-sandbox__result-card {
   display: grid;
-  gap: 12px;
-  padding: 18px;
+  gap: 10px;
+  padding: 16px;
 }
 
 .event-first-sandbox__focus-card h2,
@@ -136,6 +136,24 @@
   margin: 0;
   color: #33422c;
   line-height: 1.65;
+}
+
+.event-first-sandbox__event-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: #56664e;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.event-first-sandbox__event-mark {
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #fffdf2;
+  background: linear-gradient(135deg, #7d6a34, #b68c43);
+  box-shadow: 0 8px 18px rgba(92, 65, 22, 0.16);
 }
 
 .event-first-sandbox__resident-groups,
@@ -192,6 +210,25 @@
   font-size: 0.84rem;
 }
 
+.event-first-sandbox__event-details {
+  padding: 11px 12px;
+  border: 1px solid rgba(72, 95, 59, 0.14);
+  border-radius: 18px;
+  background: rgba(250, 248, 237, 0.92);
+}
+
+.event-first-sandbox__event-details summary {
+  color: #405b34;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.event-first-sandbox__event-details p {
+  margin: 10px 0 8px;
+  color: #53624a;
+  line-height: 1.55;
+}
+
 .event-first-sandbox__hint,
 .event-first-sandbox__tutorial-note {
   color: #66755f;
@@ -239,12 +276,15 @@
 
 @media (max-width: 760px) {
   .event-first-sandbox__viewport {
-    min-height: 54vh;
+    min-height: 40vh;
   }
 
-  .event-first-sandbox__resident-groups,
   .event-first-sandbox__preset-grid {
     grid-template-columns: 1fr;
+  }
+
+  .event-first-sandbox__resident-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .event-first-sandbox__interventions .ui-button {
@@ -253,6 +293,11 @@
 
   .event-first-sandbox__resident-card {
     min-width: 104px;
+    padding: 10px;
+  }
+
+  .event-first-sandbox__resident-groups > div,
+  .event-first-sandbox__event-details {
     padding: 10px;
   }
 
@@ -267,6 +312,8 @@
     left: 10px;
     right: 10px;
     max-width: none;
+    padding: 8px 10px;
+    font-size: 0.86rem;
   }
 
   .event-first-sandbox__interventions .ui-button {
@@ -276,5 +323,9 @@
   .event-first-sandbox__resident {
     transform: scale(0.92);
     transform-origin: top left;
+  }
+
+  .event-first-sandbox__focus-card h2 {
+    font-size: 1.25rem;
   }
 }
