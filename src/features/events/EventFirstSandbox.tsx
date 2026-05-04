@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
   selectActiveCharacters,
@@ -123,7 +130,7 @@ const emoteLabels: Record<EmoteKind, string> = {
   sadness: "涙",
   surprise: "驚",
   "talk-request": "話",
-  "event-alert": "注",
+  "event-alert": "!",
 };
 
 const initialApostleMotion: ApostleMotionState = {
@@ -384,6 +391,27 @@ export function EventFirstSandbox({
     }));
   }
 
+  function handleResidentClick(
+    event: MouseEvent<HTMLElement>,
+    characterId: CharacterId,
+  ) {
+    event.stopPropagation();
+    onOpenCharacterDetail(characterId);
+  }
+
+  function handleResidentKeyDown(
+    event: KeyboardEvent<HTMLElement>,
+    characterId: CharacterId,
+  ) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    onOpenCharacterDetail(characterId);
+  }
+
   return (
     <section className="event-first-sandbox">
       <div
@@ -405,11 +433,18 @@ export function EventFirstSandbox({
         {activeResidents.map((resident) => (
           <article
             key={resident.id}
-            className={`event-first-sandbox__resident ${resident.positionClassName} ${
+            className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${
               sandboxStage === "focused-event" ? "event-first-sandbox__resident--paused" : ""
             }`}
+            role="button"
+            tabIndex={0}
+            aria-label={`${resident.displayName}の詳細を開く`}
+            onClick={(event) => handleResidentClick(event, resident.id)}
+            onKeyDown={(event) => handleResidentKeyDown(event, resident.id)}
           >
-            <span className="event-first-sandbox__emote">
+            <span
+              className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
+            >
               {emoteLabels[resident.emote]}
             </span>
             <div className="event-first-sandbox__resident-card">
