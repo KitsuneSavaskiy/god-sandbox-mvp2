@@ -280,18 +280,28 @@ textarea {
 }
 
 .edge-drawer {
+  --edge-drawer-top: 104px;
+
   position: fixed;
-  inset: 0;
+  top: var(--edge-drawer-top);
+  right: clamp(10px, 2vw, 20px);
+  bottom: 18px;
   z-index: 24;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 10px;
   pointer-events: none;
 }
 
 .edge-drawer__buttons {
-  display: contents;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  pointer-events: auto;
 }
 
 .edge-drawer__buttons .ui-button {
-  position: fixed;
   writing-mode: vertical-rl;
   min-width: 42px;
   padding: 12px 8px;
@@ -305,31 +315,28 @@ textarea {
 }
 
 .edge-drawer__resident-button {
+  position: fixed;
   top: 50%;
   left: max(8px, env(safe-area-inset-left));
   transform: translateY(-50%);
 }
 
-.edge-drawer__log-button {
-  top: 50%;
-  right: max(8px, env(safe-area-inset-right));
-  transform: translateY(-50%);
-}
-
 .edge-drawer__panel {
-  position: fixed;
-  top: 50%;
-  right: 58px;
-  transform: translateY(-50%);
-  width: min(360px, calc(100vw - 58px));
-  max-height: min(74vh, 680px);
+  width: min(380px, calc(100vw - 72px));
+  height: calc(100dvh - var(--edge-drawer-top) - 18px);
+  max-height: none;
   overflow: auto;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid rgba(58, 80, 53, 0.18);
-  border-radius: 24px;
-  background: rgba(255, 252, 242, 0.96);
+  border-radius: 16px;
+  background: rgba(255, 252, 242, 0.9);
+  backdrop-filter: blur(12px);
   box-shadow: 0 22px 80px rgba(31, 47, 27, 0.24);
   pointer-events: auto;
+}
+
+.edge-drawer--logs .edge-drawer__panel {
+  width: min(460px, calc(100vw - 72px));
 }
 
 .edge-drawer__header {
@@ -338,6 +345,12 @@ textarea {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 10px;
+}
+
+.edge-drawer__panel .ui-panel {
+  border-radius: 14px;
+  background: rgba(255, 252, 242, 0.78);
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {
@@ -371,10 +384,21 @@ textarea {
     display: none;
   }
 
+  .edge-drawer {
+    --edge-drawer-top: 152px;
+
+    right: 8px;
+    bottom: 10px;
+    gap: 8px;
+  }
+
   .edge-drawer__panel {
-    right: 52px;
-    width: min(330px, calc(100vw - 54px));
-    max-height: 64vh;
+    width: calc(100vw - 58px);
+    height: calc(100dvh - var(--edge-drawer-top) - 10px);
+  }
+
+  .edge-drawer--logs .edge-drawer__panel {
+    width: calc(100vw - 58px);
   }
 }
 
