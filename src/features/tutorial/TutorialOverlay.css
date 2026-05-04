@@ -1,0 +1,68 @@
+.tutorial-overlay {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 60;
+  width: min(360px, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(71, 95, 57, 0.18);
+  border-radius: 22px;
+  background: rgba(255, 250, 237, 0.96);
+  box-shadow: 0 20px 70px rgba(36, 55, 30, 0.24);
+}
+
+.tutorial-overlay--top {
+  top: 92px;
+  bottom: auto;
+}
+
+.tutorial-overlay h2,
+.tutorial-overlay p {
+  margin: 0;
+}
+
+.tutorial-overlay__eyebrow {
+  color: #60714d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.tutorial-overlay__anchor {
+  color: #47573b;
+  line-height: 1.55;
+}
+
+.tutorial-overlay__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tutorial-overlay__step-id {
+  color: #718060;
+  font-size: 0.78rem;
+}
+
+[data-tutorial-highlighted="true"] {
+  position: relative;
+  outline: 3px solid rgba(112, 151, 75, 0.72);
+  outline-offset: 4px;
+}
+
+@media (max-width: 760px) {
+  .tutorial-overlay {
+    right: 10px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    left: 10px;
+    width: auto;
+  }
+
+  .tutorial-overlay--top {
+    top: calc(76px + env(safe-area-inset-top));
+    bottom: auto;
+  }
+}
