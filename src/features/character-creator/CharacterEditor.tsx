@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { Character } from "../../domain/models.js";
 import { Button } from "../../ui/Button";
 import {
@@ -48,6 +48,10 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
   const [draft, setDraft] = useState<CharacterDraft>(initialDraft);
   const validation = validateCharacterDraft(draft);
   const copy = copyByMode[mode];
+
+  useEffect(() => {
+    setDraft(initialDraft);
+  }, [initialDraft, mode]);
 
   function updateDraft(patch: Partial<CharacterDraft>) {
     setDraft((current) => ({ ...current, ...patch }));
