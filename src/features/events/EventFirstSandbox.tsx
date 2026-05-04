@@ -138,6 +138,7 @@ export function EventFirstSandbox({
       stage: "focused-event",
     }),
   );
+  const [eventWindowOpen, setEventWindowOpen] = useState(false);
   const [latestOutcome, setLatestOutcome] = useState<InterventionOutcome | null>(null);
 
   const currentEvent = selectCurrentEvent(runtimeState);
@@ -249,6 +250,7 @@ export function EventFirstSandbox({
     });
 
     onRuntimeStateChange(applied.state);
+    setEventWindowOpen(true);
     setLatestOutcome(outcome);
     setSandboxStage("result");
     setStoryEntries((currentEntries) => [
@@ -281,6 +283,7 @@ export function EventFirstSandbox({
       ...currentEntries,
     ]);
     setLatestOutcome(null);
+    setEventWindowOpen(false);
     setSandboxStage("focused-event");
     setTutorialState((currentTutorial) =>
       advanceTutorialStep(currentTutorial, "result-reviewed"),
@@ -367,43 +370,95 @@ export function EventFirstSandbox({
             </p>
           </div>
         </div>
-        <details className="event-first-sandbox__event-details">
-          <summary>イベント詳細を見る</summary>
-          <p>{observationPreset.summary}</p>
-          <div className="event-first-sandbox__tag-row">
-            {observationPreset.worldStatusTags.map((tag) => (
-              <span key={`world-${tag}`}>世界: {tag}</span>
-            ))}
-            {observationPreset.eventSituationTags.map((tag) => (
-              <span key={`event-${tag}`}>出来事: {tag}</span>
-            ))}
-          </div>
-        </details>
+        <div className="event-first-sandbox__event-entry">
+          <Button
+            type="button"
+            variant="primary"
+            className="event-first-sandbox__event-entry-button"
+            disabled={eventWindowOpen || !!latestOutcome}
+            onClick={() => setEventWindowOpen(true)}
+          >
+            <span className="event-first-sandbox__event-entry-mark">!</span>
+            <span>{eventWindowOpen || latestOutcome ? "イベント子画面を表示中" : "イベント詳細を見る"}</span>
+          </Button>
+          <p className="event-first-sandbox__hint">
+            関わり方の選択はイベント子画面の中で行います。
+          </p>
+        </div>
       </section>
 
-      {latestOutcome ? (
+      {eventWindowOpen || latestOutcome ? (
         <section
-          className="event-first-sandbox__result-card"
-          data-tutorial-anchor="tutorial-anchor-result"
-          data-tutorial-highlighted={
-            tutorialBinding?.anchorId === "tutorial-anchor-result" || undefined
-          }
+          className={`event-first-sandbox__event-window${
+            latestOutcome ? " event-first-sandbox__event-window--result" : ""
+          }`}
+          role="dialog"
+          aria-labelledby="event-first-sandbox-event-window-title"
         >
-          <p className="eyebrow">結果</p>
-          <h2>{latestOutcome.summaryTitle}</h2>
-          <p>{latestOutcome.summaryBody}</p>
-          <ul className="event-first-sandbox__result-list">
-            {latestOutcome.changeHighlights.map((highlight) => (
-              <li key={highlight}>{highlight}</li>
-            ))}
-          </ul>
-          <div className="event-first-sandbox__result-footer">
-            <span>残りの力: {latestOutcome.godPointsAfter}</span>
-            <span>次の出来事: {latestOutcome.nextEventHeadline}</span>
+          <div className="event-first-sandbox__event-window-chrome">
+            <span>イベント子画面</span>
+            <span>関わり方を決めるまで閉じられません</span>
           </div>
-          <Button type="button" variant="primary" onClick={handleResultReviewed}>
-            結果を受け取る
-          </Button>
+          {latestOutcome ? (
+            <div
+              className="event-first-sandbox__event-window-body event-first-sandbox__event-window-body--result"
+              data-tutorial-anchor="tutorial-anchor-result"
+              data-tutorial-highlighted={
+                tutorialBinding?.anchorId === "tutorial-anchor-result" || undefined
+              }
+            >
+              <p className="eyebrow">結果</p>
+              <h2 id="event-first-sandbox-event-window-title">{latestOutcome.summaryTitle}</h2>
+              <p>{latestOutcome.summaryBody}</p>
+              <ul className="event-first-sandbox__result-list">
+                {latestOutcome.changeHighlights.map((highlight) => (
+                  <li key={highlight}>{highlight}</li>
+                ))}
+              </ul>
+              <div className="event-first-sandbox__result-footer">
+                <span>残りの力: {latestOutcome.godPointsAfter}</span>
+                <span>次の出来事: {latestOutcome.nextEventHeadline}</span>
+              </div>
+              <Button type="button" variant="primary" onClick={handleResultReviewed}>
+                結果を受け取る
+              </Button>
+            </div>
+          ) : (
+            <div className="event-first-sandbox__event-window-body">
+              <div className="event-first-sandbox__event-window-copy">
+                <p className="eyebrow">イベント子画面</p>
+                <h2 id="event-first-sandbox-event-window-title">
+                  {createEventHeadline(currentEvent, primaryResident?.displayName ?? "住民")}
+                </h2>
+                <p>{currentEvent.summary}</p>
+              </div>
+              <div className="event-first-sandbox__event-details">
+                <strong>観察プリセット</strong>
+                <p>{observationPreset.summary}</p>
+                <div className="event-first-sandbox__tag-row">
+                  {observationPreset.worldStatusTags.map((tag) => (
+                    <span key={`world-${tag}`}>世界: {tag}</span>
+                  ))}
+                  {observationPreset.eventSituationTags.map((tag) => (
+                    <span key={`event-${tag}`}>出来事: {tag}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="event-first-sandbox__interventions" aria-label="イベントへの関わり方">
+                {(Object.keys(interventionLabels) as InterventionKind[]).map((type) => (
+                  <Button
+                    key={type}
+                    type="button"
+                    variant={type === "help" ? "primary" : "secondary"}
+                    className={`event-first-sandbox__intervention-button event-first-sandbox__intervention-button--${type}`}
+                    onClick={() => handleIntervention(type)}
+                  >
+                    {interventionLabels[type]}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       ) : null}
 
