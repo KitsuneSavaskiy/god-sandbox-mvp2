@@ -1,4 +1,17 @@
-import assert from "node:assert/strict";
+import {
+  applyFocusedEventInterventionCommand,
+  issueCharacterPassportCommand,
+  issueCharacterSnapshotCommand,
+  replaceActiveSlotCommand,
+} from "../application/runtimeCommands.js";
+import { createSeedRuntimeWorld } from "../application/runtimeBootstrap.js";
+import {
+  selectActiveCharacters,
+  selectCurrentEvent,
+  selectObservationPreset,
+  selectPendingActivationCharacters,
+  selectRoster,
+} from "../application/runtimeSelectors.js";
 import { applyIntervention } from "./interventions.js";
 import type { Character, CharacterRelation, SandboxSession, WorldEvent } from "./models.js";
 import { replaceActiveSlot } from "./session.js";
@@ -12,6 +25,53 @@ import { DEFAULT_CHARACTER_STATUS } from "./character.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
+
+type TestAssert = {
+  deepEqual(actual: unknown, expected: unknown): void;
+  equal(actual: unknown, expected: unknown): void;
+  notEqual(actual: unknown, expected: unknown): void;
+  ok(value: unknown): asserts value;
+  throws(action: () => void, pattern: RegExp): void;
+};
+
+const assert: TestAssert = {
+  deepEqual(actual: unknown, expected: unknown): void {
+    const actualJson = JSON.stringify(actual);
+    const expectedJson = JSON.stringify(expected);
+    if (actualJson !== expectedJson) {
+      throw new Error(`Expected ${expectedJson}, but got ${actualJson}.`);
+    }
+  },
+  equal(actual: unknown, expected: unknown): void {
+    if (actual !== expected) {
+      throw new Error(`Expected ${String(expected)}, but got ${String(actual)}.`);
+    }
+  },
+  notEqual(actual: unknown, expected: unknown): void {
+    if (actual === expected) {
+      throw new Error(`Expected values to differ: ${String(actual)}.`);
+    }
+  },
+  ok(value: unknown): asserts value {
+    if (!value) {
+      throw new Error("Expected value to be truthy.");
+    }
+  },
+  throws(action: () => void, pattern: RegExp): void {
+    try {
+      action();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!pattern.test(message)) {
+        throw new Error(`Expected error matching ${pattern}, but got: ${message}`);
+      }
+
+      return;
+    }
+
+    throw new Error(`Expected function to throw ${pattern}.`);
+  },
+};
 
 const now = "2026-05-04T00:00:00.000Z";
 
@@ -285,12 +345,65 @@ function testPersistenceFoundations(): void {
   });
 }
 
+function testRuntimeSelectorsAndCommands(): void {
+  const state = createSeedRuntimeWorld();
+  const focusedEvent = selectCurrentEvent(state);
+  const activeCharacters = selectActiveCharacters(state);
+  const observationPreset = selectObservationPreset(state);
+  const roster = selectRoster(state);
+  const pending = selectPendingActivationCharacters(state);
+
+  assert.equal(focusedEvent.id, state.session.currentEventId);
+  assert.equal(activeCharacters.length, 4);
+  assert.equal(observationPreset.focusedEventId, focusedEvent.id);
+  assert.deepEqual(observationPreset.activeCharacterIds, state.session.activeSlots);
+  assert.equal(roster.length, 5);
+  assert.deepEqual(
+    pending.map((character) => character.id),
+    ["chr_noa"],
+  );
+
+  const replaced = replaceActiveSlotCommand(state, {
+    slotIndex: 3,
+    characterId: "chr_noa",
+  });
+  assert.deepEqual(replaced.session.activeSlots, ["chr_ryo", "chr_mina", "chr_towa", "chr_noa"]);
+
+  const afterIntervention = applyFocusedEventInterventionCommand(state, {
+    type: "help",
+    now,
+    idSeed: "seed-help",
+  }).state;
+  assert.equal(afterIntervention.interventions.size, 1);
+  assert.equal(afterIntervention.changeSets.size, 2);
+
+  const issuedSnapshot = issueCharacterSnapshotCommand(afterIntervention, {
+    characterId: "chr_ryo",
+    snapshotId: "snp_seed_ryo",
+    now,
+    sourceEventId: focusedEvent.id,
+  });
+  assert.equal(issuedSnapshot.state.snapshots.size, 1);
+  assert.equal(issuedSnapshot.state.passports.size, 0);
+
+  const issuedPassport = issueCharacterPassportCommand(issuedSnapshot.state, {
+    snapshotId: "snp_seed_ryo",
+    passportId: "psp_seed_ryo",
+    fileNameToken: "ryo-seed",
+    schemaVersion: 1,
+    now,
+  });
+  assert.equal(issuedPassport.state.snapshots.size, 1);
+  assert.equal(issuedPassport.state.passports.size, 1);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
   ["intervention apply costs and changeset", testInterventionApplyCostsAndChangeSet],
   ["snapshot and passport are separate artifacts", testSnapshotAndPassportAreSeparateArtifacts],
   ["persistence foundations", testPersistenceFoundations],
+  ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
 ];
 
 for (const [name, test] of tests) {

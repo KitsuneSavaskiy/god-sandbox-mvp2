@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
+    "test:domain": "tsc --ignoreConfig --module NodeNext --moduleResolution NodeNext --target ES2022 --lib ES2022,DOM --strict --skipLibCheck --rootDir src --outDir node_modules/.tmp/domain-test-dist src/domain/runtime.test.ts && node node_modules/.tmp/domain-test-dist/domain/runtime.test.js",
     "app:manual-sweep": "vite --host 127.0.0.1 --port 5173 --open /sandbox?mode=manual-sweep"
   },
   "dependencies": {
