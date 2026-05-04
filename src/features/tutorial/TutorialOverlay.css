@@ -65,6 +65,11 @@
     bottom: calc(72px + env(safe-area-inset-bottom));
     left: 10px;
     width: auto;
+    max-height: min(34dvh, 210px);
+    gap: 7px;
+    padding: 12px;
+    overflow: auto;
+    overscroll-behavior: contain;
   }
 
   .tutorial-overlay--top {
@@ -75,5 +80,24 @@
   .tutorial-overlay--anchor-right {
     right: auto;
     bottom: auto;
+  }
+
+  .tutorial-overlay h2 {
+    font-size: 1.1rem;
+  }
+
+  .tutorial-overlay p {
+    line-height: 1.45;
+  }
+}
+
+@media (max-width: 390px) {
+  .tutorial-overlay {
+    max-height: min(30dvh, 180px);
+    padding: 11px;
+  }
+
+  .tutorial-overlay__anchor {
+    display: none;
   }
 }

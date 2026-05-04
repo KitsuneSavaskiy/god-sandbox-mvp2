@@ -516,6 +516,12 @@
     padding: 10px;
   }
 
+  .event-first-sandbox__viewport[data-tutorial-highlighted="true"],
+  .event-first-sandbox__focus-card[data-tutorial-highlighted="true"],
+  .event-first-sandbox__result-card[data-tutorial-highlighted="true"] {
+    scroll-margin: 88px 0 230px;
+  }
+
   .event-first-sandbox__resident-row {
     grid-template-columns: auto minmax(0, 1fr);
   }
