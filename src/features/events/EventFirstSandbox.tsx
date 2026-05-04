@@ -5,7 +5,7 @@ import {
   selectCurrentEvent,
   selectObservationPreset,
 } from "../../application/runtimeSelectors.js";
-import type { InterventionKind, WorldEvent } from "../../domain/models.js";
+import type { CharacterId, InterventionKind, WorldEvent } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button.js";
 import type { StoryLogEntry } from "../story/StoryLogPanel.js";
@@ -80,6 +80,7 @@ interface EventFirstSandboxProps {
   onFocusedEventIdChange: (focusedEventId: string) => void;
   onStoryEntriesChange: (entries: StoryLogEntry[]) => void;
   onActiveResidentsChange: (residents: ActiveResidentPreview[]) => void;
+  onOpenCharacterDetail: (characterId: CharacterId) => void;
   onTutorialStateChange: (tutorialStateId: string | null) => void;
 }
 
@@ -143,6 +144,7 @@ export function EventFirstSandbox({
   onFocusedEventIdChange,
   onStoryEntriesChange,
   onActiveResidentsChange,
+  onOpenCharacterDetail,
   onTutorialStateChange,
 }: EventFirstSandboxProps) {
   const [sandboxStage, setSandboxStage] =
@@ -470,9 +472,14 @@ export function EventFirstSandbox({
                   resident.isPrimary ? " event-first-sandbox__resident-row--primary" : ""
                 }`}
               >
-                <span className="character-icon-placeholder" aria-hidden="true">
+                <button
+                  type="button"
+                  className="character-icon-placeholder event-first-sandbox__character-icon-button"
+                  aria-label={`${resident.displayName}の詳細を開く`}
+                  onClick={() => onOpenCharacterDetail(resident.id)}
+                >
                   {resident.displayName.slice(0, 1)}
-                </span>
+                </button>
                 <div className="event-first-sandbox__resident-row-main">
                   <span className="event-first-sandbox__group-label">{roleLabel}</span>
                   <strong>{resident.displayName}</strong>

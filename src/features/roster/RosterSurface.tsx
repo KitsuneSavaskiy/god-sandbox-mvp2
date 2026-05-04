@@ -11,6 +11,7 @@ type RosterSurfaceProps = {
   state: RuntimeWorldState;
   onAddNew: () => void;
   onEdit: (characterId: CharacterId) => void;
+  onOpenDetail: (characterId: CharacterId) => void;
   onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
 };
 
@@ -18,6 +19,7 @@ export function RosterSurface({
   state,
   onAddNew,
   onEdit,
+  onOpenDetail,
   onReplaceActiveSlot,
 }: RosterSurfaceProps) {
   const roster = selectRoster(state);
@@ -52,6 +54,7 @@ export function RosterSurface({
               slotIndex={slotIndex}
               roster={roster}
               activeCharacterIds={state.session.activeSlots}
+              onOpenDetail={onOpenDetail}
               onReplaceActiveSlot={onReplaceActiveSlot}
             />
           ))}
@@ -73,7 +76,12 @@ export function RosterSurface({
         <h3 id="roster-list-title">roster 全員</h3>
         <div className="roster-grid">
           {roster.map((character) => (
-            <RosterCard key={character.id} character={character} onEdit={onEdit} />
+            <RosterCard
+              key={character.id}
+              character={character}
+              onEdit={onEdit}
+              onOpenDetail={onOpenDetail}
+            />
           ))}
         </div>
       </section>
@@ -86,12 +94,14 @@ function ActiveSlotCard({
   slotIndex,
   roster,
   activeCharacterIds,
+  onOpenDetail,
   onReplaceActiveSlot,
 }: {
   character: Character;
   slotIndex: number;
   roster: Character[];
   activeCharacterIds: readonly CharacterId[];
+  onOpenDetail: (characterId: CharacterId) => void;
   onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
 }) {
   const candidates = roster.filter(
@@ -101,7 +111,17 @@ function ActiveSlotCard({
   return (
     <article className="active-slot-card">
       <p className="eyebrow">Slot {slotIndex + 1}</p>
-      <h4>{character.profile.displayName}</h4>
+      <div className="roster-card__name-row">
+        <button
+          type="button"
+          className="character-icon-placeholder roster-card__icon-button"
+          aria-label={`${character.profile.displayName}の詳細を開く`}
+          onClick={() => onOpenDetail(character.id)}
+        >
+          {character.profile.displayName.slice(0, 1)}
+        </button>
+        <h4>{character.profile.displayName}</h4>
+      </div>
       <p className="active-slot-card__meta">
         ここは active な4名の枠です。roster への追加とは別操作で入れ替えます。
       </p>
@@ -125,14 +145,26 @@ function ActiveSlotCard({
 function RosterCard({
   character,
   onEdit,
+  onOpenDetail,
 }: {
   character: Character;
   onEdit: (characterId: CharacterId) => void;
+  onOpenDetail: (characterId: CharacterId) => void;
 }) {
   return (
     <article className="roster-card">
       <p className="eyebrow">{character.state.narrativeRole ?? "住民"}</p>
-      <h4>{character.profile.displayName}</h4>
+      <div className="roster-card__name-row">
+        <button
+          type="button"
+          className="character-icon-placeholder roster-card__icon-button"
+          aria-label={`${character.profile.displayName}の詳細を開く`}
+          onClick={() => onOpenDetail(character.id)}
+        >
+          {character.profile.displayName.slice(0, 1)}
+        </button>
+        <h4>{character.profile.displayName}</h4>
+      </div>
       <p className="roster-card__meta roster-card__asset">
         画像: {character.profile.appearance.primaryAssetId}
       </p>

@@ -23,6 +23,31 @@
   gap: 8px;
 }
 
+.roster-card__name-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.roster-card__name-row h4 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roster-card__icon-button {
+  padding: 0;
+  border: 1px solid rgba(79, 104, 62, 0.18);
+  cursor: pointer;
+}
+
+.roster-card__icon-button:hover,
+.roster-card__icon-button:focus-visible {
+  outline: 2px solid rgba(97, 128, 78, 0.42);
+  outline-offset: 3px;
+}
+
 .active-slot-grid,
 .roster-grid {
   display: grid;
