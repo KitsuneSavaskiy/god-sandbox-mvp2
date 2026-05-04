@@ -31,10 +31,10 @@ export function RosterSurface({
   return (
     <section className="roster-surface" aria-labelledby="roster-title">
       <div className="roster-surface__header">
-        <p className="eyebrow">Roster / activeSlots[4]</p>
-        <h2 id="roster-title">所有住民と箱庭に出る4名を分けて管理する</h2>
+        <p className="eyebrow">住民管理</p>
+        <h2 id="roster-title">住民一覧と箱庭にいる4人を分けて管理する</h2>
         <p>
-          新しい住民はまず roster に追加されます。activeSlots は常に4名のまま保ち、
+          新しい住民はまず住民一覧に保存されます。今の箱庭の4人はすぐには変わらず、
           入れ替えたい時だけ下の4枠から選びます。
         </p>
         <div className="roster-surface__actions">
@@ -45,7 +45,7 @@ export function RosterSurface({
       </div>
 
       <section className="roster-surface__section" aria-labelledby="active-slots-title">
-        <h3 id="active-slots-title">箱庭に出ている4名</h3>
+        <h3 id="active-slots-title">箱庭にいる4人</h3>
         <div className="active-slot-grid">
           {activeCharacters.map((character, slotIndex) => (
             <ActiveSlotCard
@@ -73,7 +73,7 @@ export function RosterSurface({
       </section>
 
       <section className="roster-surface__section" aria-labelledby="roster-list-title">
-        <h3 id="roster-list-title">roster 全員</h3>
+        <h3 id="roster-list-title">住民一覧</h3>
         <div className="roster-grid">
           {roster.map((character) => (
             <RosterCard
@@ -123,7 +123,7 @@ function ActiveSlotCard({
         <h4>{character.profile.displayName}</h4>
       </div>
       <p className="active-slot-card__meta">
-        ここは active な4名の枠です。roster への追加とは別操作で入れ替えます。
+        ここは、いま箱庭にいる4人です。新しい住民はまず住民一覧に入り、入れ替えはあとで選べます。
       </p>
       <label>
         <span className="active-slot-card__meta">この枠を入れ替える</span>

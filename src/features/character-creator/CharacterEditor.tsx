@@ -21,14 +21,14 @@ type CharacterEditorProps = {
 
 const copyByMode: Record<CharacterEditorMode, { title: string; body: string; action: string }> = {
   initial: {
-    title: "初回4名を同じエディタで整える",
-    body: "初回設定も後続追加も同じ入力モデルを使います。画像だけ必須で、性格、口調、年齢は空欄でも進められます。",
-    action: "初回設定を保存",
+    title: "最初の4人を同じ画面で整える",
+    body: "最初の設定も後からの追加も同じ入力画面を使います。画像だけ必須で、性格、口調、年齢は空欄でも進められます。",
+    action: "最初の設定を保存",
   },
   new: {
-    title: "新しい住民をrosterに迎える",
-    body: "保存するとrosterへ追加されます。activeな4名は崩さず、入れ替えはあとで選べます。",
-    action: "rosterへ追加",
+    title: "新しい住民を迎える",
+    body: "保存すると、まず住民一覧に加わります。今の箱庭の4人はすぐには変わらず、入れ替えはあとで選べます。",
+    action: "住民一覧に保存",
   },
   edit: {
     title: "住民プロフィールを再編集する",

@@ -19,19 +19,20 @@ export function NewCharacterTutorialSurface({
       data-tutorial-anchor="tutorial-anchor-newcomer"
       data-tutorial-highlighted={isFirstVisit || undefined}
     >
-      <Panel title="新しい住民を迎える前に">
+      <Panel title="新しい住民を迎えます">
         <div className="new-character-tutorial-surface__body">
           <p>
-            新しい住民は、まず <strong>住民一覧</strong> に加わります。今箱庭にいる 4 人は、その場では崩れません。
+            新しい住民を作っても、今の箱庭の4人はすぐには変わりません。
+          </p>
+          <p>
+            まずは住民一覧に保存します。入れ替えは、あとで好きなタイミングで選べます。
           </p>
           <ol>
-            <li>新しい住民の準備を始める</li>
-            <li>住民一覧へ加える</li>
-            <li>あとで入れ替えたい 1 人を選ぶ</li>
+            <li>新しい住民を作る</li>
+            <li>住民一覧に保存する</li>
+            <li>あとで4人の中から入れ替える相手を選ぶ</li>
           </ol>
-          <p>
-            この案内は初回だけ必須です。いまは「4 人をすぐ壊さずに新しい子を迎えられる」と分かれば十分です。
-          </p>
+          <p>この案内は初回だけ表示されます。</p>
           <div className="new-character-tutorial-surface__actions">
             {isFirstVisit ? (
               <Button type="button" variant="primary" onClick={onAcknowledge}>
