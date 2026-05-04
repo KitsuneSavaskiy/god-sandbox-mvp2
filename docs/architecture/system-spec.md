@@ -10,7 +10,8 @@
 4. `docs/architecture/snapshot-passport-spec.md`
 5. `docs/architecture/local-persistence-spec.md`
 6. `docs/architecture/ui-state-model.md`
-7. `docs/architecture/testing-strategy.md`
+7. `docs/architecture/character-detail-asset-spec.md`
+8. `docs/architecture/testing-strategy.md`
 
 この文書は `god-sandbox-mvp2` の主要なゲーム仕様、状態仕様、アーキテクチャ方針を固定する。
 
@@ -158,6 +159,8 @@ interface Character {
   - 生成済み sprite sheet 参照
   - 将来の animation や動画連動更新に備える style metadata
 - asset の正本参照は asset ID であり、filename は副次情報である。
+- UI が詳細画面で使う表示用参照束は `docs/architecture/character-detail-asset-spec.md` の `CharacterAssetBundle` に従う。
+- `CharacterAssetBundle` は `Character` 正本そのものではなく、asset registry と profile から解決される表示用契約である。
 
 ### Relation table
 
