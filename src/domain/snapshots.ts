@@ -60,6 +60,7 @@ export function issueCharacterPassport(
   input: IssueCharacterPassportInput,
 ): CharacterPassport {
   const character = input.snapshot.character;
+  const referencedAssetIds = collectReferencedAssetIds(character);
 
   return {
     id: input.id,
@@ -75,14 +76,37 @@ export function issueCharacterPassport(
     },
     exportHints: {
       referencedCharacterFileId: character.id,
-      referencedAssetIds: [
-        character.profile.appearance.primaryAssetId,
-        ...character.profile.appearance.variantAssetIds.map((variant) => variant.assetId),
-        ...(character.profile.appearance.spriteSheetAssetId
-          ? [character.profile.appearance.spriteSheetAssetId]
-          : []),
-      ],
+      referencedAssetIds,
       sourceWorldId: input.snapshot.sourceWorldId,
     },
   };
+}
+
+function collectReferencedAssetIds(character: Character): string[] {
+  const assetIds = new Set<string>([
+    character.profile.appearance.primaryAssetId,
+    ...character.profile.appearance.variantAssetIds.map((variant) => variant.assetId),
+  ]);
+
+  if (character.profile.appearance.spriteSheetAssetId) {
+    assetIds.add(character.profile.appearance.spriteSheetAssetId);
+  }
+
+  const bundle = character.profile.appearance.assetBundle;
+  if (bundle) {
+    assetIds.add(bundle.portraitAssetId);
+    if (bundle.iconAssetId) {
+      assetIds.add(bundle.iconAssetId);
+    }
+    if (bundle.spriteSheetAssetId) {
+      assetIds.add(bundle.spriteSheetAssetId);
+    }
+    for (const assetId of Object.values(bundle.expressions)) {
+      if (assetId) {
+        assetIds.add(assetId);
+      }
+    }
+  }
+
+  return [...assetIds];
 }

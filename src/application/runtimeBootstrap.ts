@@ -2,6 +2,7 @@ import { DEFAULT_CHARACTER_STATUS } from "../domain/character.js";
 import { createWorldEvent } from "../domain/events.js";
 import type {
   Character,
+  CharacterAssetBundle,
   CharacterRelation,
   SandboxSession,
 } from "../domain/models.js";
@@ -13,11 +14,10 @@ const seedNow = "2026-05-04T00:00:00.000Z";
 export function createSeedRuntimeWorld(): RuntimeWorldState {
   const characters = new Map<string, Character>(
     [
-      seedCharacter("chr_ryo", "Ryo", "まじめで少し不器用な若者"),
-      seedCharacter("chr_mina", "Mina", "周りをよく見て動く住民"),
-      seedCharacter("chr_towa", "Towa", "小さな変化に気づきやすい住民"),
-      seedCharacter("chr_sena", "Sena", "勇気を出す練習をしている住民"),
-      seedCharacter("chr_noa", "Noa", "次に仲間へ加わる候補の住民"),
+      seedCharacter("chr_eve", "Eve"),
+      seedCharacter("chr_garan", "Garan"),
+      seedCharacter("chr_ryo", "Ryo"),
+      seedCharacter("chr_suzu", "Suzu"),
     ].map((character) => [character.id, character]),
   );
 
@@ -26,9 +26,9 @@ export function createSeedRuntimeWorld(): RuntimeWorldState {
     templateId: "seed-observation",
     status: "active",
     primaryCharacterId: "chr_ryo",
-    participantCharacterIds: ["chr_ryo", "chr_mina"],
+    participantCharacterIds: ["chr_ryo", "chr_suzu"],
     situationTags: ["daily-life", "first-observation"],
-    summary: "RyoとMinaのあいだに、小さな変化が起きています。",
+    summary: "RyoとSuzuのあいだに、小さな変化が起きています。",
     structuredPayload: {
       presetId: "default-observation",
     },
@@ -39,9 +39,9 @@ export function createSeedRuntimeWorld(): RuntimeWorldState {
   const session: SandboxSession = {
     id: "default",
     playerDisplayName: "新米神様",
-    rosterCharacterIds: ["chr_ryo", "chr_mina", "chr_towa", "chr_sena", "chr_noa"],
-    activeSlots: ["chr_ryo", "chr_mina", "chr_towa", "chr_sena"],
-    pendingActivationCharacterIds: ["chr_noa"],
+    rosterCharacterIds: ["chr_eve", "chr_garan", "chr_ryo", "chr_suzu"],
+    activeSlots: ["chr_eve", "chr_garan", "chr_ryo", "chr_suzu"],
+    pendingActivationCharacterIds: [],
     currentEventId: currentEvent.id,
     godPoints: 6,
     worldStatusTags: ["calm", "first-session"],
@@ -62,19 +62,20 @@ export function createSeedRuntimeWorld(): RuntimeWorldState {
   });
 }
 
-function seedCharacter(id: string, displayName: string, description: string): Character {
+function seedCharacter(id: string, displayName: string): Character {
+  const bundleId = id.replace(/^chr_/, "");
+  const portraitAssetId = `${bundleId}-portrait-neutral`;
   return {
     id,
     profile: {
       displayName,
       personality: {},
       appearance: {
-        primaryAssetId: `asset_${id}_portrait`,
+        primaryAssetId: portraitAssetId,
         variantAssetIds: [],
+        assetBundle: createSeedAssetBundle(bundleId, portraitAssetId),
       },
-      templateFieldValues: {
-        description,
-      },
+      templateFieldValues: {},
     },
     state: {
       status: { ...DEFAULT_CHARACTER_STATUS },
@@ -86,10 +87,42 @@ function seedCharacter(id: string, displayName: string, description: string): Ch
   };
 }
 
+function createSeedAssetBundle(
+  bundleId: string,
+  portraitAssetId: string,
+): CharacterAssetBundle {
+  const generatedExpressionAssetIds = new Set(
+    bundleId === "suzu"
+      ? ["happy"]
+      : ["happy", "angry", "sad", "surprised"],
+  );
+
+  return {
+    portraitAssetId,
+    iconAssetId: null,
+    spriteSheetAssetId: null,
+    expressions: {
+      neutral: portraitAssetId,
+      happy: generatedExpressionAssetIds.has("happy")
+        ? `${bundleId}-expression-happy`
+        : null,
+      angry: generatedExpressionAssetIds.has("angry")
+        ? `${bundleId}-expression-angry`
+        : null,
+      sad: generatedExpressionAssetIds.has("sad")
+        ? `${bundleId}-expression-sad`
+        : null,
+      surprised: generatedExpressionAssetIds.has("surprised")
+        ? `${bundleId}-expression-surprised`
+        : null,
+    },
+  };
+}
+
 const seedRelation: CharacterRelation = {
-  id: "rel_chr_ryo__chr_mina",
+  id: "rel_chr_ryo__chr_suzu",
   characterAId: "chr_ryo",
-  characterBId: "chr_mina",
+  characterBId: "chr_suzu",
   score: 10,
   derivedFromEventIds: ["evt_seed_observation"],
   lastRecomputedAt: seedNow,

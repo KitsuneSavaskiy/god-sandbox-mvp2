@@ -3,7 +3,12 @@ import type { AssetId, CharacterId } from "../domain/models.js";
 export type AssetManifestEntry = {
   id: AssetId;
   ownerCharacterId?: CharacterId;
-  kind: "appearance-source" | "appearance-variant" | "sprite-sheet" | "video-source";
+  kind:
+    | "appearance-source"
+    | "appearance-variant"
+    | "icon"
+    | "sprite-sheet"
+    | "video-source";
   relativePath: string;
   contentHash?: string;
   generatedFromAssetIds?: AssetId[];
