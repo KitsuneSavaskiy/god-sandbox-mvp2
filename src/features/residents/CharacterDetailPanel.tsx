@@ -5,6 +5,7 @@ import {
   createCharacterDetailReadModel,
   getExpressionLabel,
   type CharacterDetailAssetBundle,
+  type CharacterDetailInfoItem,
 } from "./characterDetailReadModel.js";
 import "./CharacterDetailPanel.css";
 
@@ -42,9 +43,6 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
     ? resolveExpressionAssetUrl(character, selectedExpression, detailBundle)
     : null;
   const references = createAssetReferences(character, expressionVariants, detailBundle);
-  const description = readStringField(character, "description");
-  const speechStyle = character.profile.speechStyleId ?? readStringField(character, "speechStyleId");
-  const age = character.profile.age ?? readStringField(character, "age");
 
   useEffect(() => {
     setPortraitFailed(false);
@@ -96,33 +94,27 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
         </figure>
 
         <section className="character-detail-panel__section" aria-labelledby="character-detail-profile">
-          <h3 id="character-detail-profile">基本設定</h3>
-          <dl className="character-detail-panel__definition-list">
-            <div>
-              <dt>名前</dt>
-              <dd>{readModel.displayName}</dd>
-            </div>
-            <div>
-              <dt>保存名</dt>
-              <dd>{readModel.savedDisplayName}</dd>
-            </div>
-            <div>
-              <dt>役割</dt>
-              <dd>{character.state.narrativeRole ?? "未設定"}</dd>
-            </div>
-            <div>
-              <dt>説明</dt>
-              <dd>{description || "未設定"}</dd>
-            </div>
-            <div>
-              <dt>口調</dt>
-              <dd>{speechStyle || "未設定"}</dd>
-            </div>
-            <div>
-              <dt>年齢</dt>
-              <dd>{age || "未設定"}</dd>
-            </div>
-          </dl>
+          <h3 id="character-detail-profile">設定</h3>
+          <InfoList items={readModel.settingItems} />
+        </section>
+
+        <section className="character-detail-panel__section" aria-labelledby="character-detail-recognition">
+          <h3 id="character-detail-recognition">見た目メモ</h3>
+          {readModel.visualMemoItems.length ? (
+            <>
+              <p className="character-detail-panel__section-note">
+                AI認識メモは未確認です。公式loreではなく、ユーザー確認待ちの説明として扱います。
+              </p>
+              <InfoList items={readModel.visualMemoItems} />
+            </>
+          ) : (
+            <p className="character-detail-panel__empty">AI認識メモは未生成です。</p>
+          )}
+        </section>
+
+        <section className="character-detail-panel__section" aria-labelledby="character-detail-unresolved">
+          <h3 id="character-detail-unresolved">未確定メモ</h3>
+          <InfoList items={readModel.unresolvedItems} />
         </section>
 
         <section className="character-detail-panel__section" aria-labelledby="character-detail-expressions">
@@ -186,6 +178,44 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
         </section>
       </div>
     </aside>
+  );
+}
+
+function InfoList({ items }: { items: CharacterDetailInfoItem[] }) {
+  if (items.length === 0) {
+    return <p className="character-detail-panel__empty">未設定</p>;
+  }
+
+  return (
+    <dl className="character-detail-panel__definition-list">
+      {items.map((item) => (
+        <div key={`${item.source}-${item.label}-${item.value}`}>
+          <dt>
+            <span>{item.label}</span>
+            <SourceBadge source={item.source} />
+          </dt>
+          <dd>{item.value}</dd>
+          {item.needsUserConfirmation ? (
+            <dd className="character-detail-panel__source-note">未確認。ユーザー確認までは公式設定にしません。</dd>
+          ) : null}
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function SourceBadge({ source }: { source: CharacterDetailInfoItem["source"] }) {
+  const label =
+    source === "user-input"
+      ? "ユーザー入力"
+      : source === "generated-recognition"
+        ? "AI認識メモ"
+        : "未設定";
+
+  return (
+    <span className={`character-detail-panel__source-badge character-detail-panel__source-badge--${source}`}>
+      {label}
+    </span>
   );
 }
 

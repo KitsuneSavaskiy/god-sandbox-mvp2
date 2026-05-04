@@ -106,9 +106,11 @@
 
 .character-detail-panel__portrait-card figcaption,
 .character-detail-panel__empty,
+.character-detail-panel__section-note,
 .character-detail-panel__asset-row small,
 .character-detail-panel__expression-button small,
-.character-detail-panel__expression-placeholder small {
+.character-detail-panel__expression-placeholder small,
+.character-detail-panel__source-note {
   margin: 0;
   color: #5b6d50;
   font-size: 0.88rem;
@@ -138,6 +140,10 @@
 
 .character-detail-panel__definition-list dt,
 .character-detail-panel__asset-row span {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
   color: #627356;
   font-size: 0.78rem;
   font-weight: 800;
@@ -150,6 +156,34 @@
   color: #293722;
   line-height: 1.5;
   overflow-wrap: anywhere;
+}
+
+.character-detail-panel__source-note {
+  color: #806843;
+}
+
+.character-detail-panel__source-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.character-detail-panel__source-badge--user-input {
+  color: #2f5428;
+  background: rgba(113, 156, 87, 0.16);
+}
+
+.character-detail-panel__source-badge--generated-recognition {
+  color: #725326;
+  background: rgba(208, 154, 75, 0.18);
+}
+
+.character-detail-panel__source-badge--placeholder {
+  color: #65715d;
+  background: rgba(111, 126, 102, 0.14);
 }
 
 .character-detail-panel__asset-row {
