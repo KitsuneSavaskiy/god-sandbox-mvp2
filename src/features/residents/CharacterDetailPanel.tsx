@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { AppearanceVariant, Character } from "../../domain/models.js";
 import { Button } from "../../ui/Button.js";
+import {
+  createCharacterDetailReadModel,
+  getExpressionLabel,
+  type CharacterDetailAssetBundle,
+} from "./characterDetailReadModel.js";
 import "./CharacterDetailPanel.css";
 
 type CharacterDetailPanelProps = {
@@ -14,43 +19,18 @@ type AssetReference = {
   note: string;
 };
 
-type DetailAssetBundle = {
-  displayName: string;
-  bundleId: string;
-  portraitAssetId: string;
-  iconAssetId: string;
-  spriteSheetAssetId: string;
-};
-
-const expressionKeys = ["neutral", "happy", "angry", "sad", "surprised"] as const;
-
-const expressionLabels: Record<(typeof expressionKeys)[number], string> = {
-  neutral: "通常",
-  happy: "喜び",
-  angry: "怒り",
-  sad: "悲しみ",
-  surprised: "驚き",
-};
-
-const defaultCharacterDetailBundles: Record<string, DetailAssetBundle> = {
-  chr_ryo: createDefaultDetailBundle("Eve", "eve"),
-  chr_mina: createDefaultDetailBundle("Garan", "garan"),
-  chr_towa: createDefaultDetailBundle("Ryo", "ryo"),
-  chr_sena: createDefaultDetailBundle("Suzu", "suzu"),
-};
-
 export function CharacterDetailPanel({ character, onClose }: CharacterDetailPanelProps) {
   const [portraitFailed, setPortraitFailed] = useState(false);
-  const detailBundle = resolveDetailAssetBundle(character);
-  const expressionVariants = useMemo(
-    () => createExpressionVariants(character, detailBundle),
-    [character, detailBundle],
+  const readModel = useMemo(
+    () => createCharacterDetailReadModel(character),
+    [character],
   );
+  const detailBundle = readModel.assetBundle;
+  const expressionVariants = readModel.expressions;
   const [selectedExpressionId, setSelectedExpressionId] = useState<string | null>(
     () => expressionVariants[0]?.id ?? null,
   );
   const [expressionFailed, setExpressionFailed] = useState(false);
-  const detailDisplayName = resolveDetailDisplayName(character);
   const portraitSource = useMemo(
     () => resolveDisplayAssetUrl(character, detailBundle),
     [character, detailBundle],
@@ -89,7 +69,7 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
       <div className="character-detail-panel__chrome">
         <div>
           <p className="eyebrow">Character detail</p>
-          <h2 id="character-detail-panel-title">{detailDisplayName}</h2>
+          <h2 id="character-detail-panel-title">{readModel.displayName}</h2>
         </div>
         <Button type="button" variant="ghost" onClick={onClose}>
           閉じる
@@ -101,12 +81,12 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
           {portraitSource && !portraitFailed ? (
             <img
               src={portraitSource}
-              alt={`${detailDisplayName}の立ち絵`}
+              alt={`${readModel.displayName}の立ち絵`}
               onError={() => setPortraitFailed(true)}
             />
           ) : (
             <div className="character-detail-panel__portrait-placeholder" aria-label="立ち絵未生成">
-              <span>{detailDisplayName.slice(0, 1)}</span>
+              <span>{readModel.displayName.slice(0, 1)}</span>
               <strong>立ち絵は未生成</strong>
             </div>
           )}
@@ -120,11 +100,11 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
           <dl className="character-detail-panel__definition-list">
             <div>
               <dt>名前</dt>
-              <dd>{detailDisplayName}</dd>
+              <dd>{readModel.displayName}</dd>
             </div>
             <div>
               <dt>保存名</dt>
-              <dd>{character.profile.displayName}</dd>
+              <dd>{readModel.savedDisplayName}</dd>
             </div>
             <div>
               <dt>役割</dt>
@@ -153,7 +133,7 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
                 {selectedExpressionSource && !expressionFailed && selectedExpression ? (
                   <img
                     src={selectedExpressionSource}
-                    alt={`${detailDisplayName}の${getExpressionLabel(selectedExpression)}`}
+                    alt={`${readModel.displayName}の${getExpressionLabel(selectedExpression)}`}
                     onError={() => setExpressionFailed(true)}
                   />
                 ) : (
@@ -212,7 +192,7 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
 function createAssetReferences(
   character: Character,
   expressionVariants: AppearanceVariant[],
-  detailBundle: DetailAssetBundle | null,
+  detailBundle: CharacterDetailAssetBundle | null,
 ): AssetReference[] {
   return [
     {
@@ -253,7 +233,7 @@ function readStringField(character: Character, fieldId: string): string {
 
 function resolveDisplayAssetUrl(
   character: Character,
-  detailBundle: DetailAssetBundle | null,
+  detailBundle: CharacterDetailAssetBundle | null,
 ): string | null {
   const assetId = character.profile.appearance.primaryAssetId;
   if (assetId.startsWith("/") || assetId.startsWith("data:")) {
@@ -274,7 +254,7 @@ function resolveDisplayAssetUrl(
 function resolveExpressionAssetUrl(
   character: Character,
   variant: AppearanceVariant,
-  detailBundle: DetailAssetBundle | null,
+  detailBundle: CharacterDetailAssetBundle | null,
 ): string | null {
   const assetId = variant.assetId;
   if (assetId.startsWith("/") || assetId.startsWith("data:")) {
@@ -291,47 +271,6 @@ function resolveExpressionAssetUrl(
   }
 
   return `/art/residents/${character.id}/expressions/${fileToken}.png`;
-}
-
-function resolveDetailDisplayName(character: Character): string {
-  return resolveDetailAssetBundle(character)?.displayName ?? character.profile.displayName;
-}
-
-function resolveDetailAssetBundle(character: Character): DetailAssetBundle | null {
-  return defaultCharacterDetailBundles[character.id] ?? null;
-}
-
-function createDefaultDetailBundle(displayName: string, bundleId: string): DetailAssetBundle {
-  return {
-    displayName,
-    bundleId,
-    portraitAssetId: `${bundleId}-portrait-neutral`,
-    iconAssetId: `${bundleId}-icon`,
-    spriteSheetAssetId: `${bundleId}-sprite-sheet`,
-  };
-}
-
-function createExpressionVariants(
-  character: Character,
-  detailBundle: DetailAssetBundle | null,
-): AppearanceVariant[] {
-  if (character.profile.appearance.variantAssetIds.length > 0) {
-    return character.profile.appearance.variantAssetIds;
-  }
-
-  if (!detailBundle) {
-    return [];
-  }
-
-  return expressionKeys.map((key) => ({
-    id: `${detailBundle.bundleId}-expression-${key}`,
-    emotion: key,
-    assetId: `${detailBundle.bundleId}-expression-${key}`,
-  }));
-}
-
-function getExpressionLabel(variant: AppearanceVariant): string {
-  return expressionLabels[variant.emotion as (typeof expressionKeys)[number]] ?? variant.emotion ?? "表情";
 }
 
 function toAssetFileToken(value: string): string {
