@@ -178,7 +178,7 @@ export function EventFirstSandbox({
   );
 
   const primaryResident = activeResidents.find((resident) => resident.isPrimary);
-  const supportingResidents = activeResidents.filter((resident) => resident.isSupporting);
+  const primaryResidentId = primaryResident?.id ?? activeResidents[0]?.id;
   const tutorialBinding = getTutorialBinding(tutorialState, {
     routePath,
     stage: sandboxStage,
@@ -268,6 +268,7 @@ export function EventFirstSandbox({
     setLatestOutcome(outcome);
     setSandboxStage("result");
     setStoryEntries((currentEntries) => [
+      ...currentEntries,
       {
         id: `${outcome.eventId}-${type}`,
         title: `${interventionLabels[type]}で変化が起きました`,
@@ -276,7 +277,6 @@ export function EventFirstSandbox({
         tags: [interventionLabels[type], `${outcome.godPointsAfter} pt`],
         tone: "result",
       },
-      ...currentEntries,
     ]);
     setTutorialState((currentTutorial) =>
       advanceTutorialStep(currentTutorial, "intervened"),
@@ -286,6 +286,7 @@ export function EventFirstSandbox({
   function handleResultReviewed() {
     const nextEvent = selectCurrentEvent(runtimeState);
     setStoryEntries((currentEntries) => [
+      ...currentEntries,
       {
         id: `${nextEvent.id}-arrived`,
         title: "次の出来事が前に出ました",
@@ -294,7 +295,6 @@ export function EventFirstSandbox({
         tags: ["新しい出来事", ...nextEvent.situationTags.slice(0, 2)],
         tone: "pause",
       },
-      ...currentEntries,
     ]);
     setLatestOutcome(null);
     setEventWindowOpen(false);
@@ -364,44 +364,62 @@ export function EventFirstSandbox({
         </div>
         <h2>{createEventHeadline(currentEvent, primaryResident?.displayName ?? "住民")}</h2>
         <p className="event-first-sandbox__focus-summary">{currentEvent.summary}</p>
-        <div className="event-first-sandbox__resident-groups">
-          <div>
-            <span className="event-first-sandbox__group-label">主役</span>
-            <strong>{primaryResident?.displayName ?? "未設定"}</strong>
-            <p>{primaryResident?.zoneLabel ?? "箱庭中央"}</p>
-          </div>
-          <div>
-            <span className="event-first-sandbox__group-label">脇役</span>
-            <strong>
-              {supportingResidents.length > 0
-                ? supportingResidents.map((resident) => resident.displayName).join(" / ")
-                : "今は主役のみ"}
-            </strong>
-            <p>
-              {supportingResidents.length > 0
-                ? "主役の出来事に重なる気配があります。"
-                : "今回はこの子の様子が中心です。"}
-            </p>
-          </div>
-        </div>
-        <div className="event-first-sandbox__event-entry">
-          <Button
-            type="button"
-            variant="primary"
-            className="event-first-sandbox__event-entry-button"
-            data-tutorial-anchor="tutorial-anchor-event-entry"
-            data-tutorial-highlighted={
-              tutorialBinding?.anchorId === "tutorial-anchor-event-entry" || undefined
-            }
-            disabled={eventWindowOpen || !!latestOutcome}
-            onClick={() => setEventWindowOpen(true)}
-          >
-            <span className="event-first-sandbox__event-entry-mark">!</span>
-            <span>{eventWindowOpen || latestOutcome ? "イベント子画面を表示中" : "イベント詳細を見る"}</span>
-          </Button>
-          <p className="event-first-sandbox__hint">
-            関わり方の選択はイベント子画面の中で行います。
-          </p>
+        <div className="event-first-sandbox__resident-list" aria-label="いまの出来事にいる住民">
+          {activeResidents.map((resident) => {
+            const isEventEntryResident = resident.id === primaryResidentId;
+            const roleLabel = resident.isPrimary
+              ? "主役"
+              : resident.isSupporting
+                ? "脇役"
+                : "見守り中";
+
+            return (
+              <article
+                key={`focus-${resident.id}`}
+                className={`event-first-sandbox__resident-row${
+                  resident.isPrimary ? " event-first-sandbox__resident-row--primary" : ""
+                }`}
+              >
+                <span className="character-icon-placeholder" aria-hidden="true">
+                  {resident.displayName.slice(0, 1)}
+                </span>
+                <div className="event-first-sandbox__resident-row-main">
+                  <span className="event-first-sandbox__group-label">{roleLabel}</span>
+                  <strong>{resident.displayName}</strong>
+                  <span>{resident.zoneLabel}</span>
+                </div>
+                <div className="event-first-sandbox__resident-row-status">
+                  {resident.statusSummary.map((summary) => (
+                    <span key={`${resident.id}-${summary}`}>{summary}</span>
+                  ))}
+                </div>
+                {isEventEntryResident ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="event-first-sandbox__event-entry-button"
+                    data-tutorial-anchor="tutorial-anchor-event-entry"
+                    data-tutorial-highlighted={
+                      tutorialBinding?.anchorId === "tutorial-anchor-event-entry" || undefined
+                    }
+                    disabled={eventWindowOpen || !!latestOutcome}
+                    onClick={() => setEventWindowOpen(true)}
+                  >
+                    <span className="event-first-sandbox__event-entry-mark">!</span>
+                    <span>
+                      {eventWindowOpen || latestOutcome
+                        ? "イベント子画面を表示中"
+                        : "イベント詳細を見る"}
+                    </span>
+                  </Button>
+                ) : (
+                  <span className="event-first-sandbox__resident-row-note">
+                    {resident.isSupporting ? "関わりあり" : "待機中"}
+                  </span>
+                )}
+              </article>
+            );
+          })}
         </div>
       </section>
 
@@ -516,36 +534,15 @@ export function EventFirstSandbox({
         />
       ) : null}
 
-      {tutorialState.currentStepId === "intervene" ? (
+      {tutorialState.currentStepId === "intervene" && !eventWindowInterventionTutorialActive ? (
         <TutorialOverlay
           stepId="03 / 04"
-          title={
-            eventWindowInterventionTutorialActive
-              ? "子画面の中で関わり方を選びます"
-              : "出来事の詳しい声を聞く番です"
-          }
-          body={
-            eventWindowInterventionTutorialActive
-              ? "見守る / 助ける / 試練 は、このイベント子画面の中だけにあります。いまの出来事カードには戻しません。"
-              : "気になる出来事を開くと、神様がどう関わるかを選べます。見守る / 助ける / 試練 は、イベント子画面の中だけに表示されます。"
-          }
-          anchorLabel={
-            eventWindowInterventionTutorialActive
-              ? "見守る / 助ける / 試練"
-              : "! イベント詳細を見る"
-          }
-          placement="top"
-          primaryActionLabel={eventWindowInterventionTutorialActive ? undefined : "イベント詳細を見る"}
-          onPrimaryAction={
-            eventWindowInterventionTutorialActive ? undefined : () => setEventWindowOpen(true)
-          }
-          trailingContent={
-            <span className="event-first-sandbox__tutorial-note">
-              {eventWindowInterventionTutorialActive
-                ? "子画面内の選択肢を1つ押すと結果へ進みます"
-                : "まずは ! マーク付きの詳細ボタンを開きます"}
-            </span>
-          }
+          title="箱庭の住人に何かが起きています。"
+          body="「イベント詳細を見る」をクリックしてみましょう。"
+          anchorLabel="イベント詳細を見る"
+          anchorId="tutorial-anchor-event-entry"
+          placement="anchor-right"
+          showAnchorHint={false}
         />
       ) : null}
 
