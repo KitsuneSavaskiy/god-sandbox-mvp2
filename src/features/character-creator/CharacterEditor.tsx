@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import type { Character } from "../../domain/models.js";
 import { Button } from "../../ui/Button";
 import {
@@ -17,6 +17,28 @@ type CharacterEditorProps = {
   mode: CharacterEditorMode;
   onCancel: () => void;
   onSave: (draft: CharacterDraft) => void;
+};
+
+type DirectoryPicker = () => Promise<FileSystemDirectoryHandleLike>;
+
+type FileSystemDirectoryHandleLike = {
+  getFileHandle: (
+    name: string,
+    options?: { create?: boolean },
+  ) => Promise<FileSystemFileHandleLike>;
+};
+
+type FileSystemFileHandleLike = {
+  createWritable: () => Promise<FileSystemWritableFileStreamLike>;
+};
+
+type FileSystemWritableFileStreamLike = {
+  write: (data: Blob) => Promise<void>;
+  close: () => Promise<void>;
+};
+
+type WindowWithFileSystemAccess = Window & {
+  showDirectoryPicker?: DirectoryPicker;
 };
 
 const copyByMode: Record<CharacterEditorMode, { title: string; body: string; action: string }> = {
@@ -46,12 +68,32 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
     [character],
   );
   const [draft, setDraft] = useState<CharacterDraft>(initialDraft);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imagePickerMessage, setImagePickerMessage] = useState<string | null>(null);
+  const [imageSaveStatus, setImageSaveStatus] = useState<string | null>(null);
   const validation = validateCharacterDraft(draft);
   const copy = copyByMode[mode];
+  const directoryPicker = getDirectoryPicker();
 
   useEffect(() => {
     setDraft(initialDraft);
+    setSelectedImageFile(null);
+    setImagePickerMessage(null);
+    setImageSaveStatus(null);
   }, [initialDraft, mode]);
+
+  useEffect(() => {
+    if (!selectedImageFile) {
+      setImagePreviewUrl(null);
+      return undefined;
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(selectedImageFile);
+    setImagePreviewUrl(nextPreviewUrl);
+
+    return () => URL.revokeObjectURL(nextPreviewUrl);
+  }, [selectedImageFile]);
 
   function updateDraft(patch: Partial<CharacterDraft>) {
     setDraft((current) => ({ ...current, ...patch }));
@@ -64,6 +106,51 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
     }
 
     onSave(draft);
+  }
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!isSupportedImageFile(file)) {
+      setSelectedImageFile(null);
+      setImagePickerMessage("PNG / JPG / JPEG / WebP の画像ファイルを選んでください。");
+      setImageSaveStatus(null);
+      return;
+    }
+
+    const nextImageAssetId = createWorkingImageFileName(file, draft);
+    setSelectedImageFile(file);
+    setImagePickerMessage("画像を選択しました。ゲーム内で使う名前を下に表示しています。");
+    setImageSaveStatus(null);
+    updateDraft({ imageAssetId: nextImageAssetId });
+  }
+
+  async function handleSaveSelectedImageToFolder() {
+    if (!directoryPicker || !selectedImageFile || !draft.imageAssetId.trim()) {
+      return;
+    }
+
+    try {
+      setImageSaveStatus("保存先フォルダを選んでいます。");
+      const directoryHandle = await directoryPicker();
+      const fileHandle = await directoryHandle.getFileHandle(draft.imageAssetId.trim(), {
+        create: true,
+      });
+      const writable = await fileHandle.createWritable();
+      await writable.write(selectedImageFile);
+      await writable.close();
+      setImageSaveStatus(`作業フォルダへ保存しました: ${draft.imageAssetId.trim()}`);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setImageSaveStatus("保存先フォルダの選択をキャンセルしました。");
+        return;
+      }
+
+      setImageSaveStatus("このブラウザでは自動保存できませんでした。下の案内に沿って手動で配置してください。");
+    }
   }
 
   return (
@@ -85,14 +172,74 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
             />
           </label>
 
-          <label className="character-editor__field character-editor__field--wide">
-            <span>見た目画像 *</span>
-            <input
-              value={draft.imageAssetId}
-              onChange={(event) => updateDraft({ imageAssetId: event.target.value })}
-              placeholder="asset_chr_aki_portrait など"
-            />
-          </label>
+          <div className="character-editor__field character-editor__field--wide">
+            <span id="character-image-picker-label">見た目画像 *</span>
+            <div className="character-editor__image-picker" aria-labelledby="character-image-picker-label">
+              <label className="character-editor__file-button">
+                画像ファイルを選ぶ
+                <input
+                  type="file"
+                  accept="image/png,.png,image/jpeg,.jpg,.jpeg,image/webp,.webp"
+                  onChange={handleImageFileChange}
+                />
+              </label>
+
+              <div className="character-editor__image-summary">
+                <strong>
+                  {selectedImageFile
+                    ? selectedImageFile.name
+                    : draft.imageAssetId.trim()
+                      ? "登録済みの見た目画像があります"
+                      : "画像ファイルを選んでください"}
+                </strong>
+                <small>
+                  {draft.imageAssetId.trim()
+                    ? `ゲーム内で使う名前: ${draft.imageAssetId.trim()}`
+                    : "PNG / JPG / JPEG / WebP に対応しています。個人PCの絶対パスは入力しません。"}
+                </small>
+              </div>
+
+              {imagePreviewUrl ? (
+                <figure className="character-editor__image-preview">
+                  <img src={imagePreviewUrl} alt="選択した見た目画像のプレビュー" />
+                  <figcaption>選択済みプレビュー</figcaption>
+                </figure>
+              ) : null}
+
+              <div className="character-editor__image-save-guide">
+                {directoryPicker ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleSaveSelectedImageToFolder}
+                      disabled={!selectedImageFile || !draft.imageAssetId.trim()}
+                    >
+                      作業フォルダへ保存
+                    </Button>
+                    <small>
+                      対応ブラウザでは、保存先フォルダを選んで画像をコピーできます。
+                    </small>
+                  </>
+                ) : (
+                  <small>
+                    このブラウザでは、任意フォルダへ直接コピーできません。表示された名前で画像を手動配置してください。
+                  </small>
+                )}
+              </div>
+
+              {imagePickerMessage ? (
+                <p className="character-editor__image-message" role="status">
+                  {imagePickerMessage}
+                </p>
+              ) : null}
+              {imageSaveStatus ? (
+                <p className="character-editor__image-message" role="status">
+                  {imageSaveStatus}
+                </p>
+              ) : null}
+            </div>
+          </div>
 
           <label className="character-editor__field character-editor__field--wide">
             <span>性格メモ</span>
@@ -147,4 +294,58 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
       </form>
     </section>
   );
+}
+
+function isSupportedImageFile(file: File): boolean {
+  return Boolean(getSupportedImageExtension(file));
+}
+
+function createWorkingImageFileName(file: File, draft: CharacterDraft): string {
+  const extension = getSupportedImageExtension(file) ?? "png";
+  const sourceName = (draft.id ?? draft.displayName) || getFileNameWithoutExtension(file.name);
+  const slug = createSafeFileToken(sourceName);
+
+  return `character-${slug}-${Date.now().toString(36)}-portrait-original.${extension}`;
+}
+
+function getSupportedImageExtension(file: File): "png" | "jpg" | "jpeg" | "webp" | undefined {
+  const extension = file.name.split(".").pop()?.toLowerCase();
+  if (extension === "png" || extension === "jpg" || extension === "jpeg" || extension === "webp") {
+    return extension;
+  }
+
+  if (file.type === "image/png") {
+    return "png";
+  }
+
+  if (file.type === "image/jpeg") {
+    return "jpg";
+  }
+
+  if (file.type === "image/webp") {
+    return "webp";
+  }
+
+  return undefined;
+}
+
+function getFileNameWithoutExtension(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "");
+}
+
+function createSafeFileToken(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return slug || "new-resident";
+}
+
+function getDirectoryPicker(): DirectoryPicker | undefined {
+  if (typeof window === "undefined") {
+    return undefined;
+  }
+
+  return (window as WindowWithFileSystemAccess).showDirectoryPicker;
 }
