@@ -101,4 +101,3 @@ function SnapshotList({ snapshots }: { snapshots: CharacterSnapshot[] }) {
     </section>
   );
 }
-

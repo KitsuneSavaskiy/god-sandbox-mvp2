@@ -144,4 +144,3 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
     </section>
   );
 }
-

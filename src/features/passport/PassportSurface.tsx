@@ -87,4 +87,3 @@ function PassportCard({ passport }: { passport: CharacterPassport }) {
     </article>
   );
 }
-

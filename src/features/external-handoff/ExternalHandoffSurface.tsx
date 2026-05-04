@@ -96,4 +96,3 @@ function createHandoffBundle(passport: CharacterPassport) {
 function toDataHref(type: string, content: string): string {
   return `data:${type};charset=utf-8,${encodeURIComponent(content)}`;
 }
-

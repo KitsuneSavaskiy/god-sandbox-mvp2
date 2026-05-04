@@ -39,4 +39,3 @@ export const LINE3_CHARACTER_TEMPLATE: CharacterTemplate = {
     templateFieldValues: {},
   },
 };
-

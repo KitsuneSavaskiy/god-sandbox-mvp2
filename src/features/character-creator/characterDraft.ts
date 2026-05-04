@@ -178,4 +178,3 @@ function asString(value: unknown): string {
 
   return String(value);
 }
-
