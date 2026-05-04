@@ -9,7 +9,9 @@ import type { InterventionKind, WorldEvent } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button.js";
 import type { StoryLogEntry } from "../story/StoryLogPanel.js";
+import { TutorialOverlay } from "../tutorial/TutorialOverlay.js";
 import {
+  advanceTutorialStep,
   ensureTutorialForContext,
   getTutorialBinding,
   persistTutorialState,
@@ -210,6 +212,10 @@ export function EventFirstSandbox({
     persistTutorialState(tutorialState);
   }, [tutorialState]);
 
+  function handleTutorialContinue() {
+    setTutorialState((current) => advanceTutorialStep(current, "continue"));
+  }
+
   function handleIntervention(type: InterventionKind) {
     const previousInterventionIds = new Set(runtimeState.interventions.keys());
     const previousChangeSetIds = new Set(runtimeState.changeSets.keys());
@@ -256,6 +262,9 @@ export function EventFirstSandbox({
       },
       ...currentEntries,
     ]);
+    setTutorialState((currentTutorial) =>
+      advanceTutorialStep(currentTutorial, "intervened"),
+    );
   }
 
   function handleResultReviewed() {
@@ -273,6 +282,9 @@ export function EventFirstSandbox({
     ]);
     setLatestOutcome(null);
     setSandboxStage("focused-event");
+    setTutorialState((currentTutorial) =>
+      advanceTutorialStep(currentTutorial, "result-reviewed"),
+    );
   }
 
   return (
@@ -400,6 +412,54 @@ export function EventFirstSandbox({
           <strong>manual-sweep mode</strong>
           <span>runtime 出力先: {manualSweepRuntimeDirectory}</span>
         </aside>
+      ) : null}
+
+      {tutorialState.currentStepId === "observe-world" ? (
+        <TutorialOverlay
+          stepId="01 / 04"
+          title="まず箱庭を見る"
+          body="住民の位置と気配をざっと見れば十分です。主役は次のカードで分かります。"
+          anchorLabel="箱庭の見取り図"
+          primaryActionLabel="次へ"
+          onPrimaryAction={handleTutorialContinue}
+        />
+      ) : null}
+
+      {tutorialState.currentStepId === "inspect-event" ? (
+        <TutorialOverlay
+          stepId="02 / 04"
+          title="次は出来事を見る"
+          body="主役、脇役、いま起きていることの 3 つが読めれば、次の操作を決められます。"
+          anchorLabel="いまの出来事"
+          primaryActionLabel="介入へ"
+          onPrimaryAction={handleTutorialContinue}
+        />
+      ) : null}
+
+      {tutorialState.currentStepId === "intervene" ? (
+        <TutorialOverlay
+          stepId="03 / 04"
+          title="今は関わり方を選ぶ番です"
+          body="初回は 助ける がいちばん分かりやすい流れです。押すと変化が結果カードへ出ます。"
+          anchorLabel="見守る / 助ける / 試練"
+          placement="top"
+          trailingContent={
+            <span className="event-first-sandbox__tutorial-note">
+              どれか 1 つ押すと次へ進みます
+            </span>
+          }
+        />
+      ) : null}
+
+      {tutorialState.currentStepId === "read-result" && latestOutcome ? (
+        <TutorialOverlay
+          stepId="04 / 04"
+          title="最後に結果を見る"
+          body="ここで良い変化や次の出来事が分かれば、event-first の箱庭ループに入れます。"
+          anchorLabel="結果カード"
+          primaryActionLabel="結果を受け取る"
+          onPrimaryAction={handleResultReviewed}
+        />
       ) : null}
     </section>
   );
