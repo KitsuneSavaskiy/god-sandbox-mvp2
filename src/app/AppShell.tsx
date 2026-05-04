@@ -367,14 +367,23 @@ export function AppShell() {
           className={`edge-drawer${uiState.drawerPanel ? " edge-drawer--open" : ""}${
             uiState.drawerPanel ? ` edge-drawer--${uiState.drawerPanel}` : ""
           }`}
-          aria-label="右端ドロワー"
+          aria-label="補助ドロワー"
         >
           <div className="edge-drawer__buttons">
-            {(Object.keys(panelLabels) as PanelId[]).map((panelId) => (
-              <Button key={panelId} type="button" onClick={() => toggleDrawer(panelId)}>
-                {panelLabels[panelId]}
-              </Button>
-            ))}
+            <Button
+              type="button"
+              className="edge-drawer__resident-button"
+              onClick={() => toggleDrawer("roster")}
+            >
+              {panelLabels.roster}
+            </Button>
+            <Button
+              type="button"
+              className="edge-drawer__log-button"
+              onClick={() => toggleDrawer("logs")}
+            >
+              {panelLabels.logs}
+            </Button>
           </div>
           {uiState.drawerPanel ? (
             <div
