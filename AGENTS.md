@@ -11,6 +11,7 @@
 - アーキテクチャとシステム仕様の正本は `docs/architecture/` にあります。
 - 固定運用ルール、レーン境界表、PBI差分指示テンプレ、現在状態メモのテンプレは `docs/agent-operating-rules.md` にあります。
 - PR の事前確認と監査チェックリストは `docs/agent-pr-checklists.md` にあります。
+- Line 別の責務境界と必読 docs は `docs/architecture/line-responsibilities.md` にあります。
 
 ## 最重要ルール
 
@@ -23,6 +24,8 @@
 - PO が明示許可した監査役だけが、blocker 解消、CI 成功、changed files の scope 確認がそろった場合に限り approve / merge できます。
 - policy、workflow、permission、secret、billing、dependency、protected path の変更では `manual-review-required` を使います。
 - `AGENTS.md`、`CLAUDE.md`、commit する docs には、個人パス、secret、API key、token、ローカル環境名、個別アカウント設定を書きません。
+- 作業前に読んだ docs と担当 Line の責務を PR 本文に書きます。記載がない PR は監査 blocker として扱います。
+- review comment が付いた場合は PR 上で返信し、必要な修正 commit を push します。main 追従が必要な場合も作業 Line 側で対応します。
 
 ## レーン分担
 
