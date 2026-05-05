@@ -124,12 +124,10 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
           )}
         </section>
 
-        <section className="character-detail-panel__section" aria-labelledby="character-detail-unresolved">
-          <h3 id="character-detail-unresolved">未確定メモ</h3>
-          <InfoList items={readModel.unresolvedItems} />
-        </section>
-
-        <section className="character-detail-panel__section" aria-labelledby="character-detail-expressions">
+        <section
+          className="character-detail-panel__section character-detail-panel__section--expressions"
+          aria-labelledby="character-detail-expressions"
+        >
           <h3 id="character-detail-expressions">表情差分</h3>
           {expressionSlots.length ? (
             <>
@@ -150,9 +148,6 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
                     <small>生成とasset登録はLine 4の成果物を参照します。</small>
                   </div>
                 )}
-                {selectedExpression ? (
-                  <ExpressionStatus slot={selectedExpression} isFallback={selectedExpressionUsesFallback} />
-                ) : null}
               </div>
               <div className="character-detail-panel__expression-switcher" aria-label="表情差分切り替え">
                 {expressionSlots.map((slot) => (
@@ -174,12 +169,20 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
                   </button>
                 ))}
               </div>
+              {selectedExpression ? (
+                <ExpressionStatus slot={selectedExpression} isFallback={selectedExpressionUsesFallback} />
+              ) : null}
             </>
           ) : (
             <p className="character-detail-panel__empty">
               表情差分は未登録です。生成とasset登録はLine 4の成果物を参照します。
             </p>
           )}
+        </section>
+
+        <section className="character-detail-panel__section" aria-labelledby="character-detail-unresolved">
+          <h3 id="character-detail-unresolved">未確定メモ</h3>
+          <InfoList items={readModel.unresolvedItems} />
         </section>
 
         <section className="character-detail-panel__section" aria-labelledby="character-detail-assets">
