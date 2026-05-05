@@ -1,0 +1,13 @@
+# Local temporary QA/runtime output at repository root
+/tmp-*
+*.tmp
+.local/
+
+# Local browser automation profiles
+chrome-profile*/
+browser-profile*/
+playwright-profile*/
+
+# Raw command logs from local smoke checks
+*.out.log
+*.err.log
