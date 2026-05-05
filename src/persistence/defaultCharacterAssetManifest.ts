@@ -73,7 +73,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("eve", "chr_eve", "rejected"),
+    createResidentSpriteSheetReady("eve", "chr_eve"),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",

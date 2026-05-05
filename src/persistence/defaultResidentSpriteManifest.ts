@@ -39,24 +39,7 @@ export const DEFAULT_RESIDENT_SPRITE_MANIFEST: ResidentSpriteManifest = {
   schemaVersion: "resident-sprite-manifest-v1",
   updatedAt,
   residents: [
-    {
-      residentId: "chr_eve",
-      spriteSheet: {
-        assetId: "eve-sprite-sheet",
-        status: "placeholder",
-        sourcePath: "public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
-        publicPath: "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
-        frameSize: {
-          width: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameWidth,
-          height: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameHeight,
-        },
-        columns: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.columns,
-        rows: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.rows,
-        fallbackAssetId: "eve-portrait-neutral",
-        missingReason: "rejected",
-        motions: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.motions,
-      },
-    },
+    createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
     createDefaultResidentSpriteManifestEntry("chr_garan", "garan"),
     createDefaultResidentSpriteManifestEntry("chr_ryo", "ryo"),
     createDefaultResidentSpriteManifestEntry("chr_suzu", "suzu"),
