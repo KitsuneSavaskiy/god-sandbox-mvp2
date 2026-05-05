@@ -74,8 +74,9 @@ type ResidentSpriteMotionKey =
 - MVPのasset pipelineは、ChatGPTなどのサブスク画面で生成した画像をローカルで検査し、採用済みPNGだけをmanifestへ登録する方式を基本にする。
 - GodSandbox本体は、API key入力UI、従量課金の画像生成API、外部AIへの自動送信を必須にしない。
 - Codexやローカルscriptは、採用前画像の検査、切り出し確認、manifest登録補助に使ってよい。ただし、未検査画像を本物のsprite sheetとして扱わない。
-- 住民sprite sheetの外部manifestは `manifests/residents.json` とし、`assets/residents/<id>/sprites/` のsource pathと、ブラウザ配信用の `publicPath` を分けて持つ。
-- `manifests/residents.json` のstatusは `ready | placeholder | rejected | missing` とする。
+- 住民sprite sheetのGit管理されるdefault manifestは `src/persistence/defaultResidentSpriteManifest.ts` とし、`assets/residents/<id>/sprites/` のsource pathと、ブラウザ配信用の `publicPath` を分けて持つ。
+- ローカル作業用の `manifests/residents.json` は Git 管理外のplaceholderであり、正本manifestとしてcommitしない。
+- resident sprite manifest のstatusは `ready | placeholder | rejected | missing` とする。
 - `ready` は、公式採用assetとして検査済みで、`publicPath` から読めるsprite sheetだけに使う。
 - `incoming`、`tmp`、`rejected`、`user-uploads` を含むpathは、manifestに載っていてもready assetとして扱わない。
 - manifestが存在しない、または該当residentのentryがない場合でも、既存のdefault asset manifestから `portrait` または `icon` fallbackで起動できる状態を保つ。
@@ -90,9 +91,12 @@ type ResidentSpriteMotionKey =
 
 ## Resident sprite manifest
 
-`manifests/residents.json` は、住民sprite sheetの採用状態を表すmanifestである。
+Resident sprite manifest は、住民sprite sheetの採用状態を表すmanifestである。
 
 このmanifestは画像生成の実行命令ではない。GodSandbox本体は、このmanifestとread modelだけを読み、画像生成APIやCodex petを直接呼ばない。
+
+Git管理するdefault manifestは `src/persistence/defaultResidentSpriteManifest.ts` に置く。
+`manifests/residents.json` はローカル作業用placeholderであり、`.gitignore` 対象としてGit管理しない。
 
 schemaの要点:
 

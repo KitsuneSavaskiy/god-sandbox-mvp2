@@ -35,6 +35,7 @@ import {
   DEFAULT_CHARACTER_ASSET_MANIFEST,
   DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
 } from "../persistence/defaultCharacterAssetManifest.js";
+import { DEFAULT_RESIDENT_SPRITE_MANIFEST } from "../persistence/defaultResidentSpriteManifest.js";
 import {
   createAssetManifestWithResidentSprites,
   isUnmanagedAssetPipelinePath,
@@ -745,10 +746,19 @@ function testResidentSpriteManifestReadModel(): void {
     DEFAULT_CHARACTER_ASSET_MANIFEST,
     null,
   );
+  const defaultResidentSpriteManifest = createAssetManifestWithResidentSprites(
+    DEFAULT_CHARACTER_ASSET_MANIFEST,
+    DEFAULT_RESIDENT_SPRITE_MANIFEST,
+  );
   const suzuAssetBundle = selectCharacterAssetBundleReadModel(
     state,
     "chr_suzu",
     fallbackManifest,
+  );
+  const defaultManifestSuzuAssetBundle = selectCharacterAssetBundleReadModel(
+    state,
+    "chr_suzu",
+    defaultResidentSpriteManifest,
   );
 
   assert.equal(ryoAssetBundle.spriteSheet.status, "ready");
@@ -770,6 +780,8 @@ function testResidentSpriteManifestReadModel(): void {
   assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
   assert.equal(suzuAssetBundle.spriteSheet.ready, false);
   assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
+  assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.status, "placeholder");
+  assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.plannedPath, "/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png");
 }
 
 const tests: Array<[string, () => void]> = [
