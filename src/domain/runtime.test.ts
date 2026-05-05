@@ -18,6 +18,7 @@ import {
   selectRoster,
 } from "../application/runtimeSelectors.js";
 import { applyIntervention } from "./interventions.js";
+import { generateWorldEvent } from "./events.js";
 import type { Character, CharacterRelation, SandboxSession, WorldEvent } from "./models.js";
 import { replaceActiveSlot } from "./session.js";
 import {
@@ -216,6 +217,106 @@ function testEventGenerationKeepsFocusedCurrentEvent(): void {
     true,
   );
   assert.equal(generated.state.events.has(generated.state.session.currentEventId), true);
+}
+
+function testEventGenerationParticipantVariety(): void {
+  const state = worldState();
+  const activeCharacterIds = new Set(state.session.activeSlots);
+  const participantCounts = new Set<number>();
+  const deterministicFirst = generateWorldEvent({
+    session: state.session,
+    characters: state.characters,
+    relations: [],
+    now,
+    seed: "participant-variety-deterministic",
+  });
+  const deterministicSecond = generateWorldEvent({
+    session: state.session,
+    characters: state.characters,
+    relations: [],
+    now,
+    seed: "participant-variety-deterministic",
+  });
+
+  assert.equal(deterministicFirst.primaryCharacterId, deterministicSecond.primaryCharacterId);
+  assert.deepEqual(
+    deterministicFirst.participantCharacterIds,
+    deterministicSecond.participantCharacterIds,
+  );
+
+  for (let index = 0; index < 80; index += 1) {
+    const generated = generateWorldEvent({
+      session: state.session,
+      characters: state.characters,
+      relations: [],
+      now,
+      seed: `participant-variety-${index}`,
+    });
+    const uniqueParticipantIds = new Set(generated.participantCharacterIds);
+
+    participantCounts.add(generated.participantCharacterIds.length);
+    assert.equal(generated.participantCharacterIds.includes(generated.primaryCharacterId), true);
+    assert.equal(uniqueParticipantIds.size, generated.participantCharacterIds.length);
+
+    for (const characterId of generated.participantCharacterIds) {
+      assert.equal(activeCharacterIds.has(characterId), true);
+    }
+  }
+
+  assert.equal(participantCounts.has(1), true);
+  assert.equal(participantCounts.has(2), true);
+  assert.equal(participantCounts.has(3), true);
+  assert.equal(participantCounts.has(4), true);
+}
+
+function testEventGenerationPrioritizesActiveRelations(): void {
+  const state = worldState();
+  let relatedEvent: WorldEvent | undefined;
+
+  for (let index = 0; index < 80; index += 1) {
+    const generated = generateWorldEvent({
+      session: state.session,
+      characters: state.characters,
+      relations: [...state.relations.values()],
+      now,
+      seed: `relation-priority-${index}`,
+    });
+
+    if (generated.primaryCharacterId === "chr_a" || generated.primaryCharacterId === "chr_b") {
+      relatedEvent = generated;
+      break;
+    }
+  }
+
+  assert.ok(relatedEvent);
+  assert.equal(relatedEvent.participantCharacterIds.includes("chr_a"), true);
+  assert.equal(relatedEvent.participantCharacterIds.includes("chr_b"), true);
+}
+
+function testEventGenerationUsesReplacedActiveCharacter(): void {
+  const state = worldState();
+  const sessionWithNewActiveCharacter = replaceActiveSlot(state.session, 0, "chr_e");
+  const activeCharacterIds = new Set(sessionWithNewActiveCharacter.activeSlots);
+  let includesNewActiveCharacter = false;
+
+  for (let index = 0; index < 80; index += 1) {
+    const generated = generateWorldEvent({
+      session: sessionWithNewActiveCharacter,
+      characters: state.characters,
+      relations: [...state.relations.values()],
+      now,
+      seed: `new-active-character-${index}`,
+    });
+
+    includesNewActiveCharacter =
+      includesNewActiveCharacter || generated.participantCharacterIds.includes("chr_e");
+
+    for (const characterId of generated.participantCharacterIds) {
+      assert.equal(activeCharacterIds.has(characterId), true);
+    }
+  }
+
+  assert.equal(includesNewActiveCharacter, true);
 }
 
 function testInterventionApplyCostsAndChangeSet(): void {
@@ -475,6 +576,9 @@ function testCharacterAssetReadModelSeparatesIntroductionSources(): void {
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
+  ["event generation participant variety", testEventGenerationParticipantVariety],
+  ["event generation prioritizes active relations", testEventGenerationPrioritizesActiveRelations],
+  ["event generation uses replaced active character", testEventGenerationUsesReplacedActiveCharacter],
   ["intervention apply costs and changeset", testInterventionApplyCostsAndChangeSet],
   ["snapshot and passport are separate artifacts", testSnapshotAndPassportAreSeparateArtifacts],
   ["persistence foundations", testPersistenceFoundations],
