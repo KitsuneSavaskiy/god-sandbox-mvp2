@@ -14,10 +14,12 @@ playwright-profile*/
 *.err.log
 
 # Local generated asset staging
+.godsandbox/jobs/
 .asset-pipeline/
 assets/generated/
 assets/residents/
 manifests/
+narrative/generated/
 asset-pipeline/incoming/
 asset-pipeline/tmp/
 asset-pipeline/rejected/

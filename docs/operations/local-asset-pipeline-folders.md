@@ -29,6 +29,28 @@ manifests/residents.json
 manifestの正式な中身やschemaは Line 2 が決めます。
 Line 1 はファイルを置く場所だけを用意します。
 
+## Codex job queueとの関係
+
+将来の Codex Sidekick / Codex automation / Codex CLI へ制作依頼を渡す場合は、次のローカルjob queueを使う方針です。
+
+```text
+.godsandbox/jobs/pending/
+.godsandbox/jobs/running/
+.godsandbox/jobs/done/
+.godsandbox/jobs/failed/
+```
+
+`.godsandbox/jobs/**` の実jobはGit管理しません。
+source画像の場所、ローカル生成物の場所、作業メモが入りうるためです。
+
+Git管理してよいのは、次のようなdocs配下のsampleだけです。
+
+```text
+docs/operations/examples/codex-jobs/*.json
+```
+
+job queueの詳しい意味は `docs/operations/codex-job-queue.md` を見てください。
+
 ## 1コマンドで作る
 
 repository root で次を実行します。
@@ -171,6 +193,8 @@ assets/residents/<id>/sprites/
 - `assets/generated/**`
 - `assets/residents/**`
 - `manifests/residents.json`
+- `.godsandbox/jobs/**`
+- `narrative/generated/**`
 - `incoming`
 - `tmp`
 - `rejected`
@@ -212,4 +236,6 @@ git diff --check origin/main...HEAD
 - `assets/residents/**` が差分に入っていない。
 - `manifests/residents.json` が差分に入っていない。
 - `manifests/residents.json` の中身をLine 1で正本仕様として扱っていない。
+- `.godsandbox/jobs/**` の実jobが差分に入っていない。
+- `narrative/generated/**` の生成候補が差分に入っていない。
 - 個人PCの絶対パス、secret、API key、token が入っていない。
