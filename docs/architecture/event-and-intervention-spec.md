@@ -147,3 +147,6 @@ interface InterventionRecord {
   - deterministic な event data 生成
   - deterministic な render text
   - prompt / export packet 生成
+- 外部 narrative pack が未生成、失敗、review 待ちの場合も、イベントは既存の event summary、situation tag、intervention result 文で進行する。
+- Codex 生成完了を gameplay は同期的に待たない。生成物があれば補助表示に使い、なければ fallback で進む。
+- generated content の fallback 詳細は `docs/architecture/sandbox-generated-content-fallback-spec.md` を参照する。
