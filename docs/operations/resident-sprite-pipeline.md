@@ -56,6 +56,42 @@ manifests/residents.json
 Line 1 の運用docsでは、manifestの中身や read model の仕様を決めない。
 採用済みassetの登録内容は、別PBIで `src/persistence/**` 側に明示する。
 
+## 採用前のPNG検査
+
+ChatGPT UIなどで生成した画像は、まず `assets/generated/residents/<characterId>/incoming/` に保存する。
+
+採用前に、次のコマンドでPNGと画像サイズを確認する。
+
+Windows:
+
+```bat
+tools\asset-pipeline\validate-resident-sprite-sheet.bat ryo
+```
+
+macOS / Linux / Node直接実行:
+
+```bash
+node tools/asset-pipeline/validate-resident-sprite-sheet.mjs ryo
+```
+
+全住民のincomingフォルダをまとめて見る場合:
+
+```bash
+node tools/asset-pipeline/validate-resident-sprite-sheet.mjs --all
+```
+
+この検査で見ること:
+
+- PNGファイルであること。
+- 画像全体が `576x1056` px であること。
+- `96x96` frame、6列、11行として扱えるサイズであること。
+
+このscriptは採用済みassetへコピーしない。
+manifestも書き換えない。
+incoming画像を採用済み扱いにしない。
+
+検査が通っても、透明背景、文字混入、別人化、立ち絵縮小だけになっていないかは人間が目視確認する。
+
 ## 検査観点
 
 - PNGである。
