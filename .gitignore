@@ -18,9 +18,12 @@ playwright-profile*/
 asset-pipeline/incoming/
 asset-pipeline/tmp/
 asset-pipeline/rejected/
+asset-pipeline/user-uploads/
 public/art/**/incoming/
 public/art/**/tmp/
 public/art/**/rejected/
 public/art/**/_incoming/
 public/art/**/_tmp/
 public/art/**/_rejected/
+public/art/**/user-uploads/
+public/art/**/_user-uploads/

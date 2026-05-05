@@ -37,11 +37,14 @@ public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png
 生成直後の素材は、まだ採用済みではありません。
 `incoming` / `tmp` / `rejected` は Git 管理外にします。
 
+デフォルト4名や公式採用 asset として同梱する素材は Git 管理してよいです。
+ただし、プレイヤーがアップロードした新キャラ画像や、そのユーザー固有の sprite / portrait / expression は Git 管理しません。
+
 Git 管理するのは、次に限定します。
 
 - `.prompts/resident-sprites/**` の prompt
-- 採用済みの manifest / read model
-- 採用済みの `resident-sprite-sheet.png`
+- デフォルト同梱素材または公式採用 asset の manifest / read model
+- デフォルト同梱素材または公式採用 asset の `resident-sprite-sheet.png`
 
 詳しい扱いは `docs/operations/asset-pipeline-git-rules.md` を参照します。
 
