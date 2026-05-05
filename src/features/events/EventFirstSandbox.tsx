@@ -1028,10 +1028,6 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
   }
 
   const metadata = resident.spriteSheetMetadata;
-  const motionRowTop = metadata
-    ? metadata.row * metadata.frameHeight +
-      getResidentSpriteRowOffset(resident.motion, metadata.frameHeight)
-    : undefined;
 
   return {
     "--resident-sprite-sheet": `url("${resident.spriteSheetPath}")`,
@@ -1045,17 +1041,11 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
     "--resident-sheet-x-end": metadata
       ? `-${metadata.frameWidth * metadata.frames}px`
       : undefined,
-    "--resident-motion-row": motionRowTop === undefined ? undefined : `-${motionRowTop}px`,
+    "--resident-motion-row": metadata
+      ? `-${metadata.row * metadata.frameHeight}px`
+      : undefined,
     "--resident-sprite-frames": metadata?.frames,
   } as CSSProperties;
-}
-
-function getResidentSpriteRowOffset(motion: ResidentMotionKey, frameHeight: number): number {
-  if (motion === "walk-left" || motion === "walk-right") {
-    return frameHeight / 2;
-  }
-
-  return 0;
 }
 
 function describeChangeSet(
