@@ -92,6 +92,55 @@ incoming画像を採用済み扱いにしない。
 
 検査が通っても、透明背景、文字混入、別人化、立ち絵縮小だけになっていないかは人間が目視確認する。
 
+## 採用候補への処理
+
+検査が通ったPNGは、次のprocessorでローカル作業用のsprite出力とmanifest draftを作れる。
+
+Windows:
+
+```bat
+tools\asset-pipeline\process-resident-sprite-sheet.bat ryo
+```
+
+macOS / Linux / Node直接実行:
+
+```bash
+node tools/asset-pipeline/process-resident-sprite-sheet.mjs ryo
+```
+
+特定のPNGを指定する場合:
+
+```bash
+node tools/asset-pipeline/process-resident-sprite-sheet.mjs ryo assets/generated/residents/ryo/incoming/resident-ryo-sprite-source.png
+```
+
+processorの入力は `assets/generated/residents/<characterId>/incoming/` のPNGである。
+processorは `576x1056` px、`96x96` frame、6列、11行として扱えることを確認する。
+
+出力先は、Git管理外のローカル作業フォルダである。
+
+```txt
+assets/residents/<characterId>/sprites/resident-sprite-sheet.png
+assets/residents/<characterId>/sprites/resident-sprite-sheet.frames.json
+assets/residents/<characterId>/sprites/resident-sprite-manifest.draft.json
+```
+
+`resident-sprite-sheet.frames.json` は、96x96セルで切り出せる位置を示すslice mapである。
+依存追加なしの最小processorなので、フレームごとのPNG分割までは行わない。
+
+`resident-sprite-manifest.draft.json` はローカル作業用のmanifest draftである。
+これは `manifests/residents.json` ではなく、正本manifestでもない。
+
+processorは次をしない。
+
+- 採用済みassetへコピーしない。
+- `public/art/**` へコピーしない。
+- `src/persistence/**` のdefault manifestを更新しない。
+- manifestをready化しない。
+- OpenAI Images APIや画像生成APIを呼ばない。
+
+処理後に表示される「これは採用候補であり、まだ正本ではありません」という注意を維持する。
+
 ## 検査観点
 
 - PNGである。
