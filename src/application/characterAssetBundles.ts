@@ -8,7 +8,12 @@ import type { RuntimeWorldState } from "../state/runtimeState.js";
 import {
   DEFAULT_CHARACTER_ASSET_MANIFEST,
 } from "../persistence/defaultCharacterAssetManifest.js";
-import type { AssetManifest, SpriteSheetMetadata } from "../persistence/assetManifest.js";
+import type {
+  AssetManifest,
+  AssetMissingReason,
+  AssetReadinessStatus,
+  SpriteSheetMetadata,
+} from "../persistence/assetManifest.js";
 
 const expressionIds = [
   "neutral",
@@ -28,8 +33,9 @@ export type ResolvedCharacterSpriteSheetRef = ResolvedCharacterAssetRef & {
   plannedPath: string | null;
   fallbackAssetId?: AssetId;
   fallbackPath: string | null;
+  status: AssetReadinessStatus;
   isPlaceholder: boolean;
-  missingReason?: "not-generated-yet" | "asset-not-registered";
+  missingReason?: AssetMissingReason;
   metadata: SpriteSheetMetadata | null;
 };
 
@@ -52,7 +58,7 @@ export type CharacterExpressionSlot = {
   path: string | null;
   fallbackPath: string | null;
   isPlaceholder: boolean;
-  missingReason?: "not-generated-yet" | "asset-not-registered";
+  missingReason?: AssetMissingReason;
 };
 
 export type CharacterAssetBundleReadModel = {
@@ -232,6 +238,7 @@ function resolveSpriteSheetRef(
       ready: false,
       fallbackAssetId: fallback.assetId ?? undefined,
       fallbackPath: fallback.path,
+      status: "placeholder",
       isPlaceholder: true,
       missingReason: "not-generated-yet",
       metadata: null,
@@ -247,6 +254,7 @@ function resolveSpriteSheetRef(
       ready: false,
       fallbackAssetId: fallback.assetId ?? undefined,
       fallbackPath: fallback.path,
+      status: "missing",
       isPlaceholder: true,
       missingReason: "asset-not-registered",
       metadata: null,
@@ -266,6 +274,7 @@ function resolveSpriteSheetRef(
     ready: Boolean(path && !entry.isPlaceholder),
     fallbackAssetId: entry.fallbackAssetId ?? fallback.assetId ?? undefined,
     fallbackPath: fallback.path,
+    status: entry.status ?? (isPlaceholder ? "placeholder" : "ready"),
     isPlaceholder,
     missingReason: isPlaceholder
       ? entry.missingReason ?? "not-generated-yet"

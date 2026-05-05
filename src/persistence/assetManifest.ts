@@ -26,6 +26,14 @@ export type SpriteSheetMetadata = {
   motions: Record<SpriteSheetMotionName, SpriteSheetMotionSlot>;
 };
 
+export type AssetReadinessStatus = "ready" | "placeholder" | "rejected" | "missing";
+
+export type AssetMissingReason =
+  | "not-generated-yet"
+  | "asset-not-registered"
+  | "source-not-adopted"
+  | "rejected";
+
 export type AssetManifestEntry = {
   id: AssetId;
   ownerCharacterId?: CharacterId;
@@ -35,13 +43,16 @@ export type AssetManifestEntry = {
     | "icon"
     | "sprite-sheet"
     | "video-source";
+  status?: AssetReadinessStatus;
+  sourcePath?: string;
+  publicPath?: string;
   relativePath?: string;
   plannedRelativePath?: string;
   contentHash?: string;
   fallbackAssetId?: AssetId;
   generatedFromAssetIds?: AssetId[];
   isPlaceholder?: boolean;
-  missingReason?: "not-generated-yet" | "asset-not-registered";
+  missingReason?: AssetMissingReason;
   spriteSheet?: SpriteSheetMetadata;
 };
 

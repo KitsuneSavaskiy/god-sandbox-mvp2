@@ -32,6 +32,16 @@ import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
 import {
+  DEFAULT_CHARACTER_ASSET_MANIFEST,
+  DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
+} from "../persistence/defaultCharacterAssetManifest.js";
+import { DEFAULT_RESIDENT_SPRITE_MANIFEST } from "../persistence/defaultResidentSpriteManifest.js";
+import {
+  createAssetManifestWithResidentSprites,
+  isUnmanagedAssetPipelinePath,
+  type ResidentSpriteManifest,
+} from "../persistence/residentSpriteManifest.js";
+import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
   GROWTH_CYCLE_TARGET_MINUTES,
@@ -684,6 +694,96 @@ function testCharacterAssetReadModelSeparatesIntroductionSources(): void {
   assert.equal(generatedRecognitionReadModel.basicSettings.introduction.needsUserConfirmation, true);
 }
 
+function testResidentSpriteManifestReadModel(): void {
+  const residentSpriteManifest: ResidentSpriteManifest = {
+    schemaVersion: "resident-sprite-manifest-v1",
+    updatedAt: now,
+    residents: [
+      {
+        residentId: "chr_ryo",
+        spriteSheet: {
+          assetId: "ryo-sprite-sheet",
+          status: "ready",
+          sourcePath: "assets/residents/ryo/sprites/resident-sprite-sheet.png",
+          publicPath: "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+          frameSize: {
+            width: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameWidth,
+            height: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameHeight,
+          },
+          columns: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.columns,
+          rows: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.rows,
+          fallbackAssetId: "ryo-portrait-neutral",
+          motions: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.motions,
+        },
+      },
+      {
+        residentId: "chr_eve",
+        spriteSheet: {
+          assetId: "eve-sprite-sheet",
+          status: "ready",
+          sourcePath: "asset-pipeline/incoming/eve/resident-sprite-sheet.png",
+          publicPath: "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
+          frameSize: {
+            width: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameWidth,
+            height: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameHeight,
+          },
+          columns: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.columns,
+          rows: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.rows,
+          fallbackAssetId: "eve-portrait-neutral",
+          motions: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.motions,
+        },
+      },
+    ],
+  };
+  const manifest = createAssetManifestWithResidentSprites(
+    DEFAULT_CHARACTER_ASSET_MANIFEST,
+    residentSpriteManifest,
+  );
+  const state = createSeedRuntimeWorld();
+  const ryoAssetBundle = selectCharacterAssetBundleReadModel(state, "chr_ryo", manifest);
+  const eveAssetBundle = selectCharacterAssetBundleReadModel(state, "chr_eve", manifest);
+  const fallbackManifest = createAssetManifestWithResidentSprites(
+    DEFAULT_CHARACTER_ASSET_MANIFEST,
+    null,
+  );
+  const defaultResidentSpriteManifest = createAssetManifestWithResidentSprites(
+    DEFAULT_CHARACTER_ASSET_MANIFEST,
+    DEFAULT_RESIDENT_SPRITE_MANIFEST,
+  );
+  const suzuAssetBundle = selectCharacterAssetBundleReadModel(
+    state,
+    "chr_suzu",
+    fallbackManifest,
+  );
+  const defaultManifestSuzuAssetBundle = selectCharacterAssetBundleReadModel(
+    state,
+    "chr_suzu",
+    defaultResidentSpriteManifest,
+  );
+
+  assert.equal(ryoAssetBundle.spriteSheet.status, "ready");
+  assert.equal(ryoAssetBundle.spriteSheet.ready, true);
+  assert.equal(
+    ryoAssetBundle.spriteSheet.path,
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+  );
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"].frames, 6);
+
+  assert.equal(isUnmanagedAssetPipelinePath("asset-pipeline/incoming/eve.png"), true);
+  assert.equal(isUnmanagedAssetPipelinePath("assets/residents/ryo/sprites/sheet.png"), false);
+  assert.equal(eveAssetBundle.spriteSheet.status, "placeholder");
+  assert.equal(eveAssetBundle.spriteSheet.ready, false);
+  assert.equal(eveAssetBundle.spriteSheet.path, null);
+  assert.equal(eveAssetBundle.spriteSheet.missingReason, "source-not-adopted");
+  assert.equal(eveAssetBundle.spriteSheet.fallbackAssetId, "eve-portrait-neutral");
+
+  assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
+  assert.equal(suzuAssetBundle.spriteSheet.ready, false);
+  assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
+  assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.status, "placeholder");
+  assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.plannedPath, "/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png");
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -696,6 +796,7 @@ const tests: Array<[string, () => void]> = [
   ["persistence foundations", testPersistenceFoundations],
   ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
   ["asset read model separates introduction sources", testCharacterAssetReadModelSeparatesIntroductionSources],
+  ["resident sprite manifest read model", testResidentSpriteManifestReadModel],
 ];
 
 for (const [name, test] of tests) {
