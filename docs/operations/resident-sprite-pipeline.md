@@ -141,6 +141,38 @@ processorは次をしない。
 
 処理後に表示される「これは採用候補であり、まだ正本ではありません」という注意を維持する。
 
+## Eve sprite PoC のPO確認チェックリスト
+
+Eve 1名分のsprite sheet PoCでは、次の順で確認する。
+これはPOが見た目と採用可否を判断しやすくするための確認順であり、4名全員完成をSprint8の必須Doneにするものではない。
+
+1. alpha確認
+   - PNGにalpha channelがある。
+   - 背景が透明に見える。
+   - 白、緑、checkerboard、単色背景が画像に焼き込まれていない。
+   - Eveの周囲に白い縁や不透明な四角い背景が出ていない。
+2. alpha化候補確認
+   - alpha channelがない場合だけ、Git管理外の `tmp` などへalpha化候補を出す。
+   - 元画像は上書きしない。
+   - alpha化候補は目視確認してから次へ進める。
+3. validator確認
+   - PNGとして読める。
+   - 画像全体が `576x1056` px である。
+   - `96x96` frame、6列、11行として扱える。
+4. processor確認
+   - `assets/residents/eve/sprites/` のローカル作業先へ出力できる。
+   - manifest draftは作れるが、正本manifestとして扱わない。
+   - `public/art/**` や `src/persistence/**` は自動更新されない。
+5. 箱庭表示確認
+   - Eveだけready spriteとして表示される。
+   - Eveの背景が透明で、四角い背景が出ていない。
+   - idle / walk系motionが小さい箱庭キャラとして読める。
+   - Garan / Ryo / Suzu はfallbackのまま壊れていない。
+   - 箱庭上にキャラ名、場所、状態ラベルが戻っていない。
+
+PoCで見る主な成功条件は、Eve 1名で `prompt -> incoming -> alpha確認 -> validator -> processor -> 採用判断 -> 箱庭表示` の流れを確認できることである。
+Sprint8では、4キャラ x 11motion の完成を必須にしない。
+
 ## 検査観点
 
 - PNGである。
