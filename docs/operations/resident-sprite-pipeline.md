@@ -19,7 +19,7 @@
 1. `.prompts/resident-sprites/<characterId>.md` を開く。
 2. ChatGPTなどのサブスク画面を別ブラウザで開く。
 3. 参照用の立ち絵とpromptを手動で渡し、sprite sheet PNGを生成する。
-4. 生成画像を一時的なローカル作業場所で確認する。
+4. 生成画像を `assets/generated/residents/<characterId>/incoming/` に保存する。
 5. Codexまたはローカルscriptで、画像サイズ、透明背景、行列、余白、ラベル混入を検査する。
 6. 必要なら `96x96` frame、6列、11行として切り出し可能か確認する。
 7. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
@@ -28,6 +28,9 @@
 
 未検査のincoming画像、作業中tmp画像、rejected画像、user-uploads画像はGit管理へ入れない。
 Git管理するのはprompt、デフォルト同梱素材または公式採用 asset のmanifest、採用済みsprite sheetだけにする。
+
+フォルダ作成は `tools/asset-pipeline/setup-resident-asset-folders.bat` または `.ps1` を使う。
+空フォルダ維持のための `.gitkeep` は置かない。
 
 ## 検査観点
 
