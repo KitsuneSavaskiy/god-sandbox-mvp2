@@ -180,6 +180,29 @@ function hasAlphaChannel(colorType) {
   return colorType === 4 || colorType === 6;
 }
 
+function countTransparentPixels(pngInfo) {
+  if (!hasAlphaChannel(pngInfo.colorType)) {
+    return null;
+  }
+  if (pngInfo.bitDepth !== 8 || pngInfo.interlaceMethod !== 0 || pngInfo.compressionMethod !== 0 || pngInfo.filterMethod !== 0) {
+    throw new Error("透明ピクセル数を確認できないPNG形式です。8bit / non-interlaced PNGとして保存し直してください。");
+  }
+
+  const bytesPerPixel = pngInfo.colorType === 6 ? 4 : 2;
+  const alphaOffset = pngInfo.colorType === 6 ? 3 : 1;
+  const inflated = inflateSync(pngInfo.compressedData);
+  const pixels = unfilterScanlines(inflated, pngInfo.width, pngInfo.height, bytesPerPixel);
+  let transparentCount = 0;
+
+  for (let offset = alphaOffset; offset < pixels.length; offset += bytesPerPixel) {
+    if (pixels[offset] === 0) {
+      transparentCount += 1;
+    }
+  }
+
+  return transparentCount;
+}
+
 function paethPredictor(left, above, upperLeft) {
   const estimate = left + above - upperLeft;
   const distanceLeft = Math.abs(estimate - left);
@@ -364,7 +387,7 @@ function normalizeAlpha({ residentId, inputPath, tolerance }) {
     return {
       alreadyAlpha: true,
       outputPath: null,
-      transparentCount: null,
+      transparentCount: countTransparentPixels(png),
       background: null,
     };
   }
@@ -414,9 +437,15 @@ function main() {
     });
 
     if (result.alreadyAlpha) {
-      console.log("OK: このPNGにはalpha channelがあります。");
       console.log(`入力: ${toRepoRelative(inputPath)}`);
+      console.log("このPNGにはalpha channelがあります。");
+      console.log(`透明ピクセル数: ${result.transparentCount}`);
       console.log("元画像は変更していません。");
+      if (result.transparentCount === 0) {
+        console.error("注意: alpha channelはありますが、透明ピクセルが0件です。");
+        console.error("背景透過されていない可能性があります。画像を確認し、必要なら背景除去し直してください。");
+        return 1;
+      }
       console.log("次に validator と processor へ進められます。");
       return 0;
     }

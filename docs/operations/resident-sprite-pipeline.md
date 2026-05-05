@@ -21,8 +21,8 @@ ChatGPT などのサブスク画面を人間が別ブラウザで使い、GodSan
 2. ChatGPTなどのサブスク画面を別ブラウザで開く。
 3. 参照用の立ち絵とpromptを手動で渡し、sprite sheet PNGを生成する。
 4. 生成画像を `assets/generated/residents/<characterId>/incoming/` に保存する。
-5. alpha確認scriptで、透明背景向けのalpha channelがあるか確認する。
-6. alpha channelがない場合は、明示コマンドでalpha化候補を `tmp` に作り、目視確認する。
+5. alpha確認scriptで、透明背景向けのalpha channelと透明ピクセル数を確認する。
+6. alpha channelがない場合、またはalpha channelがあっても透明ピクセルが0件の場合は、明示コマンドでalpha化候補を `tmp` に作るか、背景除去し直して目視確認する。
 7. validatorで画像サイズ、行列、余白、ラベル混入を検査する。
 8. 必要なら processorで `96x96` frame、6列、11行として切り出し可能なローカル作業用出力を作る。
 9. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
@@ -75,7 +75,8 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs eve
 ```
 
 この確認では画像を変更しない。
-PNGが `576x1056` pxで、alpha channelを持つかだけを確認する。
+PNGが `576x1056` pxで、alpha channelを持ち、透明ピクセルが1件以上あるかを確認する。
+alpha channelがあっても透明ピクセルが0件の場合は、背景透過されていない可能性があるため、validatorへ進めない。
 
 alpha channelがない場合は、明示コマンドでalpha化候補を作る。
 
@@ -213,6 +214,7 @@ Eve 1名分のsprite sheet PoCでは、次の順で確認する。
 
 1. alpha確認
    - PNGにalpha channelがある。
+   - 透明ピクセル数が1件以上ある。
    - 背景が透明に見える。
    - 白、緑、checkerboard、単色背景が画像に焼き込まれていない。
    - Eveの周囲に白い縁や不透明な四角い背景が出ていない。

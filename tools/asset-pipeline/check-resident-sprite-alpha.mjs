@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { inflateSync } from "node:zlib";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,6 +34,7 @@ function printHelp() {
   - PNGファイルであること
   - 画像サイズが ${expected.width}x${expected.height}px であること
   - alpha channelを持つPNGであること
+  - 透明ピクセルが1件以上あること
   - この確認では画像を変更しません。`);
 }
 
@@ -113,6 +115,35 @@ function collectPngFiles(targetPath) {
   };
 }
 
+function readChunks(bytes) {
+  let offset = 8;
+  const chunks = [];
+
+  while (offset + 12 <= bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    const type = bytes.subarray(offset + 4, offset + 8).toString("ascii");
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const crcEnd = dataEnd + 4;
+
+    if (crcEnd > bytes.length) {
+      throw new Error("PNGの中身が途中で切れているようです。画像を保存し直してください。");
+    }
+
+    chunks.push({
+      type,
+      data: bytes.subarray(dataStart, dataEnd),
+    });
+
+    offset = crcEnd;
+    if (type === "IEND") {
+      break;
+    }
+  }
+
+  return chunks;
+}
+
 function readPngInfo(filePath) {
   const bytes = readFileSync(filePath);
   if (bytes.length < 29 || !bytes.subarray(0, 8).equals(pngSignature)) {
@@ -123,29 +154,143 @@ function readPngInfo(filePath) {
     };
   }
 
-  if (bytes.subarray(12, 16).toString("ascii") !== "IHDR") {
+  try {
+    const chunks = readChunks(bytes);
+    const ihdr = chunks.find((chunk) => chunk.type === "IHDR");
+    const idats = chunks.filter((chunk) => chunk.type === "IDAT");
+
+    if (!ihdr || ihdr.data.length !== 13) {
+      return {
+        ok: false,
+        reason: "PNGの先頭情報を読めませんでした。画像を保存し直してください。",
+        info: null,
+      };
+    }
+    if (idats.length === 0) {
+      return {
+        ok: false,
+        reason: "PNGの画像データを読めませんでした。画像を保存し直してください。",
+        info: null,
+      };
+    }
+
+    return {
+      ok: true,
+      reason: null,
+      info: {
+        width: ihdr.data.readUInt32BE(0),
+        height: ihdr.data.readUInt32BE(4),
+        bitDepth: ihdr.data.readUInt8(8),
+        colorType: ihdr.data.readUInt8(9),
+        compressionMethod: ihdr.data.readUInt8(10),
+        filterMethod: ihdr.data.readUInt8(11),
+        interlaceMethod: ihdr.data.readUInt8(12),
+        compressedData: Buffer.concat(idats.map((chunk) => chunk.data)),
+      },
+    };
+  } catch (error) {
     return {
       ok: false,
-      reason: "PNGの先頭情報を読めませんでした。画像を保存し直してください。",
+      reason: error instanceof Error ? error.message : "PNGの中身を読めませんでした。画像を保存し直してください。",
       info: null,
     };
   }
-
-  return {
-    ok: true,
-    reason: null,
-    info: {
-      width: bytes.readUInt32BE(16),
-      height: bytes.readUInt32BE(20),
-      bitDepth: bytes.readUInt8(24),
-      colorType: bytes.readUInt8(25),
-      interlaceMethod: bytes.readUInt8(28),
-    },
-  };
 }
 
 function hasAlphaChannel(colorType) {
   return colorType === 4 || colorType === 6;
+}
+
+function paethPredictor(left, above, upperLeft) {
+  const estimate = left + above - upperLeft;
+  const distanceLeft = Math.abs(estimate - left);
+  const distanceAbove = Math.abs(estimate - above);
+  const distanceUpperLeft = Math.abs(estimate - upperLeft);
+
+  if (distanceLeft <= distanceAbove && distanceLeft <= distanceUpperLeft) {
+    return left;
+  }
+  if (distanceAbove <= distanceUpperLeft) {
+    return above;
+  }
+  return upperLeft;
+}
+
+function unfilterScanlines(data, width, height, bytesPerPixel) {
+  const rowLength = width * bytesPerPixel;
+  const expectedLength = (rowLength + 1) * height;
+  if (data.length < expectedLength) {
+    throw new Error("PNGの画像データが想定より短いです。画像を保存し直してください。");
+  }
+
+  const output = Buffer.alloc(rowLength * height);
+  let sourceOffset = 0;
+
+  for (let row = 0; row < height; row += 1) {
+    const filterType = data[sourceOffset];
+    sourceOffset += 1;
+    const rowStart = row * rowLength;
+    const previousRowStart = rowStart - rowLength;
+
+    for (let column = 0; column < rowLength; column += 1) {
+      const raw = data[sourceOffset + column];
+      const left = column >= bytesPerPixel ? output[rowStart + column - bytesPerPixel] : 0;
+      const above = row > 0 ? output[previousRowStart + column] : 0;
+      const upperLeft = row > 0 && column >= bytesPerPixel
+        ? output[previousRowStart + column - bytesPerPixel]
+        : 0;
+
+      let value;
+      switch (filterType) {
+        case 0:
+          value = raw;
+          break;
+        case 1:
+          value = raw + left;
+          break;
+        case 2:
+          value = raw + above;
+          break;
+        case 3:
+          value = raw + Math.floor((left + above) / 2);
+          break;
+        case 4:
+          value = raw + paethPredictor(left, above, upperLeft);
+          break;
+        default:
+          throw new Error("対応していないPNGフィルタが含まれています。画像を書き出し直してください。");
+      }
+
+      output[rowStart + column] = value & 0xff;
+    }
+
+    sourceOffset += rowLength;
+  }
+
+  return output;
+}
+
+function countTransparentPixels(pngInfo) {
+  if (!hasAlphaChannel(pngInfo.colorType)) {
+    return null;
+  }
+  if (pngInfo.bitDepth !== 8 || pngInfo.interlaceMethod !== 0 || pngInfo.compressionMethod !== 0 || pngInfo.filterMethod !== 0) {
+    throw new Error("透明ピクセル数を確認できないPNG形式です。8bit / non-interlaced PNGとして保存し直してください。");
+  }
+
+  const bytesPerPixel = pngInfo.colorType === 6 ? 4 : 2;
+  const alphaOffset = pngInfo.colorType === 6 ? 3 : 1;
+  const inflated = inflateSync(pngInfo.compressedData);
+  const pixels = unfilterScanlines(inflated, pngInfo.width, pngInfo.height, bytesPerPixel);
+  let transparentCount = 0;
+
+  for (let offset = alphaOffset; offset < pixels.length; offset += bytesPerPixel) {
+    if (pixels[offset] === 0) {
+      transparentCount += 1;
+    }
+  }
+
+  return transparentCount;
 }
 
 function inferResidentId(filePath) {
@@ -169,6 +314,7 @@ function validateFile(filePath) {
   }
 
   const failures = [];
+  let transparentCount = null;
   if (png.info.width !== expected.width) {
     failures.push(`横幅が ${expected.width}px ではありません。現在は ${png.info.width}px です。`);
   }
@@ -177,6 +323,15 @@ function validateFile(filePath) {
   }
   if (!hasAlphaChannel(png.info.colorType)) {
     failures.push("alpha channelがありません。背景を透明にした候補PNGを作ってください。");
+  } else {
+    try {
+      transparentCount = countTransparentPixels(png.info);
+      if (transparentCount === 0) {
+        failures.push("alpha channelはありますが、透明ピクセルが0件です。背景が透過されていない可能性があります。");
+      }
+    } catch (error) {
+      failures.push(error instanceof Error ? error.message : "透明ピクセル数を確認できませんでした。画像を保存し直してください。");
+    }
   }
 
   if (failures.length > 0) {
@@ -202,6 +357,7 @@ function validateFile(filePath) {
       `OK: ${relative}`,
       `  ${expected.width}x${expected.height}px のPNGです。`,
       "  alpha channelがあります。",
+      `  透明ピクセル数: ${transparentCount}`,
       "  次に validator と processor へ進められます。",
     ],
   };
