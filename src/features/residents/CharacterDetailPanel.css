@@ -48,7 +48,7 @@
 
 .character-detail-panel__portrait-card {
   display: grid;
-  gap: 10px;
+  gap: 6px;
   margin: 0;
 }
 
@@ -70,14 +70,14 @@
 
 .character-detail-panel__portrait-card img,
 .character-detail-panel__portrait-placeholder {
-  min-height: 260px;
+  min-height: 330px;
 }
 
 .character-detail-panel__portrait-card img {
   display: block;
-  max-height: 320px;
+  max-height: 430px;
   object-fit: contain;
-  padding: 12px;
+  padding: 6px;
 }
 
 .character-detail-panel__portrait-placeholder,
@@ -104,11 +104,9 @@
   font-weight: 900;
 }
 
-.character-detail-panel__portrait-card figcaption,
 .character-detail-panel__empty,
 .character-detail-panel__section-note,
 .character-detail-panel__asset-row small,
-.character-detail-panel__expression-button small,
 .character-detail-panel__expression-placeholder small,
 .character-detail-panel__expression-status,
 .character-detail-panel__source-note {
@@ -204,14 +202,14 @@
 
 .character-detail-panel__expression-viewer img,
 .character-detail-panel__expression-placeholder {
-  min-height: 180px;
+  min-height: 250px;
 }
 
 .character-detail-panel__expression-viewer img {
   display: block;
-  max-height: 240px;
+  max-height: 330px;
   object-fit: contain;
-  padding: 10px;
+  padding: 6px;
 }
 
 .character-detail-panel__expression-placeholder span {
@@ -225,28 +223,28 @@
 }
 
 .character-detail-panel__expression-switcher {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .character-detail-panel__expression-button {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  padding: 10px;
+  min-height: 38px;
+  padding: 8px 4px;
   border: 1px solid rgba(68, 93, 55, 0.14);
   border-radius: 14px;
   color: #33492b;
   background: rgba(255, 255, 255, 0.58);
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
 .character-detail-panel__expression-button span {
   font-weight: 900;
-}
-
-.character-detail-panel__expression-button small {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .character-detail-panel__expression-button--active,
@@ -308,15 +306,11 @@
 
   .character-detail-panel__portrait-card img,
   .character-detail-panel__portrait-placeholder {
-    min-height: 210px;
+    min-height: 260px;
   }
 
   .character-detail-panel__expression-viewer img,
   .character-detail-panel__expression-placeholder {
-    min-height: 150px;
-  }
-
-  .character-detail-panel__expression-switcher {
-    grid-template-columns: 1fr;
+    min-height: 210px;
   }
 }
