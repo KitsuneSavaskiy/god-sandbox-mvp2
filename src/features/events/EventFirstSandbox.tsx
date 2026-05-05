@@ -1007,10 +1007,7 @@ function resolveResidentSpriteSheetMetadata(
     string,
     { row: number; frames: number } | undefined
   >;
-  const motionSlot =
-    motionSlots[motion] ??
-    motionSlots[motion.startsWith("walk") ? "walk" : "idle"] ??
-    motionSlots.idle;
+  const motionSlot = resolveResidentSpriteMotionSlot(motionSlots, motion);
 
   return {
     frameWidth: metadata.frameWidth,
@@ -1020,6 +1017,20 @@ function resolveResidentSpriteSheetMetadata(
     row: motionSlot?.row ?? 0,
     frames: motionSlot?.frames ?? metadata.columns,
   };
+}
+
+function resolveResidentSpriteMotionSlot(
+  motionSlots: Record<string, { row: number; frames: number } | undefined>,
+  motion: ResidentMotionKey,
+): { row: number; frames: number } | undefined {
+  // The current Eve PoC sheet is validated as a 96px grid, but several motion
+  // rows are not yet visually safe in the sandbox. Keep the renderer on the
+  // known-good idle row until motion rows have PO visual approval.
+  return (
+    motionSlots.idle ??
+    motionSlots[motion] ??
+    motionSlots[motion.startsWith("walk") ? "walk" : "idle"]
+  );
 }
 
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
