@@ -4,6 +4,7 @@ import {
 } from "../../application/runtimeSelectors.js";
 import type { Character, CharacterId } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
+import { resolveCharacterAnimationAssetStatusForCharacter } from "../residents/characterAssetStatus.js";
 import { Button } from "../../ui/Button";
 import "./RosterSurface.css";
 
@@ -107,6 +108,7 @@ function ActiveSlotCard({
   const candidates = roster.filter(
     (candidate) => candidate.id === character.id || !activeCharacterIds.includes(candidate.id),
   );
+  const assetStatus = resolveCharacterAnimationAssetStatusForCharacter(character);
 
   return (
     <article className="active-slot-card">
@@ -122,6 +124,9 @@ function ActiveSlotCard({
         </button>
         <h4>{character.profile.displayName}</h4>
       </div>
+      <span className={`roster-card__asset-status roster-card__asset-status--${assetStatus.tone}`}>
+        箱庭アニメ: {assetStatus.label}
+      </span>
       <p className="active-slot-card__meta">
         ここは、いま箱庭にいる4人です。新しい住民はまず住民一覧に入り、入れ替えはあとで選べます。
       </p>
@@ -151,6 +156,8 @@ function RosterCard({
   onEdit: (characterId: CharacterId) => void;
   onOpenDetail: (characterId: CharacterId) => void;
 }) {
+  const assetStatus = resolveCharacterAnimationAssetStatusForCharacter(character);
+
   return (
     <article className="roster-card">
       <p className="eyebrow">{character.state.narrativeRole ?? "住民"}</p>
@@ -165,6 +172,9 @@ function RosterCard({
         </button>
         <h4>{character.profile.displayName}</h4>
       </div>
+      <span className={`roster-card__asset-status roster-card__asset-status--${assetStatus.tone}`}>
+        箱庭アニメ: {assetStatus.label}
+      </span>
       <p className="roster-card__meta roster-card__asset">
         画像: {character.profile.appearance.primaryAssetId}
       </p>
