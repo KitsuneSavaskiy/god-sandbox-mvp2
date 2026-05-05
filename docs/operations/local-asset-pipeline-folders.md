@@ -61,6 +61,21 @@ PowerShellから実行する場合:
 6. 使わない画像は `rejected/` に移します。
 7. 公式採用する画像だけ、後続PBIで定義されるmanifest仕様に従って登録します。
 
+## incoming画像を検査する
+
+生成したPNGを採用する前に、次を実行します。
+
+```bat
+tools\asset-pipeline\validate-resident-sprite-sheet.bat ryo
+```
+
+`ryo` の部分は、検査したい住民IDに変えます。
+
+この検査は、PNGかどうか、画像サイズが `576x1056` px かどうかを確認します。
+採用済みフォルダへのコピーはしません。
+manifestも書き換えません。
+検査後も、画像を採用するかどうかは人間が確認して決めます。
+
 ## Gitに入れないもの
 
 次はGit管理しません。
