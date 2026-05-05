@@ -30,12 +30,52 @@
   cursor: crosshair;
   isolation: isolate;
   background:
-    linear-gradient(180deg, rgba(255, 248, 224, 0.08), rgba(35, 59, 28, 0.12)),
-    var(--sandbox-world-background) center 56% / cover no-repeat;
+    linear-gradient(180deg, rgba(255, 248, 224, 0.58), rgba(35, 59, 28, 0.28)),
+    #d5e4a6;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     inset 0 -28px 60px rgba(32, 56, 29, 0.18),
     0 20px 54px rgba(53, 74, 48, 0.16);
+}
+
+.event-first-sandbox__world-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(255, 248, 224, 0.08), rgba(35, 59, 28, 0.12)),
+    var(--sandbox-world-background) center 56% / cover no-repeat;
+  filter: saturate(var(--sandbox-background-saturation, 1)) brightness(var(--sandbox-background-brightness, 1));
+  opacity: var(--sandbox-background-opacity, 0.94);
+  transform: scale(1.01);
+  transition:
+    filter 700ms ease,
+    opacity 700ms ease;
+}
+
+.event-first-sandbox__viewport--phase-morning {
+  --sandbox-background-brightness: 1.08;
+  --sandbox-background-saturation: 1.04;
+  --sandbox-background-opacity: 0.92;
+}
+
+.event-first-sandbox__viewport--phase-noon {
+  --sandbox-background-brightness: 1;
+  --sandbox-background-saturation: 1;
+  --sandbox-background-opacity: 0.94;
+}
+
+.event-first-sandbox__viewport--phase-evening {
+  --sandbox-background-brightness: 0.88;
+  --sandbox-background-saturation: 1.08;
+  --sandbox-background-opacity: 0.94;
+}
+
+.event-first-sandbox__viewport--phase-night {
+  --sandbox-background-brightness: 0.62;
+  --sandbox-background-saturation: 0.82;
+  --sandbox-background-opacity: 0.9;
 }
 
 .event-first-sandbox__sky,
