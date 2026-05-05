@@ -600,10 +600,13 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[2]?.spriteSheet.assetId, "ryo-sprite-sheet");
   assert.equal(activeAssetBundles[3]?.spriteSheet.assetId, "suzu-sprite-sheet");
   assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.metadata !== null), true);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.ready, false);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.path, null);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, "rejected");
-  assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.ready, true);
+  assert.equal(
+    activeAssetBundles[0]?.spriteSheet.path,
+    "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
+  );
+  assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, undefined);
+  assert.equal(activeAssetBundles.slice(1).every((bundle) => bundle.spriteSheet.ready === false), true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
@@ -788,10 +791,13 @@ function testResidentSpriteManifestReadModel(): void {
   assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
   assert.equal(suzuAssetBundle.spriteSheet.ready, false);
   assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.status, "placeholder");
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.ready, false);
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.path, null);
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.missingReason, "rejected");
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.status, "ready");
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.ready, true);
+  assert.equal(
+    defaultManifestEveAssetBundle.spriteSheet.path,
+    "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
+  );
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.status, "placeholder");
   assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.plannedPath, "/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png");
 }
