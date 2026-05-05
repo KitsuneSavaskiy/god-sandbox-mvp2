@@ -12,6 +12,7 @@ import {
   type CharacterExpressionKey,
   type CharacterDetailInfoItem,
 } from "./characterDetailReadModel.js";
+import { resolveCharacterAnimationAssetStatus } from "./characterAssetStatus.js";
 import "./CharacterDetailPanel.css";
 
 type CharacterDetailPanelProps = {
@@ -57,6 +58,8 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
         (selectedExpression?.fallbackPath &&
           selectedExpression.fallbackPath !== selectedExpression.path)),
   );
+  const animationAssetStatus =
+    resolveCharacterAnimationAssetStatus(assetReadModel);
   const references = createAssetReferences(assetReadModel, expressionSlots);
 
   useEffect(() => {
@@ -180,6 +183,34 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
           )}
         </section>
 
+        <section
+          className="character-detail-panel__section character-detail-panel__section--animation-asset"
+          aria-labelledby="character-detail-animation-asset"
+        >
+          <div className="character-detail-panel__animation-header">
+            <h3 id="character-detail-animation-asset">箱庭用アニメ素材</h3>
+            <span
+              className={`character-detail-panel__asset-status character-detail-panel__asset-status--${animationAssetStatus.tone}`}
+            >
+              {animationAssetStatus.label}
+            </span>
+          </div>
+          <p className="character-detail-panel__animation-summary">
+            {animationAssetStatus.summary}
+          </p>
+          <p className="character-detail-panel__animation-note">
+            {animationAssetStatus.nextAction}
+          </p>
+          <details className="character-detail-panel__asset-guide">
+            <summary>素材を作る手順を見る</summary>
+            <ol>
+              <li>別ブラウザの生成画面で、住民の小さな箱庭用アニメ画像を作ります。</li>
+              <li>透明背景、96px枠、余白、文字混入がないかを確認します。</li>
+              <li>採用できる画像だけを開発側で登録します。この画面から外部サービスや課金設定は扱いません。</li>
+            </ol>
+          </details>
+        </section>
+
         <section className="character-detail-panel__section" aria-labelledby="character-detail-unresolved">
           <h3 id="character-detail-unresolved">未確定メモ</h3>
           <InfoList items={readModel.unresolvedItems} />
@@ -277,7 +308,7 @@ function createAssetReferences(
     {
       label: "立ち絵 / portrait",
       value: formatAssetValue(assetReadModel.portrait),
-      note: createAssetNote(assetReadModel.portrait, "Line 4 asset manifest のportrait参照です。"),
+      note: createAssetNote(assetReadModel.portrait, "登録済みの立ち絵参照です。"),
     },
     {
       label: "icon",
@@ -285,9 +316,9 @@ function createAssetReferences(
       note: createAssetNote(assetReadModel.icon, "未登録なら名前の頭文字placeholderを使います。"),
     },
     {
-      label: "sprite sheet",
+      label: "箱庭アニメ素材",
       value: formatAssetValue(assetReadModel.spriteSheet),
-      note: createAssetNote(assetReadModel.spriteSheet, "今Sprintは参照枠とfallbackまでに留めます。"),
+      note: createAssetNote(assetReadModel.spriteSheet, "今Sprintは参照枠と代用表示までに留めます。"),
     },
     {
       label: "表情差分",
