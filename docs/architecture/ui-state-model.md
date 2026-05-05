@@ -109,6 +109,14 @@ interface TutorialAnchorBinding {
 - story log と relation view は補助 surface であり、main sandbox focus ではない。
 - プレイヤーが介入を求められる前に、今の event が何かを理解できる必要がある。
 
+## generated content fallback ルール
+
+- 生成 asset や narrative pack が未生成、失敗、review 待ちでも `/sandbox` は止めない。
+- `ready` ではない住民 sprite sheet は、portrait / icon / placeholder fallback で表示する。
+- Codex 生成待ちは `eventWindowOpen` や `latestOutcome` と同じ pause 理由にしない。
+- 箱庭上にキャラ名、場所、状態ラベルを戻さない。
+- 詳細は `docs/architecture/sandbox-generated-content-fallback-spec.md` を参照する。
+
 ## キャラクター詳細の子画面ルール
 
 - キャラクター詳細は event-first 主画面の補助子画面である。
