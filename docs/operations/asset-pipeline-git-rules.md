@@ -130,12 +130,16 @@ PR に含めません。
 デフォルト同梱素材または公式採用 asset の場合:
 
 1. `.prompts/**` の prompt を使って、外部の ChatGPT / Codex で素材を生成する。
-2. 生成直後の素材を `incoming` に置く。
+2. 生成直後の素材を `incoming` に置く。Windowsでは `tools/asset-pipeline/import-resident-sprite-source.bat <id>` を使うと、保存先を覚えなくてもPNGを取り込める。
 3. 切り出しや確認が必要なら `tmp` で作業する。
 4. 不採用素材は `rejected` に移す。
 5. 採用する素材だけを `public/art/**` の正規保存先へ移す。
 6. 採用済み manifest または read model の参照と一致しているか確認する。
 7. PR 前に `git diff --name-only origin/main...HEAD` で未採用素材が入っていないか確認する。
+
+取り込みhelperは、選んだPNGを `assets/generated/residents/<id>/incoming/` へコピーするだけです。
+validator、processor、manifest更新、採用済みassetへの昇格は行いません。
+コピー後のPNGもGit管理外です。
 
 プレイヤーがアップロードした新キャラ画像の場合:
 

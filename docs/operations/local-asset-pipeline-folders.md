@@ -61,6 +61,43 @@ PowerShellから実行する場合:
 6. 使わない画像は `rejected/` に移します。
 7. 公式採用する画像だけ、後続PBIで定義されるmanifest仕様に従って登録します。
 
+## PNGを選ぶだけでincomingへ取り込む
+
+保存先フォルダを覚えなくても、Windows向け補助scriptでPNGを取り込めます。
+
+repository root で次を実行します。
+
+```bat
+tools\asset-pipeline\import-resident-sprite-source.bat ryo
+```
+
+PowerShellから実行する場合:
+
+```powershell
+.\tools\asset-pipeline\import-resident-sprite-source.ps1 ryo
+```
+
+実行するとファイル選択画面が開きます。
+ユーザーは、取り込みたいPNGだけを選びます。
+保存先の `assets/generated/residents/<id>/incoming/` を手入力する必要はありません。
+
+コピー後のファイル名は、住民IDと時刻から作られます。
+
+```text
+assets/generated/residents/ryo/incoming/resident-ryo-sprite-source-<timestamp>.png
+```
+
+この取り込み先はGit管理外です。
+scriptは、採用済みassetへのコピー、validator実行、processor実行、manifest更新を行いません。
+
+ファイル選択画面を使えない環境では、PowerShell版にPNGの場所を渡せます。
+
+```powershell
+.\tools\asset-pipeline\import-resident-sprite-source.ps1 ryo -SourcePath <png-file>
+```
+
+`<png-file>` には個人PCの絶対パスをdocsやPR本文へ書かないでください。
+
 ## incoming画像を検査する
 
 生成したPNGを採用する前に、次を実行します。
