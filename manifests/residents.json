@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "resident-sprite-manifest-v1",
+  "updatedAt": "2026-05-05T00:00:00.000Z",
+  "residents": [
+    {
+      "residentId": "chr_eve",
+      "spriteSheet": {
+        "assetId": "eve-sprite-sheet",
+        "status": "placeholder",
+        "sourcePath": "assets/residents/eve/sprites/resident-sprite-sheet.png",
+        "publicPath": "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
+        "frameSize": { "width": 96, "height": 96 },
+        "columns": 6,
+        "rows": 11,
+        "fallbackAssetId": "eve-portrait-neutral",
+        "missingReason": "not-generated-yet",
+        "motions": {
+          "idle": { "row": 0, "frames": 6 },
+          "walk-up": { "row": 1, "frames": 6 },
+          "walk-down": { "row": 2, "frames": 6 },
+          "walk-left": { "row": 3, "frames": 6 },
+          "walk-right": { "row": 4, "frames": 6 },
+          "walk-forward": { "row": 5, "frames": 6 },
+          "walk-back": { "row": 6, "frames": 6 },
+          "emote-happy": { "row": 7, "frames": 6 },
+          "emote-angry": { "row": 8, "frames": 6 },
+          "emote-sad": { "row": 9, "frames": 6 },
+          "emote-surprised": { "row": 10, "frames": 6 }
+        }
+      }
+    },
+    {
+      "residentId": "chr_garan",
+      "spriteSheet": {
+        "assetId": "garan-sprite-sheet",
+        "status": "placeholder",
+        "sourcePath": "assets/residents/garan/sprites/resident-sprite-sheet.png",
+        "publicPath": "/art/characters/defaults/garan/sprites/resident-sprite-sheet.png",
+        "frameSize": { "width": 96, "height": 96 },
+        "columns": 6,
+        "rows": 11,
+        "fallbackAssetId": "garan-portrait-neutral",
+        "missingReason": "not-generated-yet",
+        "motions": {
+          "idle": { "row": 0, "frames": 6 },
+          "walk-up": { "row": 1, "frames": 6 },
+          "walk-down": { "row": 2, "frames": 6 },
+          "walk-left": { "row": 3, "frames": 6 },
+          "walk-right": { "row": 4, "frames": 6 },
+          "walk-forward": { "row": 5, "frames": 6 },
+          "walk-back": { "row": 6, "frames": 6 },
+          "emote-happy": { "row": 7, "frames": 6 },
+          "emote-angry": { "row": 8, "frames": 6 },
+          "emote-sad": { "row": 9, "frames": 6 },
+          "emote-surprised": { "row": 10, "frames": 6 }
+        }
+      }
+    },
+    {
+      "residentId": "chr_ryo",
+      "spriteSheet": {
+        "assetId": "ryo-sprite-sheet",
+        "status": "placeholder",
+        "sourcePath": "assets/residents/ryo/sprites/resident-sprite-sheet.png",
+        "publicPath": "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+        "frameSize": { "width": 96, "height": 96 },
+        "columns": 6,
+        "rows": 11,
+        "fallbackAssetId": "ryo-portrait-neutral",
+        "missingReason": "not-generated-yet",
+        "motions": {
+          "idle": { "row": 0, "frames": 6 },
+          "walk-up": { "row": 1, "frames": 6 },
+          "walk-down": { "row": 2, "frames": 6 },
+          "walk-left": { "row": 3, "frames": 6 },
+          "walk-right": { "row": 4, "frames": 6 },
+          "walk-forward": { "row": 5, "frames": 6 },
+          "walk-back": { "row": 6, "frames": 6 },
+          "emote-happy": { "row": 7, "frames": 6 },
+          "emote-angry": { "row": 8, "frames": 6 },
+          "emote-sad": { "row": 9, "frames": 6 },
+          "emote-surprised": { "row": 10, "frames": 6 }
+        }
+      }
+    },
+    {
+      "residentId": "chr_suzu",
+      "spriteSheet": {
+        "assetId": "suzu-sprite-sheet",
+        "status": "placeholder",
+        "sourcePath": "assets/residents/suzu/sprites/resident-sprite-sheet.png",
+        "publicPath": "/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png",
+        "frameSize": { "width": 96, "height": 96 },
+        "columns": 6,
+        "rows": 11,
+        "fallbackAssetId": "suzu-portrait-neutral",
+        "missingReason": "not-generated-yet",
+        "motions": {
+          "idle": { "row": 0, "frames": 6 },
+          "walk-up": { "row": 1, "frames": 6 },
+          "walk-down": { "row": 2, "frames": 6 },
+          "walk-left": { "row": 3, "frames": 6 },
+          "walk-right": { "row": 4, "frames": 6 },
+          "walk-forward": { "row": 5, "frames": 6 },
+          "walk-back": { "row": 6, "frames": 6 },
+          "emote-happy": { "row": 7, "frames": 6 },
+          "emote-angry": { "row": 8, "frames": 6 },
+          "emote-sad": { "row": 9, "frames": 6 },
+          "emote-surprised": { "row": 10, "frames": 6 }
+        }
+      }
+    }
+  ]
+}

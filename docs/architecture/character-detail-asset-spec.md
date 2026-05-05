@@ -74,6 +74,11 @@ type ResidentSpriteMotionKey =
 - MVPのasset pipelineは、ChatGPTなどのサブスク画面で生成した画像をローカルで検査し、採用済みPNGだけをmanifestへ登録する方式を基本にする。
 - GodSandbox本体は、API key入力UI、従量課金の画像生成API、外部AIへの自動送信を必須にしない。
 - Codexやローカルscriptは、採用前画像の検査、切り出し確認、manifest登録補助に使ってよい。ただし、未検査画像を本物のsprite sheetとして扱わない。
+- 住民sprite sheetの外部manifestは `manifests/residents.json` とし、`assets/residents/<id>/sprites/` のsource pathと、ブラウザ配信用の `publicPath` を分けて持つ。
+- `manifests/residents.json` のstatusは `ready | placeholder | rejected | missing` とする。
+- `ready` は、公式採用assetとして検査済みで、`publicPath` から読めるsprite sheetだけに使う。
+- `incoming`、`tmp`、`rejected`、`user-uploads` を含むpathは、manifestに載っていてもready assetとして扱わない。
+- manifestが存在しない、または該当residentのentryがない場合でも、既存のdefault asset manifestから `portrait` または `icon` fallbackで起動できる状態を保つ。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
 - `neutral` は必須とし、添付元画像、または最初に登録された基準画像の表情を保つ。
 - `happy`、`angry`、`sad`、`surprised` は未生成でもよい。未生成の表情は `neutral` を fallback 表示する。
@@ -82,6 +87,42 @@ type ResidentSpriteMotionKey =
 - 表情差分生成用promptは `.prompts/character-expressions/` に保存する。
 - `CharacterAssetBundle` は不足素材を許容する。不足時は placeholder を出し、設定を勝手に補完しない。
 - asset の正本参照は asset ID であり、file path は表示解決後の副次情報である。
+
+## Resident sprite manifest
+
+`manifests/residents.json` は、住民sprite sheetの採用状態を表すmanifestである。
+
+このmanifestは画像生成の実行命令ではない。GodSandbox本体は、このmanifestとread modelだけを読み、画像生成APIやCodex petを直接呼ばない。
+
+schemaの要点:
+
+```ts
+type ResidentSpriteAssetStatus = "ready" | "placeholder" | "rejected" | "missing";
+
+interface ResidentSpriteManifest {
+  schemaVersion: "resident-sprite-manifest-v1";
+  updatedAt: string;
+  residents: Array<{
+    residentId: string;
+    spriteSheet: {
+      assetId: string;
+      status: ResidentSpriteAssetStatus;
+      sourcePath?: string;
+      publicPath?: string;
+      frameSize: { width: number; height: number };
+      columns: number;
+      rows: number;
+      fallbackAssetId?: string;
+      missingReason?: string;
+      motions: Record<ResidentSpriteMotionKey, { row: number; frames: number }>;
+    };
+  }>;
+}
+```
+
+`sourcePath` は `assets/residents/<id>/sprites/` 側の採用元を示す。
+`publicPath` はブラウザから読める配信用pathを示す。
+root `assets/` がブラウザ配信できない場合でも、UIは `publicPath` だけを見ればよい。
 
 ## 説明sourceとplaceholder
 
