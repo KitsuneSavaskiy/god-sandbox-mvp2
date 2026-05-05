@@ -46,6 +46,19 @@ type ResidentDecoration = {
   depthClassName: string;
 };
 
+type ResidentMotionKey =
+  | "idle"
+  | "walk-up"
+  | "walk-down"
+  | "walk-left"
+  | "walk-right"
+  | "walk-forward"
+  | "walk-back"
+  | "emote-happy"
+  | "emote-angry"
+  | "emote-sad"
+  | "emote-surprised";
+
 export type ActiveResidentPreview = {
   id: string;
   displayName: string;
@@ -61,10 +74,18 @@ type ResidentViewModel = ActiveResidentPreview & {
   emote: EmoteKind;
   positionClassName: string;
   depthClassName: string;
-  motion: "idle" | "walk";
-  visualMode: "sprite" | "portrait" | "placeholder";
+  motion: ResidentMotionKey;
+  visualMode: "sprite" | "portrait" | "icon" | "placeholder";
   portraitPath: string | null;
+  iconPath: string | null;
   spriteSheetPath: string | null;
+  spriteSheetMetadata: {
+    frameWidth: number;
+    frameHeight: number;
+    columns: number;
+    row: number;
+    frames: number;
+  } | null;
 };
 
 type InterventionOutcome = {
@@ -215,6 +236,7 @@ export function EventFirstSandbox({
     () => selectActiveCharacterAssetBundleReadModels(runtimeState),
     [runtimeState],
   );
+  const sandboxPaused = eventWindowOpen || Boolean(latestOutcome);
 
   const activeResidents = useMemo(
     () =>
@@ -232,6 +254,18 @@ export function EventFirstSandbox({
           assetBundle?.portrait.ready && assetBundle.portrait.path
             ? assetBundle.portrait.path
             : null;
+        const iconPath =
+          assetBundle?.icon.ready && assetBundle.icon.path ? assetBundle.icon.path : null;
+        const motion = resolveResidentMotion({
+          residentIndex: index,
+          isPaused: sandboxPaused,
+          isPrimary,
+          isSupporting,
+          latestOutcome,
+        });
+        const spriteSheetMetadata = spriteSheetPath
+          ? resolveResidentSpriteSheetMetadata(assetBundle?.spriteSheet.metadata, motion)
+          : null;
 
         return {
           id: character.id,
@@ -249,22 +283,32 @@ export function EventFirstSandbox({
             isSupporting,
             latestOutcome,
           }),
-          motion: resolveResidentMotion({
-            sandboxStage,
-            isPrimary,
-            isSupporting,
-            hasSpriteSheet: Boolean(spriteSheetPath),
-          }),
-          visualMode: spriteSheetPath ? "sprite" : portraitPath ? "portrait" : "placeholder",
+          motion,
+          visualMode: spriteSheetPath
+            ? "sprite"
+            : portraitPath
+              ? "portrait"
+              : iconPath
+                ? "icon"
+                : "placeholder",
           portraitPath,
+          iconPath,
           spriteSheetPath,
+          spriteSheetMetadata,
           statusSummary: [
             `活力 ${character.state.status.vitality}`,
             `調和 ${character.state.status.harmony}`,
           ],
         } satisfies ResidentViewModel;
       }),
-    [activeAssetBundles, activeCharacters, currentEvent, latestOutcome, sandboxStage],
+    [
+      activeAssetBundles,
+      activeCharacters,
+      currentEvent,
+      latestOutcome,
+      sandboxPaused,
+      sandboxStage,
+    ],
   );
 
   const primaryResident = activeResidents.find((resident) => resident.isPrimary);
@@ -305,6 +349,19 @@ export function EventFirstSandbox({
       window.clearInterval(intervalId);
     };
   }, [backgroundCyclePaused]);
+
+  useEffect(() => {
+    if (!sandboxPaused) {
+      return;
+    }
+
+    setApostleMotion((current) => ({
+      ...current,
+      targetX: current.x,
+      targetY: current.y,
+      isMoving: false,
+    }));
+  }, [sandboxPaused]);
 
   useEffect(() => {
     if (!apostleMotion.isMoving) {
@@ -463,6 +520,10 @@ export function EventFirstSandbox({
   }
 
   function handleViewportClick(event: MouseEvent<HTMLDivElement>) {
+    if (sandboxPaused) {
+      return;
+    }
+
     const bounds = event.currentTarget.getBoundingClientRect();
     const nextX = clamp(((event.clientX - bounds.left) / bounds.width) * 100, 8, 92);
     const nextY = clamp(((event.clientY - bounds.top) / bounds.height) * 100, 18, 88);
@@ -500,8 +561,9 @@ export function EventFirstSandbox({
   return (
     <section className="event-first-sandbox">
       <div
-        className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage} event-first-sandbox__viewport--season-${sandboxBackground.season} event-first-sandbox__viewport--phase-${sandboxBackground.dayPhase} ${
-          backgroundCyclePaused ? "event-first-sandbox__viewport--background-paused" : ""
+        className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage} event-first-sandbox__viewport--season-${sandboxBackground.season} event-first-sandbox__viewport--phase-${sandboxBackground.dayPhase}${
+          backgroundCyclePaused ? " event-first-sandbox__viewport--background-paused" : ""
+        }${sandboxPaused ? " event-first-sandbox__viewport--paused" : ""
         }`}
         onClick={handleViewportClick}
         data-tutorial-anchor="tutorial-anchor-world"
@@ -518,17 +580,12 @@ export function EventFirstSandbox({
         />
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
-        <div className="event-first-sandbox__pause-banner">
-          {backgroundCyclePaused
-            ? "イベント子画面を見ている間は、箱庭の背景時間を止めています。"
-            : "箱庭の背景は、ゆっくり時間帯が移り変わる土台になっています。"}
-        </div>
 
         {activeResidents.map((resident) => (
           <article
             key={resident.id}
             className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
-              sandboxStage === "focused-event" ? "event-first-sandbox__resident--paused" : ""
+              sandboxPaused ? "event-first-sandbox__resident--paused" : ""
             }`}
             role="button"
             tabIndex={0}
@@ -554,22 +611,11 @@ export function EventFirstSandbox({
                   <span className="event-first-sandbox__resident-sprite" />
                 ) : resident.portraitPath ? (
                   <img src={resident.portraitPath} alt="" />
+                ) : resident.iconPath ? (
+                  <img src={resident.iconPath} alt="" />
                 ) : (
-                  <span className="event-first-sandbox__resident-placeholder">
-                    {resident.displayName.slice(0, 1)}
-                  </span>
+                  <span className="event-first-sandbox__resident-placeholder" />
                 )}
-              </div>
-              <div className="event-first-sandbox__resident-nameplate">
-                <strong>{resident.displayName}</strong>
-                <span>{resident.zoneLabel}</span>
-                <span>
-                  {resident.isPrimary
-                    ? "主役"
-                    : resident.isSupporting
-                      ? "脇役"
-                      : "見守り中"}
-                </span>
               </div>
             </div>
           </article>
@@ -577,7 +623,7 @@ export function EventFirstSandbox({
         <div
           className={`event-first-sandbox__apostle-runner event-first-sandbox__apostle-runner--${
             apostleMotion.isMoving ? `moving-${apostleMotion.facing}` : "idle"
-          }`}
+          }${sandboxPaused ? " event-first-sandbox__apostle-runner--paused" : ""}`}
           aria-label="使徒が箱庭の中を小走りで移動しています"
           role="img"
           style={{
@@ -899,16 +945,74 @@ function resolveResidentEmote(input: {
 }
 
 function resolveResidentMotion(input: {
-  sandboxStage: SandboxExperienceStage;
+  residentIndex: number;
+  isPaused: boolean;
   isPrimary: boolean;
   isSupporting: boolean;
-  hasSpriteSheet: boolean;
+  latestOutcome: InterventionOutcome | null;
 }): ResidentViewModel["motion"] {
-  if (!input.hasSpriteSheet || input.sandboxStage !== "focused-event") {
+  if (input.isPaused) {
     return "idle";
   }
 
-  return input.isPrimary || input.isSupporting ? "walk" : "idle";
+  if (input.latestOutcome?.interventionType === "help") {
+    return input.isPrimary ? "emote-happy" : "walk-forward";
+  }
+
+  if (input.latestOutcome?.interventionType === "trial") {
+    return input.isPrimary ? "emote-angry" : "walk-back";
+  }
+
+  if (input.latestOutcome?.interventionType === "watch") {
+    return input.isPrimary ? "emote-surprised" : "idle";
+  }
+
+  if (input.isPrimary) {
+    return "walk-forward";
+  }
+
+  if (input.isSupporting) {
+    return input.residentIndex % 2 === 0 ? "walk-left" : "walk-right";
+  }
+
+  const patrolMotions = [
+    "walk-right",
+    "walk-left",
+    "walk-down",
+    "walk-up",
+  ] as const satisfies readonly ResidentMotionKey[];
+  return patrolMotions[input.residentIndex % patrolMotions.length];
+}
+
+function resolveResidentSpriteSheetMetadata(
+  metadata: {
+    frameWidth: number;
+    frameHeight: number;
+    columns: number;
+    motions: object;
+  } | null | undefined,
+  motion: ResidentMotionKey,
+): ResidentViewModel["spriteSheetMetadata"] {
+  if (!metadata) {
+    return null;
+  }
+
+  const motionSlots = metadata.motions as Record<
+    string,
+    { row: number; frames: number } | undefined
+  >;
+  const motionSlot =
+    motionSlots[motion] ??
+    motionSlots[motion.startsWith("walk") ? "walk" : "idle"] ??
+    motionSlots.idle;
+
+  return {
+    frameWidth: metadata.frameWidth,
+    frameHeight: metadata.frameHeight,
+    columns: metadata.columns,
+    row: motionSlot?.row ?? 0,
+    frames: motionSlot?.frames ?? metadata.columns,
+  };
 }
 
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
@@ -916,8 +1020,21 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
     return {};
   }
 
+  const metadata = resident.spriteSheetMetadata;
+
   return {
     "--resident-sprite-sheet": `url("${resident.spriteSheetPath}")`,
+    "--resident-frame-size": metadata ? `${metadata.frameWidth}px` : undefined,
+    "--resident-sheet-width": metadata
+      ? `${metadata.frameWidth * metadata.columns}px`
+      : undefined,
+    "--resident-sheet-x-end": metadata
+      ? `-${metadata.frameWidth * metadata.frames}px`
+      : undefined,
+    "--resident-motion-row": metadata
+      ? `-${metadata.row * metadata.frameHeight}px`
+      : undefined,
+    "--resident-sprite-frames": metadata?.frames,
   } as CSSProperties;
 }
 
