@@ -22,12 +22,12 @@
 4. 生成画像を一時的なローカル作業場所で確認する。
 5. Codexまたはローカルscriptで、画像サイズ、透明背景、行列、余白、ラベル混入を検査する。
 6. 必要なら `96x96` frame、6列、11行として切り出し可能か確認する。
-7. 採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
+7. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
 8. `src/persistence/defaultCharacterAssetManifest.ts` の該当entryを placeholder から採用済みassetへ更新する。
 9. read modelで `ready: true` として参照できることをdomain testで確認する。
 
-未検査のincoming画像、作業中tmp画像、rejected画像はGit管理へ入れない。
-Git管理するのはprompt、採用済みのmanifest、採用済みsprite sheetだけにする。
+未検査のincoming画像、作業中tmp画像、rejected画像、user-uploads画像はGit管理へ入れない。
+Git管理するのはprompt、デフォルト同梱素材または公式採用 asset のmanifest、採用済みsprite sheetだけにする。
 
 ## 検査観点
 
