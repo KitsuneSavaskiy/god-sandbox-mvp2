@@ -8,7 +8,7 @@ import type { RuntimeWorldState } from "../state/runtimeState.js";
 import {
   DEFAULT_CHARACTER_ASSET_MANIFEST,
 } from "../persistence/defaultCharacterAssetManifest.js";
-import type { AssetManifest } from "../persistence/assetManifest.js";
+import type { AssetManifest, SpriteSheetMetadata } from "../persistence/assetManifest.js";
 
 const expressionIds = [
   "neutral",
@@ -22,6 +22,14 @@ export type ResolvedCharacterAssetRef = {
   assetId: AssetId | null;
   path: string | null;
   ready: boolean;
+};
+
+export type ResolvedCharacterSpriteSheetRef = ResolvedCharacterAssetRef & {
+  fallbackAssetId?: AssetId;
+  fallbackPath: string | null;
+  isPlaceholder: boolean;
+  missingReason?: "not-generated-yet" | "asset-not-registered";
+  metadata: SpriteSheetMetadata | null;
 };
 
 export type ReadModelValueSource =
@@ -51,7 +59,7 @@ export type CharacterAssetBundleReadModel = {
   displayName: string;
   portrait: ResolvedCharacterAssetRef;
   icon: ResolvedCharacterAssetRef;
-  spriteSheet: ResolvedCharacterAssetRef;
+  spriteSheet: ResolvedCharacterSpriteSheetRef;
   expressions: Record<CharacterExpressionId, CharacterExpressionSlot>;
   basicSettings: {
     narrativeRole: CharacterDetailTextField;
@@ -94,7 +102,11 @@ export function resolveCharacterAssetBundleReadModel(
     displayName: character.profile.displayName,
     portrait: resolveAssetRef(bundle.portraitAssetId, manifest),
     icon: resolveAssetRef(bundle.iconAssetId, manifest),
-    spriteSheet: resolveAssetRef(bundle.spriteSheetAssetId, manifest),
+    spriteSheet: resolveSpriteSheetRef(
+      bundle.spriteSheetAssetId ?? inferSpriteSheetAssetId(bundle.portraitAssetId),
+      bundle.portraitAssetId,
+      manifest,
+    ),
     expressions: Object.fromEntries(
       expressionIds.map((expressionId) => [
         expressionId,
@@ -199,8 +211,59 @@ function resolveAssetRef(
   const entry = manifest.entries.find((item) => item.id === assetId);
   return {
     assetId,
-    path: entry ? `/${entry.relativePath.replace(/^\/+/, "")}` : null,
-    ready: Boolean(entry),
+    path: entry?.relativePath ? `/${entry.relativePath.replace(/^\/+/, "")}` : null,
+    ready: Boolean(entry?.relativePath && !entry.isPlaceholder),
+  };
+}
+
+function resolveSpriteSheetRef(
+  assetId: AssetId | null | undefined,
+  portraitAssetId: AssetId,
+  manifest: AssetManifest,
+): ResolvedCharacterSpriteSheetRef {
+  const fallback = resolveAssetRef(portraitAssetId, manifest);
+
+  if (!assetId) {
+    return {
+      assetId: null,
+      path: null,
+      ready: false,
+      fallbackAssetId: fallback.assetId ?? undefined,
+      fallbackPath: fallback.path,
+      isPlaceholder: true,
+      missingReason: "not-generated-yet",
+      metadata: null,
+    };
+  }
+
+  const entry = manifest.entries.find((item) => item.id === assetId);
+  if (!entry) {
+    return {
+      assetId,
+      path: null,
+      ready: false,
+      fallbackAssetId: fallback.assetId ?? undefined,
+      fallbackPath: fallback.path,
+      isPlaceholder: true,
+      missingReason: "asset-not-registered",
+      metadata: null,
+    };
+  }
+
+  const path = entry.relativePath ? `/${entry.relativePath.replace(/^\/+/, "")}` : null;
+  const isPlaceholder = Boolean(entry.isPlaceholder || !entry.relativePath);
+
+  return {
+    assetId,
+    path,
+    ready: Boolean(path && !entry.isPlaceholder),
+    fallbackAssetId: entry.fallbackAssetId ?? fallback.assetId ?? undefined,
+    fallbackPath: fallback.path,
+    isPlaceholder,
+    missingReason: isPlaceholder
+      ? entry.missingReason ?? "not-generated-yet"
+      : undefined,
+    metadata: entry.spriteSheet ?? null,
   };
 }
 
@@ -259,6 +322,15 @@ function inferExpressionAssetId(
   }
 
   return `${bundleId}-expression-${key}`;
+}
+
+function inferSpriteSheetAssetId(neutralAssetId: AssetId): AssetId | null {
+  const bundleId = neutralAssetId.replace(/-portrait-neutral$/, "");
+  if (!bundleId || bundleId === neutralAssetId) {
+    return null;
+  }
+
+  return `${bundleId}-sprite-sheet`;
 }
 
 function resolveIntroductionField(character: Character): CharacterDetailTextField {

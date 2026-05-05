@@ -42,7 +42,7 @@ interface SpriteSheetReference extends AssetReference {
   frameHeight: number;
   columns: number;
   rows: number;
-  motions: Record<string, { row: number; frames: number }>;
+  motions: Record<"idle" | "walk", { row: number; frames: number }>;
 }
 ```
 
@@ -51,6 +51,9 @@ interface SpriteSheetReference extends AssetReference {
 - `portrait` はプロフィール、会話、イベント、キャラクター詳細の主画像に使う。
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
 - `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
+- 住民sprite sheetのSprint8最小motionは `idle` と `walk` に統一する。
+- 住民sprite sheetは未生成でも参照枠を持ってよい。未生成時は `isPlaceholder: true` とし、`portrait` または `icon` へ fallback する。
+- sprite sheetの実画像がない状態で、立ち絵を縮小して本物のsprite sheetとして扱わない。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
 - `neutral` は必須とし、添付元画像、または最初に登録された基準画像の表情を保つ。
 - `happy`、`angry`、`sad`、`surprised` は未生成でもよい。未生成の表情は `neutral` を fallback 表示する。
@@ -98,7 +101,9 @@ mapping ルール:
 - `icon` は `<asset bundle id>-icon`、`spriteSheet` は `<asset bundle id>-sprite-sheet`、表情差分は `<asset bundle id>-expression-<emotion>` を推奨IDとする。
 - 表情差分の `<emotion>` は `neutral`、`happy`、`angry`、`sad`、`surprised` のいずれかにする。
 - `icon` は立ち絵から派生してよいが、派生方法が未実装なら placeholder を使う。
-- `spriteSheet` と `expressions` は存在する場合だけ表示する。
+- `spriteSheet` は `<asset bundle id>-sprite-sheet` の参照枠を持つ。実画像未生成なら `portrait` または `icon` fallback を表示し、sprite sheet本体として扱わない。
+- `spriteSheet` の最小motion名は `idle` と `walk` にする。歩行方向別motionや本格animationは次Sprint以降で増やす。
+- `expressions` は存在する場合だけ表示し、不足分は `neutral` fallback にする。
 - 画像から性格、出自、年齢、役職などの lore を断定しない。
 - lore が未入力なら「未設定」「まだ分かっていません」などの placeholder を出す。
 
