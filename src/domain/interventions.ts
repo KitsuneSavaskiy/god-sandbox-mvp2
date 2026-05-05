@@ -1,4 +1,5 @@
 import { applyStatusDelta, cloneCharacter } from "./character.js";
+import { BALANCED_INTERVENTION_COSTS } from "./growthBalance.js";
 import type {
   ChangeSet,
   Character,
@@ -9,9 +10,7 @@ import type {
 } from "./models.js";
 
 export const DEFAULT_INTERVENTION_COSTS: Record<InterventionKind, number> = {
-  watch: 0,
-  help: 2,
-  trial: 2,
+  ...BALANCED_INTERVENTION_COSTS,
 };
 
 const STATUS_DELTA_BY_INTERVENTION: Record<InterventionKind, Record<string, number>> = {
