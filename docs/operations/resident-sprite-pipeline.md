@@ -21,11 +21,13 @@ ChatGPT などのサブスク画面を人間が別ブラウザで使い、GodSan
 2. ChatGPTなどのサブスク画面を別ブラウザで開く。
 3. 参照用の立ち絵とpromptを手動で渡し、sprite sheet PNGを生成する。
 4. 生成画像を `assets/generated/residents/<characterId>/incoming/` に保存する。
-5. Codexまたはローカルscriptで、画像サイズ、透明背景、行列、余白、ラベル混入を検査する。
-6. 必要なら `96x96` frame、6列、11行として切り出し可能か確認する。
-7. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
-8. `src/persistence/defaultCharacterAssetManifest.ts` の該当entryを placeholder から採用済みassetへ更新する。
-9. read modelで `ready: true` として参照できることをdomain testで確認する。
+5. alpha確認scriptで、透明背景向けのalpha channelと透明ピクセル数を確認する。
+6. alpha channelがない場合、またはalpha channelがあっても透明ピクセルが0件の場合は、明示コマンドでalpha化候補を `tmp` に作るか、背景除去し直して目視確認する。
+7. validatorで画像サイズ、行列、余白、ラベル混入を検査する。
+8. 必要なら processorで `96x96` frame、6列、11行として切り出し可能なローカル作業用出力を作る。
+9. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
+10. `src/persistence/defaultCharacterAssetManifest.ts` の該当entryを placeholder から採用済みassetへ更新する。
+11. read modelで `ready: true` として参照できることをdomain testで確認する。
 
 未検査のincoming画像、作業中tmp画像、rejected画像、user-uploads画像はGit管理へ入れない。
 Git管理するのはprompt、デフォルト同梱素材または公式採用 asset のmanifest、採用済みsprite sheetだけにする。
@@ -55,6 +57,70 @@ manifests/residents.json
 
 Line 1 の運用docsでは、manifestの中身や read model の仕様を決めない。
 採用済みassetの登録内容は、別PBIで `src/persistence/**` 側に明示する。
+
+## alpha確認とalpha化候補
+
+ChatGPT UIやCodex petで生成したPNGは、validatorへ進める前にalpha channelを確認する。
+
+Windows:
+
+```bat
+tools\asset-pipeline\check-resident-sprite-alpha.bat eve
+```
+
+macOS / Linux / Node直接実行:
+
+```bash
+node tools/asset-pipeline/check-resident-sprite-alpha.mjs eve
+```
+
+この確認では画像を変更しない。
+PNGが `576x1056` pxで、alpha channelを持ち、透明ピクセルが1件以上あるかを確認する。
+alpha channelがあっても透明ピクセルが0件の場合は、背景透過されていない可能性があるため、validatorへ進めない。
+
+alpha channelがない場合は、明示コマンドでalpha化候補を作る。
+
+Windows:
+
+```bat
+tools\asset-pipeline\normalize-resident-sprite-alpha.bat eve
+```
+
+macOS / Linux / Node直接実行:
+
+```bash
+node tools/asset-pipeline/normalize-resident-sprite-alpha.mjs eve
+```
+
+特定のPNGを指定する場合:
+
+```bash
+node tools/asset-pipeline/normalize-resident-sprite-alpha.mjs eve assets/generated/residents/eve/incoming/resident-eve-sprite-source.png
+```
+
+normalizerは左上ピクセルを背景色の基準にし、近い色を透明化する最小処理である。
+緑背景、白背景、単色背景の候補作成を想定する。
+複雑な背景や、キャラ本体に背景と近い色が多い画像では失敗することがある。
+
+出力先はGit管理外の `tmp` である。
+
+```txt
+assets/generated/residents/<characterId>/tmp/resident-<id>-sprite-alpha-candidate-<timestamp>.png
+```
+
+元画像は上書きしない。
+alpha化後も `576x1056` pxを維持する。
+出力後は必ず目視確認する。
+
+normalizerは次をしない。
+
+- 採用済みassetへコピーしない。
+- `public/art/**` へコピーしない。
+- `src/persistence/**` を更新しない。
+- manifestをready化しない。
+- OpenAI Images APIや画像生成APIを呼ばない。
+
+alpha化候補に問題がなければ、その候補PNGをincomingへ置き、次にvalidatorへ進める。
 
 ## 採用前のPNG検査
 
@@ -148,6 +214,7 @@ Eve 1名分のsprite sheet PoCでは、次の順で確認する。
 
 1. alpha確認
    - PNGにalpha channelがある。
+   - 透明ピクセル数が1件以上ある。
    - 背景が透明に見える。
    - 白、緑、checkerboard、単色背景が画像に焼き込まれていない。
    - Eveの周囲に白い縁や不透明な四角い背景が出ていない。
