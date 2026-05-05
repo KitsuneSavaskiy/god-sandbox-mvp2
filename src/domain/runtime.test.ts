@@ -31,6 +31,18 @@ import { DEFAULT_CHARACTER_STATUS } from "./character.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
+import {
+  BALANCED_INTERVENTION_COSTS,
+  GROWTH_CYCLE_TARGET_EVENT_COUNT,
+  GROWTH_CYCLE_TARGET_MINUTES,
+  MAX_GOD_POINTS,
+  getGrowthCycleProgress,
+  recoverGodPointsByElapsedMinutes,
+} from "./growthBalance.js";
+import {
+  recoverRuntimeGodPointsByElapsedMinutes,
+  selectGrowthCycleProgress,
+} from "../application/growthBalanceService.js";
 
 type TestAssert = {
   deepEqual(actual: unknown, expected: unknown): void;
@@ -384,9 +396,74 @@ function testInterventionApplyCostsAndChangeSet(): void {
     idSeed: "trial",
   });
 
-  assert.equal(trialed.intervention.resourceCost, 2);
-  assert.equal(trialed.session.godPoints, state.session.godPoints - 2);
+  assert.equal(trialed.intervention.resourceCost, BALANCED_INTERVENTION_COSTS.trial);
+  assert.equal(
+    trialed.session.godPoints,
+    state.session.godPoints - BALANCED_INTERVENTION_COSTS.trial,
+  );
   assert.deepEqual(trialed.changeSets[0].patch, { courage: 2, stress: 1, ambition: 1 });
+}
+
+function testThirtyMinuteGrowthBalance(): void {
+  assert.equal(GROWTH_CYCLE_TARGET_MINUTES, 30);
+  assert.equal(GROWTH_CYCLE_TARGET_EVENT_COUNT, 10);
+  assert.equal(BALANCED_INTERVENTION_COSTS.watch, 0);
+  assert.equal(BALANCED_INTERVENTION_COSTS.help, 2);
+  assert.equal(BALANCED_INTERVENTION_COSTS.trial, 3);
+
+  const progressBeforeGoal = getGrowthCycleProgress(9);
+  assert.equal(progressBeforeGoal.isCycleComplete, false);
+  assert.equal(progressBeforeGoal.remainingEventCount, 1);
+
+  const progressAtGoal = getGrowthCycleProgress(10);
+  assert.equal(progressAtGoal.isCycleComplete, true);
+  assert.equal(progressAtGoal.remainingEventCount, 0);
+
+  const state = worldState();
+  const recoveredSession = recoverGodPointsByElapsedMinutes(
+    {
+      ...state.session,
+      godPoints: 2,
+    },
+    9,
+  );
+  assert.equal(recoveredSession.godPoints, 5);
+
+  const cappedSession = recoverGodPointsByElapsedMinutes(
+    {
+      ...state.session,
+      godPoints: MAX_GOD_POINTS - 1,
+    },
+    30,
+  );
+  assert.equal(cappedSession.godPoints, MAX_GOD_POINTS);
+
+  const recoveredRuntime = recoverRuntimeGodPointsByElapsedMinutes(
+    createRuntimeWorldState({
+      ...state,
+      session: {
+        ...state.session,
+        godPoints: 1,
+      },
+    }),
+    6,
+  );
+  assert.equal(recoveredRuntime.session.godPoints, 3);
+
+  const events = new Map(state.events);
+  for (let index = 0; index < GROWTH_CYCLE_TARGET_EVENT_COUNT; index += 1) {
+    events.set(`evt_cycle_${index}`, {
+      ...event(`evt_cycle_${index}`),
+      status: "resolved",
+    });
+  }
+  const progressState = createRuntimeWorldState({
+    ...state,
+    events,
+  });
+  const selectedProgress = selectGrowthCycleProgress(progressState);
+  assert.equal(selectedProgress.completedEventCount, GROWTH_CYCLE_TARGET_EVENT_COUNT);
+  assert.equal(selectedProgress.isCycleComplete, true);
 }
 
 function testSnapshotAndPassportAreSeparateArtifacts(): void {
@@ -614,6 +691,7 @@ const tests: Array<[string, () => void]> = [
   ["event generation prioritizes active relations", testEventGenerationPrioritizesActiveRelations],
   ["event generation uses replaced active character", testEventGenerationUsesReplacedActiveCharacter],
   ["intervention apply costs and changeset", testInterventionApplyCostsAndChangeSet],
+  ["thirty minute growth balance", testThirtyMinuteGrowthBalance],
   ["snapshot and passport are separate artifacts", testSnapshotAndPassportAreSeparateArtifacts],
   ["persistence foundations", testPersistenceFoundations],
   ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
