@@ -113,6 +113,33 @@ tools\asset-pipeline\validate-resident-sprite-sheet.bat ryo
 manifestも書き換えません。
 検査後も、画像を採用するかどうかは人間が確認して決めます。
 
+## 採用候補として処理する
+
+検査が通ったPNGは、次のprocessorでローカル作業用spriteにできます。
+
+```bat
+tools\asset-pipeline\process-resident-sprite-sheet.bat ryo
+```
+
+`ryo` の部分は、処理したい住民IDに変えます。
+
+processorは `assets/generated/residents/<id>/incoming/` からPNGを読み、次のGit管理外フォルダへ出力します。
+
+```text
+assets/residents/<id>/sprites/
+```
+
+作られる主なファイルは次の3つです。
+
+- `resident-sprite-sheet.png`
+- `resident-sprite-sheet.frames.json`
+- `resident-sprite-manifest.draft.json`
+
+これは採用候補であり、まだ正本ではありません。
+`public/art/**` へはコピーしません。
+`manifests/residents.json` も書き換えません。
+正式採用する場合は、別PBIで人間が確認してから行います。
+
 ## Gitに入れないもの
 
 次はGit管理しません。
