@@ -100,7 +100,28 @@ scriptは、採用済みassetへのコピー、validator実行、processor実行
 
 ## incoming画像を検査する
 
-生成したPNGを採用する前に、次を実行します。
+生成したPNGを採用する前に、まずalpha channelを確認します。
+
+```bat
+tools\asset-pipeline\check-resident-sprite-alpha.bat ryo
+```
+
+alpha channelがない場合は、明示コマンドでalpha化候補を作れます。
+
+```bat
+tools\asset-pipeline\normalize-resident-sprite-alpha.bat ryo
+```
+
+alpha化候補は、次のGit管理外フォルダへ出力されます。
+
+```text
+assets/generated/residents/<id>/tmp/
+```
+
+元画像は上書きしません。
+これは候補なので、必ず目視確認してください。
+
+alpha確認が通ったら、次にPNGサイズを検査します。
 
 ```bat
 tools\asset-pipeline\validate-resident-sprite-sheet.bat ryo
