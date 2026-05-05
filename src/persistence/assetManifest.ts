@@ -1,6 +1,17 @@
 import type { AssetId, CharacterId } from "../domain/models.js";
 
-export type SpriteSheetMotionName = "idle" | "walk";
+export type SpriteSheetMotionName =
+  | "idle"
+  | "walk-up"
+  | "walk-down"
+  | "walk-left"
+  | "walk-right"
+  | "walk-forward"
+  | "walk-back"
+  | "emote-happy"
+  | "emote-angry"
+  | "emote-sad"
+  | "emote-surprised";
 
 export type SpriteSheetMotionSlot = {
   row: number;
@@ -25,6 +36,7 @@ export type AssetManifestEntry = {
     | "sprite-sheet"
     | "video-source";
   relativePath?: string;
+  plannedRelativePath?: string;
   contentHash?: string;
   fallbackAssetId?: AssetId;
   generatedFromAssetIds?: AssetId[];
@@ -44,7 +56,7 @@ export function resolveAssetRelativePath(
   assetId: AssetId,
 ): string {
   const entry = manifest.entries.find((item) => item.id === assetId);
-  if (!entry || !entry.relativePath) {
+  if (!entry || !entry.relativePath || entry.isPlaceholder) {
     throw new Error(`Asset not found in manifest: ${assetId}`);
   }
   return entry.relativePath;
