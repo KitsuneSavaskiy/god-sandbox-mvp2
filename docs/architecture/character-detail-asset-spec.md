@@ -71,6 +71,9 @@ type ResidentSpriteMotionKey =
 - 住民sprite sheetは、立ち絵の雰囲気を保ったドット絵風の小さい箱庭キャラとして生成する。
 - 住民sprite sheetは、2.5Dペーパークラフト背景の上で動いて見えることを優先する。
 - アプリ内からCodex petや外部AI APIを直接呼ばない。生成は外部補助で行い、結果PNGを決められた保存先へ置く。
+- MVPのasset pipelineは、ChatGPTなどのサブスク画面で生成した画像をローカルで検査し、採用済みPNGだけをmanifestへ登録する方式を基本にする。
+- GodSandbox本体は、API key入力UI、従量課金の画像生成API、外部AIへの自動送信を必須にしない。
+- Codexやローカルscriptは、採用前画像の検査、切り出し確認、manifest登録補助に使ってよい。ただし、未検査画像を本物のsprite sheetとして扱わない。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
 - `neutral` は必須とし、添付元画像、または最初に登録された基準画像の表情を保つ。
 - `happy`、`angry`、`sad`、`surprised` は未生成でもよい。未生成の表情は `neutral` を fallback 表示する。
@@ -123,6 +126,7 @@ mapping ルール:
 - `expressions` は存在する場合だけ表示し、不足分は `neutral` fallback にする。
 - 画像から性格、出自、年齢、役職などの lore を断定しない。
 - lore が未入力なら「未設定」「まだ分かっていません」などの placeholder を出す。
+- 生成直後のincoming画像、作業中tmp画像、rejected画像はGit管理しない。Git管理するのはprompt、採用済みmanifest、採用済みsprite sheetだけにする。
 
 ## キャラクター詳細画面
 

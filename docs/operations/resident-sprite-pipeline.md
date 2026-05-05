@@ -6,9 +6,39 @@
 
 - アプリ内からCodex petや外部AI APIを直接呼ばない。
 - 生成は外部補助として、ユーザーまたは開発者が別ブラウザで行う。
+- MVPでは、ChatGPTなどのサブスク画面にpromptと参照画像を手動で渡す運用を主軸にする。
+- GodSandbox本体はAPI key、従量課金API、画像生成API呼び出しを必須にしない。
 - GodSandbox側は prompt、保存先、命名規則、asset manifest、read modelだけを持つ。
 - 立ち絵を縮小しただけの画像をsprite sheetとして登録しない。
 - 住民sprite sheetは、ドット絵風の小さい箱庭キャラとして生成する。
+
+## サブスク前提ローカルasset pipeline
+
+このpipelineは、アプリ内課金やAPI連携ではなく、外部の生成画面とローカル作業を分けて扱う。
+
+1. `.prompts/resident-sprites/<characterId>.md` を開く。
+2. ChatGPTなどのサブスク画面を別ブラウザで開く。
+3. 参照用の立ち絵とpromptを手動で渡し、sprite sheet PNGを生成する。
+4. 生成画像を一時的なローカル作業場所で確認する。
+5. Codexまたはローカルscriptで、画像サイズ、透明背景、行列、余白、ラベル混入を検査する。
+6. 必要なら `96x96` frame、6列、11行として切り出し可能か確認する。
+7. 採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
+8. `src/persistence/defaultCharacterAssetManifest.ts` の該当entryを placeholder から採用済みassetへ更新する。
+9. read modelで `ready: true` として参照できることをdomain testで確認する。
+
+未検査のincoming画像、作業中tmp画像、rejected画像はGit管理へ入れない。
+Git管理するのはprompt、採用済みのmanifest、採用済みsprite sheetだけにする。
+
+## 検査観点
+
+- PNGである。
+- 透明背景にalpha channelがある。
+- frame sizeが `96x96` として扱える。
+- columnsが `6`、rowsが `11` として扱える。
+- 行ごとのmotion keyがこの文書の仕様と一致する。
+- 文字、番号、UI枠、背景が画像内に焼き込まれていない。
+- 立ち絵を縮小して貼っただけではない。
+- 4名の公式loreを画像から勝手に断定していない。
 
 ## 保存先
 
@@ -59,3 +89,33 @@ public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png
 - `missingReason` は `not-generated-yet` とする。
 - UIは `portrait` または `icon` fallbackを使う。
 - 未生成sprite sheetを、本物のsprite sheetとして読み込まない。
+
+## manifest登録時の方針
+
+生成画像を採用した場合だけ、manifest entryに `relativePath` を入れる。
+未生成または検査未完了の間は `plannedRelativePath` のみを持たせ、`isPlaceholder: true` を維持する。
+
+採用前:
+
+```ts
+{
+  id: "ryo-sprite-sheet",
+  kind: "sprite-sheet",
+  plannedRelativePath: "art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+  isPlaceholder: true,
+  missingReason: "not-generated-yet"
+}
+```
+
+採用後:
+
+```ts
+{
+  id: "ryo-sprite-sheet",
+  kind: "sprite-sheet",
+  relativePath: "art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+  isPlaceholder: false
+}
+```
+
+採用後も、Passport schemaやキャラクターloreは変更しない。
