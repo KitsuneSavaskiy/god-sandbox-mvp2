@@ -83,6 +83,7 @@ type ResidentViewModel = ActiveResidentPreview & {
     frameWidth: number;
     frameHeight: number;
     columns: number;
+    rows: number;
     row: number;
     frames: number;
   } | null;
@@ -585,6 +586,10 @@ export function EventFirstSandbox({
           <article
             key={resident.id}
             className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
+              resident.spriteSheetPath
+                ? "event-first-sandbox__resident--sprite-ready"
+                : "event-first-sandbox__resident--sprite-fallback"
+            } ${
               sandboxPaused ? "event-first-sandbox__resident--paused" : ""
             }`}
             role="button"
@@ -989,6 +994,7 @@ function resolveResidentSpriteSheetMetadata(
     frameWidth: number;
     frameHeight: number;
     columns: number;
+    rows: number;
     motions: object;
   } | null | undefined,
   motion: ResidentMotionKey,
@@ -1010,6 +1016,7 @@ function resolveResidentSpriteSheetMetadata(
     frameWidth: metadata.frameWidth,
     frameHeight: metadata.frameHeight,
     columns: metadata.columns,
+    rows: metadata.rows,
     row: motionSlot?.row ?? 0,
     frames: motionSlot?.frames ?? metadata.columns,
   };
@@ -1021,6 +1028,10 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
   }
 
   const metadata = resident.spriteSheetMetadata;
+  const motionRowTop = metadata
+    ? metadata.row * metadata.frameHeight +
+      getResidentSpriteRowOffset(resident.motion, metadata.frameHeight)
+    : undefined;
 
   return {
     "--resident-sprite-sheet": `url("${resident.spriteSheetPath}")`,
@@ -1028,14 +1039,23 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
       : undefined,
+    "--resident-sheet-height": metadata
+      ? `${metadata.frameHeight * metadata.rows}px`
+      : undefined,
     "--resident-sheet-x-end": metadata
       ? `-${metadata.frameWidth * metadata.frames}px`
       : undefined,
-    "--resident-motion-row": metadata
-      ? `-${metadata.row * metadata.frameHeight}px`
-      : undefined,
+    "--resident-motion-row": motionRowTop === undefined ? undefined : `-${motionRowTop}px`,
     "--resident-sprite-frames": metadata?.frames,
   } as CSSProperties;
+}
+
+function getResidentSpriteRowOffset(motion: ResidentMotionKey, frameHeight: number): number {
+  if (motion === "walk-left" || motion === "walk-right") {
+    return frameHeight / 2;
+  }
+
+  return 0;
 }
 
 function describeChangeSet(
