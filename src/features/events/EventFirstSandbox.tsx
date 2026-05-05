@@ -248,7 +248,9 @@ export function EventFirstSandbox({
         const isSupporting =
           currentEvent.participantCharacterIds.includes(character.id) && !isPrimary;
         const spriteSheetPath =
-          assetBundle?.spriteSheet.ready && assetBundle.spriteSheet.path
+          assetBundle?.spriteSheet.ready &&
+          assetBundle.spriteSheet.path &&
+          isSandboxSpriteRenderable(assetBundle.spriteSheet.assetId)
             ? assetBundle.spriteSheet.path
             : null;
         const portraitPath =
@@ -1007,7 +1009,10 @@ function resolveResidentSpriteSheetMetadata(
     string,
     { row: number; frames: number } | undefined
   >;
-  const motionSlot = resolveResidentSpriteMotionSlot(motionSlots, motion);
+  const motionSlot =
+    motionSlots[motion] ??
+    motionSlots[motion.startsWith("walk") ? "walk" : "idle"] ??
+    motionSlots.idle;
 
   return {
     frameWidth: metadata.frameWidth,
@@ -1019,18 +1024,11 @@ function resolveResidentSpriteSheetMetadata(
   };
 }
 
-function resolveResidentSpriteMotionSlot(
-  motionSlots: Record<string, { row: number; frames: number } | undefined>,
-  motion: ResidentMotionKey,
-): { row: number; frames: number } | undefined {
-  // The current Eve PoC sheet is validated as a 96px grid, but several motion
-  // rows are not yet visually safe in the sandbox. Keep the renderer on the
-  // known-good idle row until motion rows have PO visual approval.
-  return (
-    motionSlots.idle ??
-    motionSlots[motion] ??
-    motionSlots[motion.startsWith("walk") ? "walk" : "idle"]
-  );
+function isSandboxSpriteRenderable(assetId: string | null): boolean {
+  // Eve's current PoC sprite sheet is a valid asset file, but it has not passed
+  // PO visual correctness in the sandbox. Keep her on portrait fallback until a
+  // visually approved sprite sheet is registered.
+  return assetId !== "eve-sprite-sheet";
 }
 
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
