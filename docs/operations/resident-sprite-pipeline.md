@@ -32,6 +32,19 @@ public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png
 .prompts/resident-sprites/suzu.md
 ```
 
+## Git管理ルール
+
+生成直後の素材は、まだ採用済みではありません。
+`incoming` / `tmp` / `rejected` は Git 管理外にします。
+
+Git 管理するのは、次に限定します。
+
+- `.prompts/resident-sprites/**` の prompt
+- 採用済みの manifest / read model
+- 採用済みの `resident-sprite-sheet.png`
+
+詳しい扱いは `docs/operations/asset-pipeline-git-rules.md` を参照します。
+
 ## sprite sheet仕様
 
 - frame size: `96x96`
