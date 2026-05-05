@@ -2,6 +2,11 @@
 
 You are creating a resident sprite sheet for GodSandbox.
 
+Workflow note:
+- This prompt is for an external subscription UI such as ChatGPT.
+- GodSandbox must not call an image generation API from inside the app.
+- Do not include API keys, account details, personal paths, or billing details in the output.
+
 Reference:
 - Use `public/art/characters/defaults/eve/portrait.png` only as the identity reference.
 - Do not crop, resize, or paste the portrait into the sprite sheet.
