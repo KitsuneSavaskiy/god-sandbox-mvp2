@@ -60,6 +60,8 @@ Git 管理してよいものは、次に限定します。
 - `assets/generated/**`: ローカル生成作業用の素材置き場
 - `assets/residents/**`: ローカル確認用の住民素材置き場
 - `manifests/residents.json`: ローカル作業用 placeholder manifest
+- `.godsandbox/jobs/**`: ローカル制作依頼の実job
+- `narrative/generated/**`: ローカル生成作業用の物語候補置き場
 - white matte、背景残り、別人化などで使わない素材
 - 個人PCの絶対パスを書いたメモ
 - secret / API key / token を含むファイル
@@ -75,6 +77,8 @@ asset-pipeline/user-uploads/
 assets/generated/
 assets/residents/
 manifests/residents.json
+.godsandbox/jobs/
+narrative/generated/
 public/art/**/incoming/
 public/art/**/tmp/
 public/art/**/rejected/
@@ -125,6 +129,19 @@ PR に含めません。
 つまり、`manifests/residents.json` は採用済みassetの正本ではありません。
 採用済みassetへ昇格する場合は、別PBIで画像保存先と `src/persistence/**` の参照を明示します。
 
+## Codex job queueとsample JSON
+
+`.godsandbox/jobs/**` は、将来の Codex Sidekick / Codex automation / Codex CLI が読むローカルjob queueです。
+実jobにはsource画像の場所、ローカル生成物の場所、作業メモが入りうるため、Git管理しません。
+
+Git管理してよいのは、個人情報を含まないsample JSONだけです。
+
+```text
+docs/operations/examples/codex-jobs/*.json
+```
+
+job queueのlifecycle、生成物置き場、`source` / `incoming` / `draft` / `adopted` の違いは `docs/operations/codex-job-queue.md` を正本とします。
+
 ## 採用までの流れ
 
 デフォルト同梱素材または公式採用 asset の場合:
@@ -172,6 +189,8 @@ git diff --check origin/main...HEAD
 
 - `incoming` / `tmp` / `rejected` が changed files に入っていない。
 - `assets/generated/**` / `assets/residents/**` / `manifests/residents.json` が changed files に入っていない。
+- `.godsandbox/jobs/**` の実jobが changed files に入っていない。
+- `narrative/generated/**` の生成候補が changed files に入っていない。
 - `.prompts/**` は prompt として必要なものだけ入っている。
 - `public/art/**` に入る画像はデフォルト同梱素材または公式採用 asset だけである。
 - プレイヤーがアップロードした新キャラ画像が入っていない。

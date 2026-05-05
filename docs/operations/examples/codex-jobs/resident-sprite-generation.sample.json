@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "godsandbox-codex-job/v0",
+  "jobId": "sample-resident-sprite-eve-001",
+  "jobType": "resident-sprite-generation",
+  "status": "pending",
+  "characterId": "eve",
+  "input": {
+    "sourceKind": "default-reference",
+    "sourceImageRef": "project-default-character-reference",
+    "promptRef": ".prompts/resident-sprites/eve.md"
+  },
+  "requestedOutputs": {
+    "spriteSheet": {
+      "frameSize": {
+        "width": 96,
+        "height": 96
+      },
+      "columns": 6,
+      "rows": [
+        "idle",
+        "walk-up",
+        "walk-down",
+        "walk-left",
+        "walk-right",
+        "walk-forward",
+        "walk-back",
+        "emote-happy",
+        "emote-angry",
+        "emote-sad",
+        "emote-surprised"
+      ],
+      "background": "transparent-alpha"
+    }
+  },
+  "outputPolicy": {
+    "incomingDirectory": "assets/generated/residents/eve/incoming/sprites/",
+    "draftDirectory": "assets/residents/eve/sprites/",
+    "adoptedDirectory": "public/art/characters/defaults/eve/sprites/",
+    "readyPromotion": "human-review-and-po-visual-ok-required"
+  },
+  "notes": [
+    "This is a documentation sample, not a real job.",
+    "Do not put personal paths, API keys, tokens, or secrets in job files.",
+    "Real .godsandbox/jobs/** files are local-only and are not committed."
+  ]
+}
