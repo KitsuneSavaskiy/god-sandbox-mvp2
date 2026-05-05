@@ -12,9 +12,10 @@
 - 立ち絵を縮小しただけの画像をsprite sheetとして登録しない。
 - 住民sprite sheetは、ドット絵風の小さい箱庭キャラとして生成する。
 
-## サブスク前提ローカルasset pipeline
+## APIキー不要・従量課金なしのサブスク前提ローカルasset pipeline
 
 このpipelineは、アプリ内課金やAPI連携ではなく、外部の生成画面とローカル作業を分けて扱う。
+ChatGPT などのサブスク画面を人間が別ブラウザで使い、GodSandbox 本体は API key や従量課金 API 呼び出しを前提にしない。
 
 1. `.prompts/resident-sprites/<characterId>.md` を開く。
 2. ChatGPTなどのサブスク画面を別ブラウザで開く。
@@ -31,6 +32,29 @@ Git管理するのはprompt、デフォルト同梱素材または公式採用 a
 
 フォルダ作成は `tools/asset-pipeline/setup-resident-asset-folders.bat` または `.ps1` を使う。
 空フォルダ維持のための `.gitkeep` は置かない。
+
+## 作業フォルダとGit管理の境界
+
+ローカル作業では、次のようなフォルダを使う。
+
+```txt
+assets/generated/residents/<characterId>/incoming/
+assets/generated/residents/<characterId>/tmp/
+assets/generated/residents/<characterId>/rejected/
+assets/residents/<characterId>/sprites/
+manifests/residents.json
+```
+
+これらは作業用であり、Git 管理対象にしない。
+`manifests/residents.json` は、ローカルで候補素材を並べるための placeholder であり、正本manifestではない。
+
+採用済みassetは、次の場所で扱う。
+
+- 画像本体: `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png`
+- 既定素材の参照: `src/persistence/**` の default manifest / read model
+
+Line 1 の運用docsでは、manifestの中身や read model の仕様を決めない。
+採用済みassetの登録内容は、別PBIで `src/persistence/**` 側に明示する。
 
 ## 検査観点
 
@@ -68,7 +92,7 @@ public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png
 ## Git管理ルール
 
 生成直後の素材は、まだ採用済みではありません。
-`incoming` / `tmp` / `rejected` は Git 管理外にします。
+`incoming` / `tmp` / `rejected` / `user-uploads` は Git 管理外にします。
 
 デフォルト4名や公式採用 asset として同梱する素材は Git 管理してよいです。
 ただし、プレイヤーがアップロードした新キャラ画像や、そのユーザー固有の sprite / portrait / expression は Git 管理しません。
@@ -76,8 +100,10 @@ public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png
 Git 管理するのは、次に限定します。
 
 - `.prompts/resident-sprites/**` の prompt
-- デフォルト同梱素材または公式採用 asset の manifest / read model
+- デフォルト同梱素材または公式採用 asset を参照する `src/persistence/**` の default manifest / read model
 - デフォルト同梱素材または公式採用 asset の `resident-sprite-sheet.png`
+
+`manifests/residents.json` はローカル作業用 placeholder なので、この一覧には含めない。
 
 詳しい扱いは `docs/operations/asset-pipeline-git-rules.md` を参照します。
 
