@@ -22,6 +22,10 @@ export function createWorldEvent(input: WorldEvent): WorldEvent {
     throw new Error("WorldEvent.primaryCharacterId must also be in participantCharacterIds.");
   }
 
+  if (new Set(input.participantCharacterIds).size !== input.participantCharacterIds.length) {
+    throw new Error("WorldEvent.participantCharacterIds must not contain duplicate characters.");
+  }
+
   return structuredClone(input) as WorldEvent;
 }
 
@@ -38,14 +42,12 @@ export function generateWorldEvent(input: GenerateWorldEventInput): WorldEvent {
 
   const primaryIndex = deterministicIndex(input.seed, activeCharacters.length);
   const primaryCharacter = activeCharacters[primaryIndex];
-  const relationPartner = selectRelatedParticipant(
+  const participantCharacterIds = selectEventParticipants(
     primaryCharacter.id,
     input.session.activeSlots,
     input.relations ?? [],
+    input.seed,
   );
-  const participantCharacterIds = relationPartner
-    ? [primaryCharacter.id, relationPartner]
-    : [primaryCharacter.id];
 
   return createWorldEvent({
     id: `evt_${stableHash(`${input.seed}:${input.now}:${primaryCharacter.id}`).toString(36)}`,
@@ -65,11 +67,63 @@ export function generateWorldEvent(input: GenerateWorldEventInput): WorldEvent {
   });
 }
 
-function selectRelatedParticipant(
+function selectEventParticipants(
   primaryCharacterId: string,
   activeCharacterIds: readonly string[],
   relations: CharacterRelation[],
-): string | undefined {
+  seed: string,
+): string[] {
+  const desiredCount = Math.max(
+    selectParticipantCount(seed, activeCharacterIds.length),
+    hasRelatedParticipant(primaryCharacterId, activeCharacterIds, relations) ? 2 : 1,
+  );
+  const participantIds = [primaryCharacterId];
+  const relatedParticipantIds = selectRelatedParticipants(
+    primaryCharacterId,
+    activeCharacterIds,
+    relations,
+  );
+
+  for (const characterId of relatedParticipantIds) {
+    addParticipantIfNeeded(participantIds, characterId, desiredCount);
+  }
+
+  const seededCandidates = activeCharacterIds
+    .filter((characterId) => characterId !== primaryCharacterId)
+    .filter((characterId) => !participantIds.includes(characterId))
+    .sort(
+      (left, right) => {
+        const rankDifference =
+          stableHash(`${seed}:participant:${left}`) -
+          stableHash(`${seed}:participant:${right}`);
+        return rankDifference === 0 ? left.localeCompare(right) : rankDifference;
+      },
+    );
+
+  for (const characterId of seededCandidates) {
+    addParticipantIfNeeded(participantIds, characterId, desiredCount);
+  }
+
+  return participantIds;
+}
+
+function selectParticipantCount(seed: string, activeCharacterCount: number): number {
+  return 1 + (stableHash(`${seed}:participant-count`) % activeCharacterCount);
+}
+
+function hasRelatedParticipant(
+  primaryCharacterId: string,
+  activeCharacterIds: readonly string[],
+  relations: CharacterRelation[],
+): boolean {
+  return selectRelatedParticipants(primaryCharacterId, activeCharacterIds, relations).length > 0;
+}
+
+function selectRelatedParticipants(
+  primaryCharacterId: string,
+  activeCharacterIds: readonly string[],
+  relations: CharacterRelation[],
+): string[] {
   const candidates = relations
     .filter(
       (relation) =>
@@ -84,9 +138,26 @@ function selectRelatedParticipant(
           : relation.characterAId,
     }))
     .filter((candidate) => activeCharacterIds.includes(candidate.partnerId))
-    .sort((left, right) => right.score - left.score);
+    .sort((left, right) => {
+      const scoreDifference = right.score - left.score;
+      return scoreDifference === 0
+        ? left.partnerId.localeCompare(right.partnerId)
+        : scoreDifference;
+    });
 
-  return candidates[0]?.partnerId;
+  return candidates.map((candidate) => candidate.partnerId);
+}
+
+function addParticipantIfNeeded(
+  participantIds: string[],
+  characterId: string,
+  desiredCount: number,
+): void {
+  if (participantIds.length >= desiredCount || participantIds.includes(characterId)) {
+    return;
+  }
+
+  participantIds.push(characterId);
 }
 
 function deterministicIndex(seed: string, length: number): number {
