@@ -1,7 +1,34 @@
 import { CURRENT_SAVE_VERSION } from "./migrations.js";
-import type { AssetManifest } from "./assetManifest.js";
+import type { AssetManifest, AssetManifestEntry, SpriteSheetMetadata } from "./assetManifest.js";
 
 const updatedAt = "2026-05-04T00:00:00.000Z";
+
+export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA: SpriteSheetMetadata = {
+  frameWidth: 96,
+  frameHeight: 96,
+  columns: 4,
+  rows: 2,
+  motions: {
+    idle: { row: 0, frames: 4 },
+    walk: { row: 1, frames: 4 },
+  },
+};
+
+function createResidentSpriteSheetPlaceholder(
+  bundleId: string,
+  ownerCharacterId: string,
+): AssetManifestEntry {
+  return {
+    id: `${bundleId}-sprite-sheet`,
+    ownerCharacterId,
+    kind: "sprite-sheet",
+    fallbackAssetId: `${bundleId}-portrait-neutral`,
+    generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
+    isPlaceholder: true,
+    missingReason: "not-generated-yet",
+    spriteSheet: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
+  };
+}
 
 export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
   saveVersion: CURRENT_SAVE_VERSION,
@@ -13,6 +40,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
+    createResidentSpriteSheetPlaceholder("eve", "chr_eve"),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",
@@ -47,6 +75,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/garan/portrait.png",
     },
+    createResidentSpriteSheetPlaceholder("garan", "chr_garan"),
     {
       id: "garan-expression-happy",
       ownerCharacterId: "chr_garan",
@@ -81,6 +110,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/ryo/portrait.png",
     },
+    createResidentSpriteSheetPlaceholder("ryo", "chr_ryo"),
     {
       id: "ryo-expression-happy",
       ownerCharacterId: "chr_ryo",
@@ -115,6 +145,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/suzu/portrait.png",
     },
+    createResidentSpriteSheetPlaceholder("suzu", "chr_suzu"),
     {
       id: "suzu-expression-happy",
       ownerCharacterId: "chr_suzu",

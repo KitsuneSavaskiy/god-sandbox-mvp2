@@ -1,5 +1,20 @@
 import type { AssetId, CharacterId } from "../domain/models.js";
 
+export type SpriteSheetMotionName = "idle" | "walk";
+
+export type SpriteSheetMotionSlot = {
+  row: number;
+  frames: number;
+};
+
+export type SpriteSheetMetadata = {
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  rows: number;
+  motions: Record<SpriteSheetMotionName, SpriteSheetMotionSlot>;
+};
+
 export type AssetManifestEntry = {
   id: AssetId;
   ownerCharacterId?: CharacterId;
@@ -9,9 +24,13 @@ export type AssetManifestEntry = {
     | "icon"
     | "sprite-sheet"
     | "video-source";
-  relativePath: string;
+  relativePath?: string;
   contentHash?: string;
+  fallbackAssetId?: AssetId;
   generatedFromAssetIds?: AssetId[];
+  isPlaceholder?: boolean;
+  missingReason?: "not-generated-yet" | "asset-not-registered";
+  spriteSheet?: SpriteSheetMetadata;
 };
 
 export type AssetManifest = {
@@ -25,7 +44,7 @@ export function resolveAssetRelativePath(
   assetId: AssetId,
 ): string {
   const entry = manifest.entries.find((item) => item.id === assetId);
-  if (!entry) {
+  if (!entry || !entry.relativePath) {
     throw new Error(`Asset not found in manifest: ${assetId}`);
   }
   return entry.relativePath;
