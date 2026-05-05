@@ -3,7 +3,8 @@
   "jobId": "sample-resident-sprite-eve-001",
   "jobType": "resident-sprite-generation",
   "status": "pending",
-  "characterId": "eve",
+  "characterId": "chr_eve",
+  "assetBundleId": "eve",
   "input": {
     "sourceKind": "default-reference",
     "sourceImageRef": "project-default-character-reference",

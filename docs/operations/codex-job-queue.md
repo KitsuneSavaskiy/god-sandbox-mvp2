@@ -89,20 +89,32 @@ docs/operations/examples/codex-jobs/*.json
 
 sample JSONには、個人PCの絶対パス、secret、API key、token、実ユーザー画像の場所を書かない。
 
+### characterId と assetBundleId の区別
+
+job JSONでは、実行時の住民IDとasset用のキーを混ぜない。
+
+| Field | 意味 | 例 |
+| --- | --- | --- |
+| `characterId` | domain / runtime / roster / activeSlots で使う正本の住民ID。 | `chr_eve` |
+| `assetBundleId` | asset bundle、prompt、ローカル作業フォルダ、asset id prefixで使う安全なキー。 | `eve` |
+
+`characterId` は表示名やfolder keyの代わりに使わない。
+`assetBundleId` はdomain上の住民IDではないため、runtime read modelやevent participant idとして使わない。
+
 ### generated outputの置き場
 
 ローカル作業では、次の置き場を使う。
 
 ```txt
-assets/generated/residents/<characterId>/source/
-assets/generated/residents/<characterId>/incoming/expressions/
-assets/generated/residents/<characterId>/incoming/sprites/
-assets/generated/residents/<characterId>/tmp/
-assets/generated/residents/<characterId>/rejected/
+assets/generated/residents/<assetBundleId>/source/
+assets/generated/residents/<assetBundleId>/incoming/expressions/
+assets/generated/residents/<assetBundleId>/incoming/sprites/
+assets/generated/residents/<assetBundleId>/tmp/
+assets/generated/residents/<assetBundleId>/rejected/
 
-assets/residents/<characterId>/expressions/
-assets/residents/<characterId>/sprites/
-assets/residents/<characterId>/icons/
+assets/residents/<assetBundleId>/expressions/
+assets/residents/<assetBundleId>/sprites/
+assets/residents/<assetBundleId>/icons/
 
 narrative/generated/residents/<characterId>/
 narrative/generated/events/
