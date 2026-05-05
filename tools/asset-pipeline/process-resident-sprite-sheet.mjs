@@ -10,6 +10,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runVisualFrameAudit } from "./audit-resident-sprite-visuals.mjs";
 
 const expected = {
   frameWidth: 96,
@@ -58,11 +59,14 @@ function printHelp() {
   assets/residents/<residentId>/sprites/resident-sprite-sheet.png
   assets/residents/<residentId>/sprites/resident-sprite-sheet.frames.json
   assets/residents/<residentId>/sprites/resident-sprite-manifest.draft.json
+  assets/residents/<residentId>/sprites/resident-sprite-sheet.visual-audit.svg
+  assets/residents/<residentId>/sprites/resident-sprite-sheet.visual-audit.json
 
 注意:
   - これは採用候補であり、まだ正本ではありません。
   - 採用済みassetへコピーしません。
   - manifestをready化しません。
+  - visual audit は human review を強制するための出力です。
   - OpenAI Images APIや画像生成APIを呼びません。`);
 }
 
@@ -194,7 +198,13 @@ function writeJson(filePath, value) {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function createDraftManifest({ residentId, sourcePath, spriteSheetPath, frameMapPath }) {
+function createDraftManifest({
+  residentId,
+  sourcePath,
+  spriteSheetPath,
+  frameMapPath,
+  visualAudit,
+}) {
   const { motions } = createFrameMap();
 
   return {
@@ -216,11 +226,14 @@ function createDraftManifest({ residentId, sourcePath, spriteSheetPath, frameMap
       width: expected.width,
       height: expected.height,
     },
+    visualAudit,
     motions,
     adoptionRequired: true,
     ready: false,
     nextSteps: [
+      "visual audit の contact sheet を人間が確認し、split / crop / row mixing がないか見る。",
       "透明背景、文字混入、別人化、立ち絵縮小だけになっていないか人間が確認する。",
+      "PO が sandbox 表示を確認するまで ready にしない。",
       "採用する場合だけ、別PBIで public/art/** と src/persistence/** の正本参照を更新する。",
       "manifests/residents.json はローカルplaceholderなので、正本manifestとしてcommitしない。",
     ],
@@ -263,6 +276,12 @@ function processResidentSpriteSheet(residentId, inputArg) {
     rows: expected.rows,
     ...createFrameMap(),
   });
+  const visualAudit = runVisualFrameAudit({
+    residentId: normalizedId,
+    inputPath: spriteSheetPath,
+    outputDir,
+    sourceLabel: sourcePath,
+  });
   writeJson(
     manifestDraftPath,
     createDraftManifest({
@@ -270,6 +289,16 @@ function processResidentSpriteSheet(residentId, inputArg) {
       sourcePath,
       spriteSheetPath,
       frameMapPath,
+      visualAudit: {
+        generatedAt: visualAudit.generatedAt,
+        sourceHash: visualAudit.sourceHash,
+        contactSheetPath: toRepoRelative(visualAudit.svgPath),
+        reportPath: toRepoRelative(visualAudit.reportPath),
+        warningFrameCount: visualAudit.warningFrameCount,
+        warningsByCode: visualAudit.warningsByCode,
+        humanReviewRequired: true,
+        poConfirmationRequired: true,
+      },
     }),
   );
 
@@ -279,6 +308,7 @@ function processResidentSpriteSheet(residentId, inputArg) {
     spriteSheetPath,
     frameMapPath,
     manifestDraftPath,
+    visualAudit,
   };
 }
 
@@ -304,7 +334,11 @@ function main() {
     console.log(`出力: ${toRepoRelative(result.spriteSheetPath)}`);
     console.log(`slice map: ${toRepoRelative(result.frameMapPath)}`);
     console.log(`manifest draft: ${toRepoRelative(result.manifestDraftPath)}`);
+    console.log(`visual audit: ${toRepoRelative(result.visualAudit.svgPath)}`);
+    console.log(`audit report: ${toRepoRelative(result.visualAudit.reportPath)}`);
+    console.log(`audit warnings: ${result.visualAudit.warningFrameCount}`);
     console.log(alphaMessage);
+    console.log("Human review と PO 確認が終わるまで ready にしないでください。");
     console.log("採用済みassetへのコピー、manifest ready化、画像生成API呼び出しはしていません。");
     return 0;
   } catch (error) {

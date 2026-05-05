@@ -188,6 +188,7 @@ function validateFile(filePath) {
       `OK: ${relative}`,
       `  PNGで、画像サイズは ${expected.width}x${expected.height}px です。`,
       `  ${alphaMessage}`,
+      `  次は processor と visual audit へ進められます。`,
       `  これは採用前の確認です。採用済みassetへのコピーやmanifest更新はしていません。`,
     ],
   };
