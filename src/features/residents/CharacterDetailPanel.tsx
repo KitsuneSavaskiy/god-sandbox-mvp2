@@ -326,4 +326,3 @@ function createAssetNote(
 
   return `${fallbackNote} path未登録`;
 }
-
