@@ -302,4 +302,3 @@ Use this single instruction after this document is committed or available in the
 ```bash
 codex "Read docs/operations/resident-sprite-visual-correctness-task.md, implement the task exactly, achieve the final vision, and test until complete."
 ```
-
