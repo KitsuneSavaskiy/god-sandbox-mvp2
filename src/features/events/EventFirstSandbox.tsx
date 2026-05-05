@@ -86,6 +86,16 @@ type ApostleMotionState = {
   facing: "left" | "right";
 };
 
+const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
+type SandboxDayPhase = (typeof sandboxDayPhases)[number];
+type SandboxSeason = "spring";
+
+type SandboxBackgroundState = {
+  season: SandboxSeason;
+  dayPhase: SandboxDayPhase;
+  imagePath: string;
+};
+
 interface EventFirstSandboxProps {
   runtimeState: RuntimeWorldState;
   routePath: string;
@@ -154,6 +164,18 @@ const initialApostleMotion: ApostleMotionState = {
   facing: "left",
 };
 
+const SANDBOX_BACKGROUND_PHASE_INTERVAL_MS = 45_000;
+const DEFAULT_SANDBOX_BACKGROUND_PATH = "/art/world/backgrounds/world_spring_noon.png";
+
+const sandboxBackgroundImages: Record<
+  SandboxSeason,
+  Partial<Record<SandboxDayPhase, string>>
+> = {
+  spring: {
+    noon: DEFAULT_SANDBOX_BACKGROUND_PATH,
+  },
+};
+
 export function EventFirstSandbox({
   runtimeState,
   routePath,
@@ -181,6 +203,9 @@ export function EventFirstSandbox({
   const [latestOutcome, setLatestOutcome] = useState<InterventionOutcome | null>(null);
   const [apostleMotion, setApostleMotion] =
     useState<ApostleMotionState>(initialApostleMotion);
+  const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
+    sandboxDayPhases.indexOf("noon"),
+  );
   const apostleMotionRef = useRef(apostleMotion);
 
   const currentEvent = selectCurrentEvent(runtimeState);
@@ -251,10 +276,35 @@ export function EventFirstSandbox({
   });
   const eventWindowInterventionTutorialActive =
     tutorialState.currentStepId === "intervene" && eventWindowOpen && !latestOutcome;
+  const backgroundCyclePaused = eventWindowOpen || latestOutcome !== null;
+  const sandboxBackground = useMemo(
+    () =>
+      resolveSandboxBackground({
+        season: "spring",
+        dayPhase: sandboxDayPhases[
+          backgroundCycleStep % sandboxDayPhases.length
+        ],
+      }),
+    [backgroundCycleStep],
+  );
 
   useEffect(() => {
     apostleMotionRef.current = apostleMotion;
   }, [apostleMotion]);
+
+  useEffect(() => {
+    if (backgroundCyclePaused) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setBackgroundCycleStep((currentStep) => currentStep + 1);
+    }, SANDBOX_BACKGROUND_PHASE_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [backgroundCyclePaused]);
 
   useEffect(() => {
     if (!apostleMotion.isMoving) {
@@ -450,19 +500,28 @@ export function EventFirstSandbox({
   return (
     <section className="event-first-sandbox">
       <div
-        className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage}`}
+        className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage} event-first-sandbox__viewport--season-${sandboxBackground.season} event-first-sandbox__viewport--phase-${sandboxBackground.dayPhase} ${
+          backgroundCyclePaused ? "event-first-sandbox__viewport--background-paused" : ""
+        }`}
         onClick={handleViewportClick}
         data-tutorial-anchor="tutorial-anchor-world"
         data-tutorial-highlighted={
           tutorialBinding?.anchorId === "tutorial-anchor-world" || undefined
         }
+        data-sandbox-season={sandboxBackground.season}
+        data-sandbox-day-phase={sandboxBackground.dayPhase}
       >
+        <div
+          className="event-first-sandbox__world-backdrop"
+          aria-hidden="true"
+          style={createSandboxBackgroundStyle(sandboxBackground)}
+        />
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
         <div className="event-first-sandbox__pause-banner">
-          {sandboxStage === "focused-event"
-            ? "いまは出来事に注目しているので、箱庭の時間と歩き回りは少し止まっています。"
-            : "変化を受け取ったあと、次の出来事へ向けて箱庭がまた動き出します。"}
+          {backgroundCyclePaused
+            ? "イベント子画面を見ている間は、箱庭の背景時間を止めています。"
+            : "箱庭の背景は、ゆっくり時間帯が移り変わる土台になっています。"}
         </div>
 
         {activeResidents.map((resident) => (
@@ -773,6 +832,31 @@ function createTimestamp(stepIndex: number): string {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function resolveSandboxBackground(input: {
+  season: SandboxSeason;
+  dayPhase: SandboxDayPhase;
+}): SandboxBackgroundState {
+  const seasonImages = sandboxBackgroundImages[input.season];
+  const imagePath =
+    seasonImages[input.dayPhase] ??
+    seasonImages.noon ??
+    DEFAULT_SANDBOX_BACKGROUND_PATH;
+
+  return {
+    season: input.season,
+    dayPhase: input.dayPhase,
+    imagePath,
+  };
+}
+
+function createSandboxBackgroundStyle(
+  background: SandboxBackgroundState,
+): CSSProperties {
+  return {
+    "--sandbox-world-background": `url("${background.imagePath}")`,
+  } as CSSProperties;
 }
 
 function createEventHeadline(event: WorldEvent, primaryCharacterName: string): string {
