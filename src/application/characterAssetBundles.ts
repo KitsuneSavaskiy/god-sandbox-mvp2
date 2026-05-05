@@ -25,6 +25,7 @@ export type ResolvedCharacterAssetRef = {
 };
 
 export type ResolvedCharacterSpriteSheetRef = ResolvedCharacterAssetRef & {
+  plannedPath: string | null;
   fallbackAssetId?: AssetId;
   fallbackPath: string | null;
   isPlaceholder: boolean;
@@ -227,6 +228,7 @@ function resolveSpriteSheetRef(
     return {
       assetId: null,
       path: null,
+      plannedPath: null,
       ready: false,
       fallbackAssetId: fallback.assetId ?? undefined,
       fallbackPath: fallback.path,
@@ -241,6 +243,7 @@ function resolveSpriteSheetRef(
     return {
       assetId,
       path: null,
+      plannedPath: null,
       ready: false,
       fallbackAssetId: fallback.assetId ?? undefined,
       fallbackPath: fallback.path,
@@ -251,11 +254,15 @@ function resolveSpriteSheetRef(
   }
 
   const path = entry.relativePath ? `/${entry.relativePath.replace(/^\/+/, "")}` : null;
+  const plannedPath = entry.plannedRelativePath
+    ? `/${entry.plannedRelativePath.replace(/^\/+/, "")}`
+    : null;
   const isPlaceholder = Boolean(entry.isPlaceholder || !entry.relativePath);
 
   return {
     assetId,
     path,
+    plannedPath,
     ready: Boolean(path && !entry.isPlaceholder),
     fallbackAssetId: entry.fallbackAssetId ?? fallback.assetId ?? undefined,
     fallbackPath: fallback.path,

@@ -482,12 +482,29 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.isPlaceholder, true);
   assert.equal(ryoAssetBundle.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(ryoAssetBundle.spriteSheet.path, null);
+  assert.equal(
+    ryoAssetBundle.spriteSheet.plannedPath,
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+  );
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 96);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 96);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 6);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 11);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle.row, 0);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle.frames, 4);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.walk.row, 1);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.walk.frames, 4);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle.frames, 6);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-up"].row, 1);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-down"].row, 2);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"].row, 3);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"].row, 4);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-forward"].row, 5);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-back"].row, 6);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-happy"].row, 7);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-angry"].row, 8);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-sad"].row, 9);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-surprised"].row, 10);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-surprised"].frames, 6);
   assert.equal(ryoAssetBundle.basicSettings.introduction.isPlaceholder, true);
   assert.equal(ryoAssetBundle.basicSettings.introduction.source, "placeholder");
   assert.equal(activeAssetBundles[0]?.portrait.ready, true);

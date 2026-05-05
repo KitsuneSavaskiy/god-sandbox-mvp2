@@ -6,11 +6,20 @@ const updatedAt = "2026-05-04T00:00:00.000Z";
 export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA: SpriteSheetMetadata = {
   frameWidth: 96,
   frameHeight: 96,
-  columns: 4,
-  rows: 2,
+  columns: 6,
+  rows: 11,
   motions: {
-    idle: { row: 0, frames: 4 },
-    walk: { row: 1, frames: 4 },
+    idle: { row: 0, frames: 6 },
+    "walk-up": { row: 1, frames: 6 },
+    "walk-down": { row: 2, frames: 6 },
+    "walk-left": { row: 3, frames: 6 },
+    "walk-right": { row: 4, frames: 6 },
+    "walk-forward": { row: 5, frames: 6 },
+    "walk-back": { row: 6, frames: 6 },
+    "emote-happy": { row: 7, frames: 6 },
+    "emote-angry": { row: 8, frames: 6 },
+    "emote-sad": { row: 9, frames: 6 },
+    "emote-surprised": { row: 10, frames: 6 },
   },
 };
 
@@ -22,6 +31,7 @@ function createResidentSpriteSheetPlaceholder(
     id: `${bundleId}-sprite-sheet`,
     ownerCharacterId,
     kind: "sprite-sheet",
+    plannedRelativePath: `art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
     fallbackAssetId: `${bundleId}-portrait-neutral`,
     generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
     isPlaceholder: true,

@@ -2,7 +2,7 @@
 
 状態: 管理対象の正本ドキュメント
 
-この文書は Sprint7 のキャラクター詳細画面、標準住民画像、使徒sprite sheet演出の方針を固定する。
+この文書は Sprint7 以降のキャラクター詳細画面、標準住民画像、住民sprite sheet、使徒sprite sheet演出の方針を固定する。
 
 ## 中核方針
 
@@ -42,8 +42,21 @@ interface SpriteSheetReference extends AssetReference {
   frameHeight: number;
   columns: number;
   rows: number;
-  motions: Record<"idle" | "walk", { row: number; frames: number }>;
+  motions: Record<ResidentSpriteMotionKey, { row: number; frames: number }>;
 }
+
+type ResidentSpriteMotionKey =
+  | "idle"
+  | "walk-up"
+  | "walk-down"
+  | "walk-left"
+  | "walk-right"
+  | "walk-forward"
+  | "walk-back"
+  | "emote-happy"
+  | "emote-angry"
+  | "emote-sad"
+  | "emote-surprised";
 ```
 
 ルール:
@@ -51,9 +64,13 @@ interface SpriteSheetReference extends AssetReference {
 - `portrait` はプロフィール、会話、イベント、キャラクター詳細の主画像に使う。
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
 - `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
-- 住民sprite sheetのSprint8最小motionは `idle` と `walk` に統一する。
+- 住民sprite sheetのframeは `96x96` を基本にする。
+- 住民sprite sheetのmotion keyは `idle`、`walk-up`、`walk-down`、`walk-left`、`walk-right`、`walk-forward`、`walk-back`、`emote-happy`、`emote-angry`、`emote-sad`、`emote-surprised` に統一する。
 - 住民sprite sheetは未生成でも参照枠を持ってよい。未生成時は `isPlaceholder: true` とし、`portrait` または `icon` へ fallback する。
 - sprite sheetの実画像がない状態で、立ち絵を縮小して本物のsprite sheetとして扱わない。
+- 住民sprite sheetは、立ち絵の雰囲気を保ったドット絵風の小さい箱庭キャラとして生成する。
+- 住民sprite sheetは、2.5Dペーパークラフト背景の上で動いて見えることを優先する。
+- アプリ内からCodex petや外部AI APIを直接呼ばない。生成は外部補助で行い、結果PNGを決められた保存先へ置く。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
 - `neutral` は必須とし、添付元画像、または最初に登録された基準画像の表情を保つ。
 - `happy`、`angry`、`sad`、`surprised` は未生成でもよい。未生成の表情は `neutral` を fallback 表示する。
@@ -102,7 +119,7 @@ mapping ルール:
 - 表情差分の `<emotion>` は `neutral`、`happy`、`angry`、`sad`、`surprised` のいずれかにする。
 - `icon` は立ち絵から派生してよいが、派生方法が未実装なら placeholder を使う。
 - `spriteSheet` は `<asset bundle id>-sprite-sheet` の参照枠を持つ。実画像未生成なら `portrait` または `icon` fallback を表示し、sprite sheet本体として扱わない。
-- `spriteSheet` の最小motion名は `idle` と `walk` にする。歩行方向別motionや本格animationは次Sprint以降で増やす。
+- `spriteSheet` のmotion keyは `ResidentSpriteMotionKey` にそろえる。未生成motionは placeholder として扱い、生成済みPNGが入るまで本物のmotionとして扱わない。
 - `expressions` は存在する場合だけ表示し、不足分は `neutral` fallback にする。
 - 画像から性格、出自、年齢、役職などの lore を断定しない。
 - lore が未入力なら「未設定」「まだ分かっていません」などの placeholder を出す。
