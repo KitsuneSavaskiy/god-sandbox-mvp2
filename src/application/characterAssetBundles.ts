@@ -8,12 +8,14 @@ import type { RuntimeWorldState } from "../state/runtimeState.js";
 import {
   DEFAULT_CHARACTER_ASSET_MANIFEST,
 } from "../persistence/defaultCharacterAssetManifest.js";
+import { DEFAULT_RESIDENT_SPRITE_MANIFEST } from "../persistence/defaultResidentSpriteManifest.js";
 import type {
   AssetManifest,
   AssetMissingReason,
   AssetReadinessStatus,
   SpriteSheetMetadata,
 } from "../persistence/assetManifest.js";
+import { createAssetManifestWithResidentSprites } from "../persistence/residentSpriteManifest.js";
 
 const expressionIds = [
   "neutral",
@@ -22,6 +24,12 @@ const expressionIds = [
   "sad",
   "surprised",
 ] as const satisfies readonly CharacterExpressionId[];
+
+export const DEFAULT_CHARACTER_ASSET_READ_MODEL_MANIFEST =
+  createAssetManifestWithResidentSprites(
+    DEFAULT_CHARACTER_ASSET_MANIFEST,
+    DEFAULT_RESIDENT_SPRITE_MANIFEST,
+  );
 
 export type ResolvedCharacterAssetRef = {
   assetId: AssetId | null;
@@ -79,7 +87,7 @@ export type CharacterAssetBundleReadModel = {
 export function selectCharacterAssetBundleReadModel(
   state: RuntimeWorldState,
   characterId: string,
-  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_MANIFEST,
+  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_READ_MODEL_MANIFEST,
 ): CharacterAssetBundleReadModel {
   const character = state.characters.get(characterId);
   if (!character) {
@@ -91,7 +99,7 @@ export function selectCharacterAssetBundleReadModel(
 
 export function selectActiveCharacterAssetBundleReadModels(
   state: RuntimeWorldState,
-  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_MANIFEST,
+  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_READ_MODEL_MANIFEST,
 ): CharacterAssetBundleReadModel[] {
   return state.session.activeSlots.map((characterId) =>
     selectCharacterAssetBundleReadModel(state, characterId, manifest),
@@ -100,7 +108,7 @@ export function selectActiveCharacterAssetBundleReadModels(
 
 export function resolveCharacterAssetBundleReadModel(
   character: Character,
-  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_MANIFEST,
+  manifest: AssetManifest = DEFAULT_CHARACTER_ASSET_READ_MODEL_MANIFEST,
 ): CharacterAssetBundleReadModel {
   const bundle = resolveCharacterAssetBundle(character);
 

@@ -1,7 +1,7 @@
 import { CURRENT_SAVE_VERSION } from "./migrations.js";
 import type { AssetManifest, AssetManifestEntry, SpriteSheetMetadata } from "./assetManifest.js";
 
-const updatedAt = "2026-05-04T00:00:00.000Z";
+const updatedAt = "2026-05-05T00:00:00.000Z";
 
 export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA: SpriteSheetMetadata = {
   frameWidth: 96,
@@ -26,6 +26,7 @@ export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA: SpriteSheetMetadata = {
 function createResidentSpriteSheetPlaceholder(
   bundleId: string,
   ownerCharacterId: string,
+  missingReason: AssetManifestEntry["missingReason"] = "not-generated-yet",
 ): AssetManifestEntry {
   return {
     id: `${bundleId}-sprite-sheet`,
@@ -38,7 +39,7 @@ function createResidentSpriteSheetPlaceholder(
     fallbackAssetId: `${bundleId}-portrait-neutral`,
     generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
     isPlaceholder: true,
-    missingReason: "not-generated-yet",
+    missingReason,
     spriteSheet: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
   };
 }
@@ -72,7 +73,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
-    createResidentSpriteSheetReady("eve", "chr_eve"),
+    createResidentSpriteSheetPlaceholder("eve", "chr_eve", "rejected"),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",

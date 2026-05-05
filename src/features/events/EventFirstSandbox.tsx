@@ -249,8 +249,7 @@ export function EventFirstSandbox({
           currentEvent.participantCharacterIds.includes(character.id) && !isPrimary;
         const spriteSheetPath =
           assetBundle?.spriteSheet.ready &&
-          assetBundle.spriteSheet.path &&
-          isSandboxSpriteRenderable(assetBundle.spriteSheet.assetId)
+          assetBundle.spriteSheet.path
             ? assetBundle.spriteSheet.path
             : null;
         const portraitPath =
@@ -1022,13 +1021,6 @@ function resolveResidentSpriteSheetMetadata(
     row: motionSlot?.row ?? 0,
     frames: motionSlot?.frames ?? metadata.columns,
   };
-}
-
-function isSandboxSpriteRenderable(assetId: string | null): boolean {
-  // Eve's current PoC sprite sheet is a valid asset file, but it has not passed
-  // PO visual correctness in the sandbox. Keep her on portrait fallback until a
-  // visually approved sprite sheet is registered.
-  return assetId !== "eve-sprite-sheet";
 }
 
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
