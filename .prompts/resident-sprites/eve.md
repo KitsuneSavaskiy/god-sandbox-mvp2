@@ -27,7 +27,7 @@ Style:
 - suitable for a 2.5D papercraft background
 
 Sprite sheet:
-- Output file: `public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png`
+- Output target after human approval: `public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png`
 - PNG with real alpha channel
 - frame size: 96x96
 - columns: 6
@@ -35,6 +35,7 @@ Sprite sheet:
 - each row is one motion
 - each column is one frame
 - no labels, numbers, UI frames, or background inside the image
+- if true alpha is not available in the generation UI, use a perfectly flat solid `#ff00ff` chroma-key background so the local alpha normalizer can remove it
 
 Motion rows:
 1. `idle`
@@ -53,3 +54,4 @@ Important:
 - This must be a real sprite sheet.
 - Do not use a resized portrait as the sprite.
 - Keep every frame recognizable as Eve.
+- For this PoC, generate only Eve. Do not expand to Garan, Ryo, or Suzu.

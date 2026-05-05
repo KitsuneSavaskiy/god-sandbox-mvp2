@@ -43,6 +43,25 @@ function createResidentSpriteSheetPlaceholder(
   };
 }
 
+function createResidentSpriteSheetReady(
+  bundleId: string,
+  ownerCharacterId: string,
+): AssetManifestEntry {
+  return {
+    id: `${bundleId}-sprite-sheet`,
+    ownerCharacterId,
+    kind: "sprite-sheet",
+    status: "ready",
+    sourcePath: `public/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
+    publicPath: `/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
+    relativePath: `art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
+    fallbackAssetId: `${bundleId}-portrait-neutral`,
+    generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
+    isPlaceholder: false,
+    spriteSheet: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
+  };
+}
+
 export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
   saveVersion: CURRENT_SAVE_VERSION,
   updatedAt,
@@ -53,7 +72,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("eve", "chr_eve"),
+    createResidentSpriteSheetReady("eve", "chr_eve"),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",
