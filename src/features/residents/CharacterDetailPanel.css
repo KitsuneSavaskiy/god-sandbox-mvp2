@@ -43,7 +43,7 @@
 }
 
 .character-detail-panel__body {
-  padding: 16px;
+  padding: 14px;
 }
 
 .character-detail-panel__portrait-card {
@@ -117,22 +117,35 @@
 }
 
 .character-detail-panel__section {
-  padding: 13px;
+  padding: 11px;
   border: 1px solid rgba(68, 93, 55, 0.13);
   border-radius: 18px;
   background: rgba(250, 248, 237, 0.8);
 }
 
+.character-detail-panel__section--expressions {
+  gap: 7px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255, 246, 197, 0.5), transparent 40%),
+    rgba(250, 248, 237, 0.82);
+}
+
+.character-detail-panel__section--expressions h3 {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
 .character-detail-panel__definition-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
 }
 
 .character-detail-panel__definition-list div,
 .character-detail-panel__asset-row {
   min-width: 0;
-  padding: 10px;
+  padding: 8px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.58);
 }
@@ -187,7 +200,7 @@
 
 .character-detail-panel__asset-row {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .character-detail-panel__asset-row strong {
@@ -197,19 +210,19 @@
 
 .character-detail-panel__expression-viewer {
   display: grid;
-  gap: 8px;
+  gap: 0;
 }
 
 .character-detail-panel__expression-viewer img,
 .character-detail-panel__expression-placeholder {
-  min-height: 250px;
+  min-height: 420px;
 }
 
 .character-detail-panel__expression-viewer img {
   display: block;
-  max-height: 330px;
+  max-height: 540px;
   object-fit: contain;
-  padding: 6px;
+  padding: 2px;
 }
 
 .character-detail-panel__expression-placeholder span {
@@ -224,7 +237,7 @@
 
 .character-detail-panel__expression-switcher {
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
 }
 
 .character-detail-panel__expression-button {
@@ -232,8 +245,8 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  min-height: 38px;
-  padding: 8px 4px;
+  min-height: 36px;
+  padding: 7px 2px;
   border: 1px solid rgba(68, 93, 55, 0.14);
   border-radius: 14px;
   color: #33492b;
@@ -243,6 +256,7 @@
 }
 
 .character-detail-panel__expression-button span {
+  font-size: clamp(0.78rem, 2.35vw, 0.92rem);
   font-weight: 900;
   white-space: nowrap;
 }
@@ -262,7 +276,7 @@
 }
 
 .character-detail-panel__expression-status {
-  padding: 9px 10px;
+  padding: 7px 9px;
   border: 1px solid rgba(185, 137, 62, 0.18);
   border-radius: 14px;
   color: #73572f;
@@ -301,7 +315,7 @@
 
   .character-detail-panel__chrome,
   .character-detail-panel__body {
-    padding: 12px;
+    padding: 10px;
   }
 
   .character-detail-panel__portrait-card img,
@@ -311,6 +325,19 @@
 
   .character-detail-panel__expression-viewer img,
   .character-detail-panel__expression-placeholder {
-    min-height: 210px;
+    min-height: 330px;
+  }
+
+  .character-detail-panel__expression-viewer img {
+    max-height: 400px;
+  }
+
+  .character-detail-panel__expression-switcher {
+    gap: 4px;
+  }
+
+  .character-detail-panel__expression-button {
+    min-height: 33px;
+    padding: 6px 1px;
   }
 }
