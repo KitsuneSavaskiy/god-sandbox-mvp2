@@ -103,9 +103,6 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
               <strong>立ち絵は未生成</strong>
             </div>
           )}
-          <figcaption>
-            立ち絵は登録済みassetがあれば表示します。未登録の場合はplaceholderで止めます。
-          </figcaption>
         </figure>
 
         <section className="character-detail-panel__section" aria-labelledby="character-detail-profile">
@@ -174,11 +171,6 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
                     onClick={() => setSelectedExpressionKey(slot.key)}
                   >
                     <span>{getExpressionLabel(slot)}</span>
-                    <small>
-                      {slot.isPlaceholder
-                        ? `未生成 / neutral fallback中 (${getMissingReasonLabel(slot.missingReason)})`
-                        : slot.assetId}
-                    </small>
                   </button>
                 ))}
               </div>
@@ -217,8 +209,7 @@ function ExpressionStatus({
   if (slot.isPlaceholder) {
     return (
       <p className="character-detail-panel__expression-status">
-        {getExpressionLabel(slot)} は未生成です。neutral fallback中です。
-        {slot.missingReason ? ` 理由: ${getMissingReasonLabel(slot.missingReason)}。` : null}
+        未生成。neutral fallback中です。
       </p>
     );
   }
@@ -226,16 +217,12 @@ function ExpressionStatus({
   if (isFallback) {
     return (
       <p className="character-detail-panel__expression-status">
-        画像を読み込めなかったため、neutral fallback中です。
+        neutral fallback中です。
       </p>
     );
   }
 
-  return (
-    <p className="character-detail-panel__expression-status">
-      {getExpressionLabel(slot)} の実画像を表示しています。
-    </p>
-  );
+  return null;
 }
 
 function InfoList({ items }: { items: CharacterDetailInfoItem[] }) {
@@ -340,13 +327,3 @@ function createAssetNote(
   return `${fallbackNote} path未登録`;
 }
 
-function getMissingReasonLabel(reason: CharacterExpressionSlot["missingReason"]): string {
-  switch (reason) {
-    case "not-generated-yet":
-      return "未生成";
-    case "asset-not-registered":
-      return "asset未登録";
-    default:
-      return "未設定";
-  }
-}
