@@ -72,6 +72,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [imagePickerMessage, setImagePickerMessage] = useState<string | null>(null);
   const [imageSaveStatus, setImageSaveStatus] = useState<string | null>(null);
+  const [imageDraftId, setImageDraftId] = useState(() => createDraftImageId());
   const validation = validateCharacterDraft(draft);
   const copy = copyByMode[mode];
   const directoryPicker = getDirectoryPicker();
@@ -81,6 +82,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
     setSelectedImageFile(null);
     setImagePickerMessage(null);
     setImageSaveStatus(null);
+    setImageDraftId(createDraftImageId());
   }, [initialDraft, mode]);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
       return;
     }
 
-    const nextImageAssetId = createWorkingImageFileName(file, draft);
+    const nextImageAssetId = createWorkingImageFileName(file, draft, imageDraftId);
     setSelectedImageFile(file);
     setImagePickerMessage("画像を選択しました。ゲーム内で使う名前を下に表示しています。");
     setImageSaveStatus(null);
@@ -300,12 +302,16 @@ function isSupportedImageFile(file: File): boolean {
   return Boolean(getSupportedImageExtension(file));
 }
 
-function createWorkingImageFileName(file: File, draft: CharacterDraft): string {
+function createWorkingImageFileName(
+  file: File,
+  draft: CharacterDraft,
+  imageDraftId: string,
+): string {
   const extension = getSupportedImageExtension(file) ?? "png";
-  const sourceName = (draft.id ?? draft.displayName) || getFileNameWithoutExtension(file.name);
-  const slug = createSafeFileToken(sourceName);
+  const sourceId = createSafeFileToken(draft.id ?? imageDraftId);
+  const timestamp = Date.now().toString(36);
 
-  return `character-${slug}-${Date.now().toString(36)}-portrait-original.${extension}`;
+  return `character-${sourceId}-portrait-original-${timestamp}.${extension}`;
 }
 
 function getSupportedImageExtension(file: File): "png" | "jpg" | "jpeg" | "webp" | undefined {
@@ -329,17 +335,19 @@ function getSupportedImageExtension(file: File): "png" | "jpg" | "jpeg" | "webp"
   return undefined;
 }
 
-function getFileNameWithoutExtension(fileName: string): string {
-  return fileName.replace(/\.[^.]+$/, "");
-}
-
 function createSafeFileToken(value: string): string {
   const slug = value
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-|-$/g, "");
 
-  return slug || "new-resident";
+  return slug || createDraftImageId();
+}
+
+function createDraftImageId(): string {
+  const randomToken = Math.random().toString(36).slice(2, 8);
+
+  return `draft-${Date.now().toString(36)}-${randomToken}`;
 }
 
 function getDirectoryPicker(): DirectoryPicker | undefined {
