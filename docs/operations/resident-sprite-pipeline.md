@@ -173,6 +173,99 @@ Eve 1名分のsprite sheet PoCでは、次の順で確認する。
 PoCで見る主な成功条件は、Eve 1名で `prompt -> incoming -> alpha確認 -> validator -> processor -> 採用判断 -> 箱庭表示` の流れを確認できることである。
 Sprint8では、4キャラ x 11motion の完成を必須にしない。
 
+## Eve sprite PoC 実行手順
+
+この手順は、**APIキー不要・従量課金なしのサブスク前提ローカルasset pipeline** で Eve 1名のsprite sheetを確認するためのrunbookです。
+POは上から順番に見れば、どこまで進んだかを確認できます。
+
+### 0. 作業フォルダを作る
+
+repository root で次を実行します。
+
+```bat
+tools\asset-pipeline\setup-resident-asset-folders.bat eve
+```
+
+このコマンドはローカル作業フォルダを作るだけです。
+`assets/generated/**`、`assets/residents/**`、`manifests/residents.json` はGit管理外です。
+
+### 1. Codex petで生成したPNGをincomingへ取り込む
+
+ChatGPTなどの別画面で生成したEve sprite sheet PNGを選びます。
+
+```bat
+tools\asset-pipeline\import-resident-sprite-source.bat eve
+```
+
+保存先を覚える必要はありません。
+scriptが `assets/generated/residents/eve/incoming/` へコピーします。
+コピー後のファイル名は、たとえば次の形になります。
+
+```text
+resident-eve-sprite-source-<timestamp>.png
+```
+
+### 2. alpha確認をする
+
+Line 2のalpha確認scriptで、PNGにalpha channelがあるか確認します。
+script名はLine 2のPRで確定します。
+
+確認すること:
+
+- alpha channelがある。
+- 透明背景に見える。
+- 白、緑、checkerboard、単色背景が焼き込まれていない。
+- Eveの周囲に白い縁や四角い背景が出ていない。
+
+alpha channelがない場合は、Line 2のalpha化scriptで `tmp` などのGit管理外フォルダへ候補PNGを出します。
+元画像は上書きしません。
+alpha化候補は、必ず目視確認してから次へ進めます。
+
+### 3. validatorを実行する
+
+```bat
+tools\asset-pipeline\validate-resident-sprite-sheet.bat eve
+```
+
+確認すること:
+
+- PNGとして読める。
+- 画像全体が `576x1056` px である。
+- `96x96` frame、6列、11行として扱える。
+
+validatorは採用済みassetへコピーしません。
+manifestも書き換えません。
+
+### 4. processorを実行する
+
+```bat
+tools\asset-pipeline\process-resident-sprite-sheet.bat eve
+```
+
+出力先:
+
+```text
+assets/residents/eve/sprites/
+```
+
+この出力はローカル作業用です。
+まだ正本assetではありません。
+`public/art/**` や `src/persistence/**` は自動更新されません。
+
+### 5. 箱庭で表示を確認する
+
+Line 2がEveだけを採用済みassetとして登録し、Line 4が表示確認します。
+
+確認すること:
+
+- Eveだけready spriteとして表示される。
+- Eveの背景が透明で、四角い背景が出ていない。
+- idle / walk系motionが小さい箱庭キャラとして読める。
+- Garan / Ryo / Suzu はfallbackのまま壊れていない。
+- 箱庭上にキャラ名、場所、状態ラベルが戻っていない。
+
+確認結果は `.logs/README.md` のテンプレートを使って記録できます。
+
 ## 検査観点
 
 - PNGである。
