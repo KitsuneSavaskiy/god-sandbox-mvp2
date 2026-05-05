@@ -3,9 +3,11 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type KeyboardEvent,
   type MouseEvent,
 } from "react";
+import { selectActiveCharacterAssetBundleReadModels } from "../../application/characterAssetBundles.js";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
   selectActiveCharacters,
@@ -41,6 +43,7 @@ type ResidentDecoration = {
   presetLabel: string;
   alertPriority: string;
   positionClassName: string;
+  depthClassName: string;
 };
 
 export type ActiveResidentPreview = {
@@ -57,6 +60,11 @@ export type ActiveResidentPreview = {
 type ResidentViewModel = ActiveResidentPreview & {
   emote: EmoteKind;
   positionClassName: string;
+  depthClassName: string;
+  motion: "idle" | "walk";
+  visualMode: "sprite" | "portrait" | "placeholder";
+  portraitPath: string | null;
+  spriteSheetPath: string | null;
 };
 
 type InterventionOutcome = {
@@ -103,24 +111,28 @@ const residentDecorations: ResidentDecoration[] = [
     presetLabel: "落ち着いた観察",
     alertPriority: "最優先",
     positionClassName: "event-first-sandbox__resident--one",
+    depthClassName: "event-first-sandbox__resident--depth-mid",
   },
   {
     zoneLabel: "木陰の小道",
     presetLabel: "会話の気配",
     alertPriority: "高め",
     positionClassName: "event-first-sandbox__resident--two",
+    depthClassName: "event-first-sandbox__resident--depth-back",
   },
   {
     zoneLabel: "風の見張り台",
     presetLabel: "変化に敏感",
     alertPriority: "ふつう",
     positionClassName: "event-first-sandbox__resident--three",
+    depthClassName: "event-first-sandbox__resident--depth-front",
   },
   {
     zoneLabel: "灯りの広場",
     presetLabel: "賑わい観察",
     alertPriority: "ふつう",
     positionClassName: "event-first-sandbox__resident--four",
+    depthClassName: "event-first-sandbox__resident--depth-mid",
   },
 ];
 
@@ -174,14 +186,27 @@ export function EventFirstSandbox({
   const currentEvent = selectCurrentEvent(runtimeState);
   const observationPreset = selectObservationPreset(runtimeState);
   const activeCharacters = selectActiveCharacters(runtimeState);
+  const activeAssetBundles = useMemo(
+    () => selectActiveCharacterAssetBundleReadModels(runtimeState),
+    [runtimeState],
+  );
 
   const activeResidents = useMemo(
     () =>
       activeCharacters.map((character, index) => {
         const decoration = residentDecorations[index] ?? residentDecorations[0];
+        const assetBundle = activeAssetBundles[index];
         const isPrimary = currentEvent.primaryCharacterId === character.id;
         const isSupporting =
           currentEvent.participantCharacterIds.includes(character.id) && !isPrimary;
+        const spriteSheetPath =
+          assetBundle?.spriteSheet.ready && assetBundle.spriteSheet.path
+            ? assetBundle.spriteSheet.path
+            : null;
+        const portraitPath =
+          assetBundle?.portrait.ready && assetBundle.portrait.path
+            ? assetBundle.portrait.path
+            : null;
 
         return {
           id: character.id,
@@ -192,19 +217,29 @@ export function EventFirstSandbox({
           isPrimary,
           isSupporting,
           positionClassName: decoration.positionClassName,
+          depthClassName: decoration.depthClassName,
           emote: resolveResidentEmote({
             sandboxStage,
             isPrimary,
             isSupporting,
             latestOutcome,
           }),
+          motion: resolveResidentMotion({
+            sandboxStage,
+            isPrimary,
+            isSupporting,
+            hasSpriteSheet: Boolean(spriteSheetPath),
+          }),
+          visualMode: spriteSheetPath ? "sprite" : portraitPath ? "portrait" : "placeholder",
+          portraitPath,
+          spriteSheetPath,
           statusSummary: [
             `活力 ${character.state.status.vitality}`,
             `調和 ${character.state.status.harmony}`,
           ],
         } satisfies ResidentViewModel;
       }),
-    [activeCharacters, currentEvent, latestOutcome, sandboxStage],
+    [activeAssetBundles, activeCharacters, currentEvent, latestOutcome, sandboxStage],
   );
 
   const primaryResident = activeResidents.find((resident) => resident.isPrimary);
@@ -433,14 +468,21 @@ export function EventFirstSandbox({
         {activeResidents.map((resident) => (
           <article
             key={resident.id}
-            className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${
+            className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
               sandboxStage === "focused-event" ? "event-first-sandbox__resident--paused" : ""
             }`}
             role="button"
             tabIndex={0}
             aria-label={`${resident.displayName}の詳細を開く`}
+            data-resident-depth={resident.depthClassName.replace(
+              "event-first-sandbox__resident--depth-",
+              "",
+            )}
+            data-resident-motion={resident.motion}
+            data-resident-visual={resident.visualMode}
             onClick={(event) => handleResidentClick(event, resident.id)}
             onKeyDown={(event) => handleResidentKeyDown(event, resident.id)}
+            style={createResidentStyle(resident)}
           >
             <span
               className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
@@ -448,15 +490,28 @@ export function EventFirstSandbox({
               {emoteLabels[resident.emote]}
             </span>
             <div className="event-first-sandbox__resident-card">
-              <strong>{resident.displayName}</strong>
-              <span>{resident.zoneLabel}</span>
-              <span>
-                {resident.isPrimary
-                  ? "主役"
-                  : resident.isSupporting
-                    ? "脇役"
-                    : "見守り中"}
-              </span>
+              <div className="event-first-sandbox__resident-figure" aria-hidden="true">
+                {resident.spriteSheetPath ? (
+                  <span className="event-first-sandbox__resident-sprite" />
+                ) : resident.portraitPath ? (
+                  <img src={resident.portraitPath} alt="" />
+                ) : (
+                  <span className="event-first-sandbox__resident-placeholder">
+                    {resident.displayName.slice(0, 1)}
+                  </span>
+                )}
+              </div>
+              <div className="event-first-sandbox__resident-nameplate">
+                <strong>{resident.displayName}</strong>
+                <span>{resident.zoneLabel}</span>
+                <span>
+                  {resident.isPrimary
+                    ? "主役"
+                    : resident.isSupporting
+                      ? "脇役"
+                      : "見守り中"}
+                </span>
+              </div>
             </div>
           </article>
         ))}
@@ -757,6 +812,29 @@ function resolveResidentEmote(input: {
   }
 
   return input.isPrimary ? "talk-request" : "joy";
+}
+
+function resolveResidentMotion(input: {
+  sandboxStage: SandboxExperienceStage;
+  isPrimary: boolean;
+  isSupporting: boolean;
+  hasSpriteSheet: boolean;
+}): ResidentViewModel["motion"] {
+  if (!input.hasSpriteSheet || input.sandboxStage !== "focused-event") {
+    return "idle";
+  }
+
+  return input.isPrimary || input.isSupporting ? "walk" : "idle";
+}
+
+function createResidentStyle(resident: ResidentViewModel): CSSProperties {
+  if (!resident.spriteSheetPath) {
+    return {};
+  }
+
+  return {
+    "--resident-sprite-sheet": `url("${resident.spriteSheetPath}")`,
+  } as CSSProperties;
 }
 
 function describeChangeSet(
