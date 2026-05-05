@@ -21,6 +21,8 @@ git status --short
 - [ ] branch 名が active PBI と一致している。
 - [ ] tracked / untracked の不要ファイルを別 PBI 成果物として混ぜていない。
 - [ ] 別レーンの着手中ファイルを巻き込んでいない。
+- [ ] 作業前に `AGENTS.md`、`docs/agent-operating-rules.md`、`docs/agent-pr-checklists.md`、`docs/architecture/line-responsibilities.md` を読んだ。
+- [ ] 今回 PBI に関係する `docs/architecture/**` を読んだ。
 
 ### 2. changed files
 
@@ -57,6 +59,8 @@ npm run build
 
 - [ ] 対応 Issue がある。
 - [ ] PR 本文に `Closes #<issue-number>` がある。
+- [ ] PR 本文に「参照したdocs」がある。
+- [ ] PR 本文に「今回のLine責務」がある。
 - [ ] PR 本文に branch、changed files、今回やったこと、今回やらないこと、scope 外変更がないこと、確認コマンド結果、監査役に見てほしい点がある。
 - [ ] label が `agent-routine` または `manual-review-required` のどちらかで、実際の risk と一致している。
 - [ ] `docs/product/godsandbox-user-flow.md` を更新した場合、`docs/product/godsandbox-user-flow.drawio` も同じ PR で整合している。
@@ -65,6 +69,8 @@ npm run build
 - [ ] `AGENTS.md` / `CLAUDE.md` は参照導線と最重要ルール中心で、詳細は `docs/` に寄せている。
 - [ ] `.logs/` やローカル補助ファイルを、PBI scope なしに追加していない。
 - [ ] アート生成プロンプトを Git 管理する場合、`docs/art-prompts/` に置いている。
+- [ ] review comment がある場合、GitHub PR 上で返信している。
+- [ ] rebase が必要な場合、作業 Line 側で `origin/main` へ追従し、結果を PR コメントに残している。
 
 ## PR監査チェックリスト
 
@@ -80,6 +86,8 @@ npm run build
 - [ ] 同じ PR で実装役と監査役を兼任していない。
 - [ ] Issue、branch、PR、label、PBI 名が整合している。
 - [ ] `Closes #...` が正しい Issue を指している。
+- [ ] PR 本文に「参照したdocs」がある。
+- [ ] PR 本文に「今回のLine責務」がある。
 
 ### 2. diff と scope
 
@@ -115,6 +123,15 @@ git diff --check origin/main...HEAD
 - [ ] hidden scope expansion がない。
 - [ ] review comment の未解消事項がない、または PO が明示的に許可している。
 - [ ] merge 順依存がある場合、その前提が解消されている。
+
+次のどれかが欠けている PR は merge 不可:
+
+- PR 本文に「参照したdocs」がない。
+- PR 本文に「担当Line責務」または「今回のLine責務」がない。
+- `Closes #...` がない。
+- changed files が Line 責務と PBI scope から外れている。
+- review comment に GitHub PR 上で返信していない。
+- rebase が必要なのに作業 Line 側で対応していない。
 
 ### 4.5 GodSandbox 深刻度
 

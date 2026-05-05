@@ -13,7 +13,21 @@
 この文書は新 repository における初期の実装責務境界を定義する。
 完成版ユーザーフローを縦に切りつつ、PR の混線を減らすことを目的とする。
 
+## 全 Line 共通の PR 運用
+
+- PR 本文に、参照した docs と担当 Line 責務を必ず書く。
+- review comment が付いた場合は GitHub PR 上で返信し、必要な修正 commit を push する。
+- rebase または main 追従が必要な場合は、作業 Line 側で対応し、結果を PR comment に残す。
+- Codex 監査役へ毎回 rebase を依頼しない。
+
 ## Line 1: App Platform / Shell / Auth
+
+作業前に必ず読む docs:
+
+- `AGENTS.md`
+- `docs/agent-operating-rules.md`
+- `docs/agent-pr-checklists.md`
+- `docs/architecture/line-responsibilities.md`
 
 担当:
 
@@ -39,8 +53,23 @@
 - イベント生成ルール
 - キャラクター作成仕様
 - passport 発行仕様
+- gameplay 意味、domain 仕様、event 生成ルール
+
+PR 本文に書く責務確認:
+
+- Line 1 責務内の app shell / route / 共通 UI の器の変更であること。
+- gameplay 意味、domain 仕様、event 生成ルールを決めていないこと。
 
 ## Line 2: Core Runtime / Domain / Persistence
+
+作業前に必ず読む docs:
+
+- `AGENTS.md`
+- `docs/agent-operating-rules.md`
+- `docs/agent-pr-checklists.md`
+- `docs/architecture/line-responsibilities.md`
+- `docs/architecture/system-spec.md`
+- `docs/architecture/event-and-intervention-spec.md`
 
 担当:
 
@@ -65,7 +94,22 @@
 - tutorial 演出
 - character creator UI 体験
 
+PR 本文に書く責務確認:
+
+- Line 2 責務内の正本モデル、runtime、persistence、balance rule の変更であること。
+- UI 表示や tutorial 文言を同じ PR に混ぜていないこと。
+- 30分 / 10イベント / god point 回復などの正本ルール変更では domain test 結果を書くこと。
+
 ## Line 3: Character Lifecycle / Roster / Passport
+
+作業前に必ず読む docs:
+
+- `AGENTS.md`
+- `docs/agent-operating-rules.md`
+- `docs/agent-pr-checklists.md`
+- `docs/architecture/line-responsibilities.md`
+- `docs/architecture/character-detail-asset-spec.md`
+- `docs/architecture/snapshot-passport-spec.md`
 
 担当:
 
@@ -93,7 +137,22 @@
 - app shell の挙動
 - 導入 tutorial 全体の進行管理
 
+PR 本文に書く責務確認:
+
+- Line 3 責務内の CharacterDetail / Roster / Snapshot / Passport 導線の変更であること。
+- `focusedEvent` を壊していないこと。
+- Passport schema を明示許可なしに変更していないこと。
+
 ## Line 4: Event Experience / Tutorial / Narrative
+
+作業前に必ず読む docs:
+
+- `AGENTS.md`
+- `docs/agent-operating-rules.md`
+- `docs/agent-pr-checklists.md`
+- `docs/architecture/line-responsibilities.md`
+- `docs/architecture/ui-state-model.md`
+- `docs/architecture/event-and-intervention-spec.md`
 
 担当:
 
@@ -119,6 +178,13 @@
 - 正本の保存状態
 - character creator のフォーム仕様
 - アプリ全体の platform 設定
+
+PR 本文に書く責務確認:
+
+- Line 4 責務内の event-first UI、tutorial、物語ログ、イベント体験の変更であること。
+- `focusedCharacter` / `selectedCharacter` 中心へ戻していないこと。
+- 箱庭上にキャラ名、場所、状態ラベルを戻していないこと。
+- UI 変更では 390px / 360px の確認結果、または未実施理由を書くこと。
 
 ## 境界ルール
 
