@@ -11,7 +11,7 @@ export type CharacterAnimationAssetStatusTone =
   | "missing";
 
 export type CharacterAnimationAssetStatus = {
-  label: "準備済み" | "未生成" | "確認中" | "通常画像で代用中";
+  label: "準備済み" | "未生成" | "確認が必要" | "通常画像で代用中";
   tone: CharacterAnimationAssetStatusTone;
   summary: string;
   nextAction: string;
@@ -30,7 +30,7 @@ export function resolveCharacterAnimationAssetStatus(
 ): CharacterAnimationAssetStatus {
   const sprite = readModel.spriteSheet;
 
-  if (sprite.ready && sprite.path) {
+  if (sprite.status === "ready") {
     return {
       label: "準備済み",
       tone: "ready",
@@ -39,16 +39,35 @@ export function resolveCharacterAnimationAssetStatus(
     };
   }
 
-  if (sprite.path && !sprite.ready) {
+  if (
+    sprite.status === "rejected" ||
+    sprite.missingReason === "rejected" ||
+    sprite.missingReason === "source-not-adopted"
+  ) {
     return {
-      label: "確認中",
+      label: "確認が必要",
       tone: "reviewing",
-      summary: "素材候補はありますが、採用前の確認が残っています。",
-      nextAction: "検査が終わるまでは通常画像で表示します。",
+      summary: "箱庭用アニメ素材の候補はありますが、まだ採用されていません。",
+      nextAction: "安全に確認できるまでは通常画像で表示します。",
     };
   }
 
-  if (sprite.fallbackPath) {
+  if (
+    sprite.status === "missing" ||
+    sprite.missingReason === "asset-not-registered"
+  ) {
+    return {
+      label: "未生成",
+      tone: "missing",
+      summary: "箱庭用アニメ素材はまだ登録されていません。",
+      nextAction: "必要になったら外部の生成画面と検査手順で準備できます。",
+    };
+  }
+
+  if (
+    sprite.status === "placeholder" &&
+    sprite.missingReason === "not-generated-yet"
+  ) {
     return {
       label: "通常画像で代用中",
       tone: "fallback",
@@ -58,9 +77,9 @@ export function resolveCharacterAnimationAssetStatus(
   }
 
   return {
-    label: "未生成",
-    tone: "missing",
-    summary: "箱庭用アニメ素材はまだありません。",
-    nextAction: "素材を作る場合は、外部の生成画面と検査手順を使います。",
+    label: "通常画像で代用中",
+    tone: "fallback",
+    summary: "箱庭用アニメ素材は準備中です。",
+    nextAction: "確認できるまでは登録済みの通常画像で表示します。",
   };
 }
