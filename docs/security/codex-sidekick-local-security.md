@@ -255,5 +255,5 @@ Codex repo / Claude repo / SPECA run directory を混ぜない
 ## One-line Codex resume instruction
 
 ```bash
-codex "Read docs/security/codex-sidekick-local-security.md, keep Codex Sidekick local security as the Phase 2 gate, do not implement App Server or runner, and test until complete."
+codex "docs/security/codex-sidekick-local-security.md を読み、Sprint9 Phase 2 gateとしてCodex Sidekick local security仕様を整えてください。App Serverやrunnerは実装せず、検証まで完了してください。"
 ```
