@@ -6,6 +6,7 @@ Workflow note:
 - This prompt is for an external subscription UI such as ChatGPT.
 - GodSandbox must not call an image generation API from inside the app.
 - Do not include API keys, account details, personal paths, or billing details in the output.
+- Follow the visual correctness rules from `docs/operations/ryo-sprite-visual-correctness-task.md`.
 
 Reference:
 - Use `public/art/characters/defaults/ryo/portrait.png` only as the identity reference.
@@ -26,8 +27,18 @@ Style:
 - consistent scale and baseline
 - suitable for a 2.5D papercraft background
 
+Visual correctness:
+- Each 96x96 frame must contain one complete character.
+- Keep head, torso, and feet inside the same frame.
+- Do not let the body cross into a neighboring row or column.
+- Keep at least about 6px left/right margin and 4px top/bottom margin when possible.
+- If the character would exceed the frame, scale the character down instead of cropping.
+- Emote particles may be small and separate, but they must not look like detached body parts.
+- Do not include labels, frame numbers, guide lines, or any square background.
+
 Sprite sheet:
-- Output file: `public/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png`
+- Downloaded PNG must go through: `assets/generated/residents/ryo/incoming/`
+- Adopted output after visual audit and human approval: `public/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png`
 - PNG with real alpha channel
 - frame size: 96x96
 - columns: 6
@@ -35,6 +46,7 @@ Sprite sheet:
 - each row is one motion
 - each column is one frame
 - no labels, numbers, UI frames, or background inside the image
+- if true alpha is not available in the generation UI, use a perfectly flat solid `#ff00ff` chroma-key background so the local alpha normalizer can remove it
 
 Motion rows:
 1. `idle`
@@ -53,3 +65,5 @@ Important:
 - This must be a real sprite sheet.
 - Do not use a resized portrait as the sprite.
 - Keep every frame recognizable as Ryo.
+- Every frame must stand on its own without borrowing pixels from neighboring cells.
+- For this sprint, generate only Ryo. Do not expand to Eve, Garan, or Suzu.
