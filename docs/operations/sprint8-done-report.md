@@ -52,6 +52,8 @@ PBI-DOC-NONTECH-CHARACTER-CREATION-SIDEKICK-HANDOFF-001
 - assetやnarrativeが未生成の時はどうなるのか。
 - Codex Sidekickは何を助けるのか。
 - APIキーや従量課金なしでどこまでできるのか。
+- Codex Sidekickは、APIキー連携や従量課金APIを前提にせず、ChatGPT / Codex のサブスク範囲内での個人利用を前提に説明する。
+- 商用利用、再配布、第三者提供はこの導線の前提にしない。必要な場合は、各サービス規約、素材権利、プロジェクト方針を別途確認する。
 - Character Passportを外部でどう使うのか。
 - 後続ゲーム開発者は何を見ればよいのか。
 - 非技術者がCLIやCodexで詰まらないようにするには何を説明すべきか。
