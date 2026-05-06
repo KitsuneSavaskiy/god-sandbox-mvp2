@@ -27,6 +27,7 @@ import {
   type SandboxExperienceStage,
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
+import { createTimestamp } from "./EventFirstSandboxTimestamp.js";
 import "./EventFirstSandbox.css";
 
 type EmoteKind =
@@ -944,10 +945,6 @@ function createInitialStoryEntries(state: RuntimeWorldState): StoryLogEntry[] {
       tone: "event",
     },
   ];
-}
-
-function createTimestamp(stepIndex: number): string {
-  return `2026-05-04T08:${String(stepIndex).padStart(2, "0")}:00.000Z`;
 }
 
 function clamp(value: number, min: number, max: number): number {
