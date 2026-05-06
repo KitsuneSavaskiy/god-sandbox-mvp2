@@ -8,6 +8,13 @@ Workflow note:
 - Do not include API keys, account details, personal paths, or billing details in the output.
 - Follow the visual correctness rules from `docs/operations/resident-sprite-spec.md`.
 
+Generation source requirement:
+- Use Codex pet / approved external image generation UI to generate the sprite sheet from the source portrait.
+- If Codex pet / external generation UI is unavailable, stop and report `generation step unavailable`.
+- Do not create a local handmade, synthetic, placeholder, simple-shape, or validation-only sprite sheet as a substitute.
+- Do not treat a validation-only image as a character candidate.
+- Passing `sprite:check` alone does not prove character identity or Codex pet generation.
+
 Reference:
 - Use `public/art/characters/defaults/garan/portrait.png` only as the identity reference.
 - Do not crop, resize, or paste the portrait into the sprite sheet.
@@ -67,3 +74,4 @@ Important:
 - Keep every frame recognizable as Garan.
 - Every frame must stand on its own without borrowing pixels from neighboring cells.
 - For this sprint, generate only Garan. Do not expand to Eve, Ryo, or Suzu.
+- If Codex pet / external generation UI cannot be used, do not create a substitute local sprite sheet. Stop and report `generation step unavailable`.

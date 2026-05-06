@@ -78,6 +78,70 @@ Not allowed:
 - No label text, frame number, row marker, guide line, or grid line may be baked into the final asset.
 - If the generation tool cannot produce real alpha, use a flat `#ff00ff` chroma-key background. The local alpha normalizer will remove it.
 
+## Generation source contract
+
+Resident sprite sheet candidates must be generated from the character portrait through the approved external image generation flow, such as Codex pet or an external subscription image generation UI.
+
+Do not replace a resident candidate with a local handmade placeholder, synthetic test image, simple colored shape sheet, resized portrait sheet, or manually drawn proxy created only to satisfy validation.
+
+If Codex pet or the external generation UI cannot be operated in the current environment, stop the generation proof and report:
+
+```txt
+generation step unavailable
+```
+
+Do not create a substitute sprite sheet.
+
+A local synthetic image may be created only for validation-tool development or validator smoke testing. Such an image must be explicitly labeled:
+
+```txt
+validation-only test image
+not a resident candidate
+not a generation proof
+not eligible for PO visual review
+not eligible for ready promotion
+```
+
+Passing `npm run sprite:check` means the PNG satisfies technical sprite-sheet checks. It does not prove:
+
+- the image was generated from the character portrait,
+- the image used Codex pet or an approved external generation UI,
+- the character is visually recognizable,
+- the candidate is eligible for ready promotion.
+
+Generation proof requires all of the following:
+
+1. Source portrait path is recorded.
+2. Prompt path is recorded.
+3. Codex pet or approved external generation UI usage is confirmed.
+4. Generated PNG is placed in `assets/generated/residents/<characterId>/incoming/`.
+5. `npm run sprite:check -- <characterId>` passes.
+6. Contact sheet is reviewed.
+7. Human and PO visual review confirm character identity and sandbox fit.
+
+Resident sprite proof reports must include:
+
+```md
+## Generation source
+- source portrait:
+- prompt:
+- generation method:
+- Codex pet / external generation UI used: yes / no
+- if no: proof result must be fail / not executed
+
+## Candidate classification
+- generated character candidate / validation-only test image
+- eligible for PO visual review: yes / no
+- ready promotion allowed: no
+```
+
+End-to-end proof must be treated as fail when:
+
+- Codex pet or approved external generation UI was not used,
+- a local-only handmade or synthetic image substituted for the generation step,
+- a validation-only image was treated as a resident candidate,
+- `sprite:check` pass was treated as generation proof by itself.
+
 ## Pipeline path conventions
 
 ```txt
