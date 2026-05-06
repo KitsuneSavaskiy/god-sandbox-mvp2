@@ -143,7 +143,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/ryo/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("ryo", "chr_ryo"),
+    createResidentSpriteSheetReady("ryo", "chr_ryo"),
     {
       id: "ryo-expression-happy",
       ownerCharacterId: "chr_ryo",

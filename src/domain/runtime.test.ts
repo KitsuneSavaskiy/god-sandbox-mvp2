@@ -565,12 +565,11 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.expressions.happy.isPlaceholder, false);
   assert.equal(ryoAssetBundle.expressions.surprised.assetId, "ryo-expression-surprised");
   assert.equal(ryoAssetBundle.spriteSheet.assetId, "ryo-sprite-sheet");
-  assert.equal(ryoAssetBundle.spriteSheet.ready, false);
-  assert.equal(ryoAssetBundle.spriteSheet.isPlaceholder, true);
-  assert.equal(ryoAssetBundle.spriteSheet.missingReason, "not-generated-yet");
-  assert.equal(ryoAssetBundle.spriteSheet.path, null);
+  assert.equal(ryoAssetBundle.spriteSheet.ready, true);
+  assert.equal(ryoAssetBundle.spriteSheet.isPlaceholder, false);
+  assert.equal(ryoAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(
-    ryoAssetBundle.spriteSheet.plannedPath,
+    ryoAssetBundle.spriteSheet.path,
     "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
   );
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
@@ -612,7 +611,13 @@ function testRuntimeSelectorsAndCommands(): void {
     "/art/characters/defaults/garan/sprites/resident-sprite-sheet.png",
   );
   assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, undefined);
-  assert.equal(activeAssetBundles.slice(2).every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.ready, true);
+  assert.equal(
+    activeAssetBundles[2]?.spriteSheet.path,
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
+  );
+  assert.equal(activeAssetBundles[2]?.spriteSheet.missingReason, undefined);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.ready, false);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
