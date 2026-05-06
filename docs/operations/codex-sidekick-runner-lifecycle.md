@@ -283,7 +283,8 @@ docs/**
 sample JSON without personal data
 prompt
 tools
-adopted official assets
+ready official assets
+adopted official narrative packs
 source-of-truth manifest / read model
 ```
 
