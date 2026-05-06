@@ -80,6 +80,34 @@ Not allowed:
 
 ## Generation source contract
 
+### Non-technical user flow
+
+The non-technical user provides only two inputs:
+
+```txt
+character name (display name)
+portrait image (one PNG)
+```
+
+The user is not expected to know or provide any of the following:
+
+```txt
+characterId / assetBundleId / jobId
+prompt path or prompt text
+incoming folder path
+sprite:check command
+external generation UI operation
+```
+
+Everything else is handled by the intake pipeline (Layer 1–2) and an authorized operator:
+
+1. `npm run sidekick:intake -- --slug <slug> --portrait <path>` auto-generates the job and sets up folders.
+2. The operator takes the generated prompt and portrait reference to Codex pet or an approved external subscription UI.
+3. The operator places the resulting PNG in `assets/generated/residents/<slug>/incoming/`.
+4. The operator runs `npm run sprite:check -- <slug>` to validate the candidate.
+
+### Generation rules
+
 Resident sprite sheet candidates must be generated from the character portrait through the approved external image generation flow, such as Codex pet or an external subscription image generation UI.
 
 Do not replace a resident candidate with a local handmade placeholder, synthetic test image, simple colored shape sheet, resized portrait sheet, or manually drawn proxy created only to satisfy validation.

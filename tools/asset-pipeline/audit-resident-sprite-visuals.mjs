@@ -875,6 +875,8 @@ function main() {
       outputDir,
     });
 
+    const hasWarnings = result.warningFrameCount > 0;
+
     console.log("見た目監査が完了しました。");
     console.log(`監査対象: ${toRepoRelative(result.filePath)}`);
     console.log(`contact sheet: ${toRepoRelative(result.svgPath)}`);
@@ -886,6 +888,9 @@ function main() {
           .map(([code, count]) => `${code}x${count}`)
           .join(", ")}`,
       );
+    }
+    if (hasWarnings) {
+      console.log("note: warnings are heuristic hints for human review — exit code is 0 (not a failure)");
     }
     console.log("Human review と PO 確認が終わるまで ready にしないでください。");
     return 0;
