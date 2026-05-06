@@ -1,4 +1,10 @@
-# Eve resident sprite sheet prompt
+# [CHARACTER] resident sprite sheet prompt
+
+Replace [CHARACTER] with the character name (e.g. ryo, suzu).
+Replace [PORTRAIT_PATH] with the portrait path (e.g. public/art/characters/defaults/ryo/portrait.png).
+Save the filled-in file as .prompts/resident-sprites/<characterId>.md before use.
+
+---
 
 You are creating a resident sprite sheet for GodSandbox.
 
@@ -9,9 +15,9 @@ Workflow note:
 - Follow the visual correctness rules from `docs/operations/resident-sprite-spec.md`.
 
 Reference:
-- Use `public/art/characters/defaults/eve/portrait.png` only as the identity reference.
+- Use `[PORTRAIT_PATH]` only as the identity reference.
 - Do not crop, resize, or paste the portrait into the sprite sheet.
-- Reinterpret Eve as a small pixel-art resident who can move inside a 2.5D papercraft sandbox.
+- Reinterpret [CHARACTER] as a small pixel-art resident who can move inside a 2.5D papercraft sandbox.
 
 Character handling:
 - Preserve the recognizable hair, outfit colors, silhouette, and overall mood from the reference portrait.
@@ -37,8 +43,8 @@ Visual correctness:
 - Do not include labels, frame numbers, guide lines, or any square background.
 
 Sprite sheet:
-- Downloaded PNG must go through: `assets/generated/residents/eve/incoming/`
-- Adopted output after visual audit and human approval: `public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png`
+- Downloaded PNG must go through: `assets/generated/residents/[CHARACTER]/incoming/`
+- Adopted output after visual audit and human approval: `public/art/characters/defaults/[CHARACTER]/sprites/resident-sprite-sheet.png`
 - PNG with real alpha channel
 - frame size: 96x96
 - columns: 6
@@ -64,6 +70,11 @@ Motion rows:
 Important:
 - This must be a real sprite sheet.
 - Do not use a resized portrait as the sprite.
-- Keep every frame recognizable as Eve.
+- Keep every frame recognizable as [CHARACTER].
 - Every frame must stand on its own without borrowing pixels from neighboring cells.
-- For this PoC, generate only Eve. Do not expand to Garan, Ryo, or Suzu.
+- For this sprint, generate only [CHARACTER]. Do not generate other characters.
+
+Validation after receiving the PNG:
+```bash
+npm run sprite:check -- [CHARACTER]
+```
