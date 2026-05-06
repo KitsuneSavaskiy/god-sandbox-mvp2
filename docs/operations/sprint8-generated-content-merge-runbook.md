@@ -58,6 +58,7 @@ merge判断では、次を正本として扱う。
 - `docs/operations/codex-job-queue.md`
 - `docs/operations/generated-workspace-retention-policy.md`
 - `docs/operations/narrative-sidekick-workspace.md`
+- `docs/operations/sprint8-closeout-git-hygiene.md`
 - `docs/architecture/narrative-pack-schema.md`
 - `docs/architecture/narrative-gm-personas.md`
 
@@ -145,6 +146,8 @@ narrative surface chainとは別軸で進める。
 
 `dist/` は `npm run build` で再生成できるローカル出力である。
 Sprint8 generated content / narrative / time-season PRには入れない。
+
+Sprint8 closeout直前のGit衛生確認は `docs/operations/sprint8-closeout-git-hygiene.md` を正本にする。
 
 PR前に次を確認する。
 
