@@ -672,18 +672,10 @@ export function EventFirstSandbox({
             aria-hidden="true"
             style={createSandboxClockStyle(sandboxBackground)}
           >
-            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--zero">
-              0
-            </span>
-            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--three">
-              3
-            </span>
-            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--six">
-              6
-            </span>
-            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--nine">
-              9
-            </span>
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--zero" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--three" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--six" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--nine" />
             <span className="event-first-sandbox__clock-hand event-first-sandbox__clock-hand--hour" />
             <span className="event-first-sandbox__clock-hand event-first-sandbox__clock-hand--minute" />
           </span>
