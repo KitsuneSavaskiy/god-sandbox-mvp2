@@ -109,12 +109,14 @@ type ApostleMotionState = {
 
 const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
 type SandboxDayPhase = (typeof sandboxDayPhases)[number];
-type SandboxSeason = "spring";
+const sandboxSeasons = ["spring", "summer", "autumn", "winter"] as const;
+type SandboxSeason = (typeof sandboxSeasons)[number];
 
 type SandboxBackgroundState = {
   season: SandboxSeason;
   dayPhase: SandboxDayPhase;
   imagePath: string;
+  fallbackImagePath: string;
 };
 
 interface EventFirstSandboxProps {
@@ -188,12 +190,53 @@ const initialApostleMotion: ApostleMotionState = {
 const SANDBOX_BACKGROUND_PHASE_INTERVAL_MS = 45_000;
 const DEFAULT_SANDBOX_BACKGROUND_PATH = "/art/world/backgrounds/world_spring_noon.png";
 
+const sandboxDayPhaseLabels: Record<SandboxDayPhase, string> = {
+  morning: "朝",
+  noon: "昼",
+  evening: "夕方",
+  night: "夜",
+};
+
+const sandboxSeasonLabels: Record<
+  SandboxSeason,
+  {
+    label: string;
+    icon: string;
+  }
+> = {
+  spring: { label: "春", icon: "芽" },
+  summer: { label: "夏", icon: "日" },
+  autumn: { label: "秋", icon: "葉" },
+  winter: { label: "冬", icon: "雪" },
+};
+
 const sandboxBackgroundImages: Record<
   SandboxSeason,
   Partial<Record<SandboxDayPhase, string>>
 > = {
   spring: {
+    morning: "/art/world/backgrounds/world_spring_morning.png",
     noon: DEFAULT_SANDBOX_BACKGROUND_PATH,
+    evening: "/art/world/backgrounds/world_spring_evening.png",
+    night: "/art/world/backgrounds/world_spring_night.png",
+  },
+  summer: {
+    morning: "/art/world/backgrounds/world_summer_morning.png",
+    noon: "/art/world/backgrounds/world_summer_noon.png",
+    evening: "/art/world/backgrounds/world_summer_evening.png",
+    night: "/art/world/backgrounds/world_summer_night.png",
+  },
+  autumn: {
+    morning: "/art/world/backgrounds/world_autumn_morning.png",
+    noon: "/art/world/backgrounds/world_autumn_noon.png",
+    evening: "/art/world/backgrounds/world_autumn_evening.png",
+    night: "/art/world/backgrounds/world_autumn_night.png",
+  },
+  winter: {
+    morning: "/art/world/backgrounds/world_winter_morning.png",
+    noon: "/art/world/backgrounds/world_winter_noon.png",
+    evening: "/art/world/backgrounds/world_winter_evening.png",
+    night: "/art/world/backgrounds/world_winter_night.png",
   },
 };
 
@@ -323,15 +366,11 @@ export function EventFirstSandbox({
     tutorialState.currentStepId === "intervene" && eventWindowOpen && !latestOutcome;
   const backgroundCyclePaused = eventWindowOpen || latestOutcome !== null;
   const sandboxBackground = useMemo(
-    () =>
-      resolveSandboxBackground({
-        season: "spring",
-        dayPhase: sandboxDayPhases[
-          backgroundCycleStep % sandboxDayPhases.length
-        ],
-      }),
+    () => resolveSandboxBackground(backgroundCycleStep),
     [backgroundCycleStep],
   );
+  const sandboxSeasonLabel = sandboxSeasonLabels[sandboxBackground.season];
+  const sandboxDayPhaseLabel = sandboxDayPhaseLabels[sandboxBackground.dayPhase];
 
   useEffect(() => {
     apostleMotionRef.current = apostleMotion;
@@ -574,6 +613,27 @@ export function EventFirstSandbox({
           aria-hidden="true"
           style={createSandboxBackgroundStyle(sandboxBackground)}
         />
+        <div
+          className="event-first-sandbox__time-season-hud"
+          aria-label={`箱庭の時間は${sandboxDayPhaseLabel}、季節は${sandboxSeasonLabel.label}です`}
+        >
+          <span
+            key={`${sandboxBackground.season}-${sandboxBackground.dayPhase}`}
+            className="event-first-sandbox__clock"
+            aria-hidden="true"
+          >
+            <span className="event-first-sandbox__clock-hand" />
+          </span>
+          <span className="event-first-sandbox__hud-pill">
+            {sandboxDayPhaseLabel}
+          </span>
+          <span className="event-first-sandbox__hud-pill event-first-sandbox__hud-pill--season">
+            <span className="event-first-sandbox__season-icon" aria-hidden="true">
+              {sandboxSeasonLabel.icon}
+            </span>
+            {sandboxSeasonLabel.label}
+          </span>
+        </div>
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
 
@@ -894,20 +954,24 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function resolveSandboxBackground(input: {
-  season: SandboxSeason;
-  dayPhase: SandboxDayPhase;
-}): SandboxBackgroundState {
-  const seasonImages = sandboxBackgroundImages[input.season];
+function resolveSandboxBackground(cycleStep: number): SandboxBackgroundState {
+  const normalizedStep = Math.max(0, cycleStep);
+  const dayPhase = sandboxDayPhases[normalizedStep % sandboxDayPhases.length];
+  const season =
+    sandboxSeasons[
+      Math.floor(normalizedStep / sandboxDayPhases.length) % sandboxSeasons.length
+    ];
+  const seasonImages = sandboxBackgroundImages[season];
   const imagePath =
-    seasonImages[input.dayPhase] ??
+    seasonImages[dayPhase] ??
     seasonImages.noon ??
     DEFAULT_SANDBOX_BACKGROUND_PATH;
 
   return {
-    season: input.season,
-    dayPhase: input.dayPhase,
+    season,
+    dayPhase,
     imagePath,
+    fallbackImagePath: DEFAULT_SANDBOX_BACKGROUND_PATH,
   };
 }
 
@@ -916,6 +980,7 @@ function createSandboxBackgroundStyle(
 ): CSSProperties {
   return {
     "--sandbox-world-background": `url("${background.imagePath}")`,
+    "--sandbox-world-background-fallback": `url("${background.fallbackImagePath}")`,
   } as CSSProperties;
 }
 

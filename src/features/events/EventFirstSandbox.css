@@ -6,6 +6,7 @@
   --sandbox-grass-front: #77a465;
   --sandbox-grass-back: #c1d791;
   --sandbox-world-background: url("/art/world/backgrounds/world_spring_noon.png");
+  --sandbox-world-background-fallback: url("/art/world/backgrounds/world_spring_noon.png");
 
   display: grid;
   gap: 14px;
@@ -45,7 +46,8 @@
   pointer-events: none;
   background:
     linear-gradient(180deg, rgba(255, 248, 224, 0.08), rgba(35, 59, 28, 0.12)),
-    var(--sandbox-world-background) center 56% / cover no-repeat;
+    var(--sandbox-world-background) center 56% / cover no-repeat,
+    var(--sandbox-world-background-fallback) center 56% / cover no-repeat;
   filter: saturate(var(--sandbox-background-saturation, 1)) brightness(var(--sandbox-background-brightness, 1));
   opacity: var(--sandbox-background-opacity, 0.94);
   transform: scale(1.01);
@@ -76,6 +78,122 @@
   --sandbox-background-brightness: 0.62;
   --sandbox-background-saturation: 0.82;
   --sandbox-background-opacity: 0.9;
+}
+
+.event-first-sandbox__viewport--season-spring {
+  --sandbox-hud-accent: #6c9f58;
+  --sandbox-hud-accent-soft: rgba(178, 220, 142, 0.78);
+}
+
+.event-first-sandbox__viewport--season-summer {
+  --sandbox-hud-accent: #d58b22;
+  --sandbox-hud-accent-soft: rgba(255, 211, 95, 0.82);
+  --sandbox-background-saturation: 1.08;
+}
+
+.event-first-sandbox__viewport--season-autumn {
+  --sandbox-hud-accent: #b75f2b;
+  --sandbox-hud-accent-soft: rgba(229, 154, 85, 0.78);
+  --sandbox-background-saturation: 1.04;
+}
+
+.event-first-sandbox__viewport--season-winter {
+  --sandbox-hud-accent: #4f88a8;
+  --sandbox-hud-accent-soft: rgba(190, 224, 235, 0.82);
+  --sandbox-background-saturation: 0.88;
+}
+
+.event-first-sandbox__time-season-hud {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 8;
+  display: inline-flex;
+  max-width: calc(100% - 28px);
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 247, 218, 0.72)),
+    var(--sandbox-hud-accent-soft, rgba(178, 220, 142, 0.78));
+  box-shadow:
+    0 14px 32px rgba(33, 48, 27, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  color: #314329;
+  font-size: clamp(0.78rem, 2.4vw, 0.9rem);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.event-first-sandbox__clock {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid rgba(49, 67, 41, 0.78);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.92) 0 18%, transparent 19%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(240, 229, 188, 0.88));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.62);
+}
+
+.event-first-sandbox__clock::before {
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(49, 67, 41, 0.16) 48% 52%, transparent 52%),
+    linear-gradient(0deg, transparent 48%, rgba(49, 67, 41, 0.16) 48% 52%, transparent 52%);
+  content: "";
+}
+
+.event-first-sandbox__clock-hand {
+  position: absolute;
+  bottom: 50%;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--sandbox-hud-accent, #6c9f58);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.42);
+  transform-origin: center bottom;
+  animation: event-first-sandbox-clock-hand 45s linear infinite;
+}
+
+.event-first-sandbox__viewport--background-paused .event-first-sandbox__clock-hand {
+  animation-play-state: paused;
+}
+
+.event-first-sandbox__hud-pill {
+  display: inline-flex;
+  min-width: 2.5em;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.event-first-sandbox__hud-pill--season {
+  padding-left: 2px;
+}
+
+.event-first-sandbox__season-icon {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--sandbox-hud-accent, #6c9f58);
+  color: #fffdf3;
+  font-size: 0.74rem;
+  line-height: 1;
+  box-shadow: 0 6px 12px rgba(41, 57, 33, 0.18);
 }
 
 .event-first-sandbox__sky,
@@ -918,6 +1036,16 @@ button.event-first-sandbox__emote:disabled {
   }
 }
 
+@keyframes event-first-sandbox-clock-hand {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 760px) {
   .event-first-sandbox__viewport {
     min-height: min(440px, 46vh);
@@ -946,6 +1074,27 @@ button.event-first-sandbox__emote:disabled {
     --apostle-sheet-x-end: -348px;
     --apostle-row-run-right: -116px;
     --apostle-row-run-left: -58px;
+  }
+
+  .event-first-sandbox__time-season-hud {
+    top: 10px;
+    left: 10px;
+    gap: 5px;
+    padding: 6px 8px;
+  }
+
+  .event-first-sandbox__clock {
+    width: 24px;
+    height: 24px;
+  }
+
+  .event-first-sandbox__clock-hand {
+    height: 8px;
+  }
+
+  .event-first-sandbox__season-icon {
+    width: 21px;
+    height: 21px;
   }
 
   .event-first-sandbox__resident-row,
