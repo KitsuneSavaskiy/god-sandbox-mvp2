@@ -40,7 +40,7 @@ export const DEFAULT_RESIDENT_SPRITE_MANIFEST: ResidentSpriteManifest = {
   updatedAt,
   residents: [
     createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
-    createDefaultResidentSpriteManifestEntry("chr_garan", "garan"),
+    createDefaultResidentSpriteManifestEntry("chr_garan", "garan", "ready"),
     createDefaultResidentSpriteManifestEntry("chr_ryo", "ryo"),
     createDefaultResidentSpriteManifestEntry("chr_suzu", "suzu"),
   ],

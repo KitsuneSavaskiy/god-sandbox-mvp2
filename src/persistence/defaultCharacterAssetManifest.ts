@@ -108,7 +108,7 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/garan/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("garan", "chr_garan"),
+    createResidentSpriteSheetReady("garan", "chr_garan"),
     {
       id: "garan-expression-happy",
       ownerCharacterId: "chr_garan",
