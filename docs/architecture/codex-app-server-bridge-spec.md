@@ -276,5 +276,5 @@ Phase 2実装は、Implementation Start Gateを満たすまで開始しない。
 ## One-line Codex resume instruction
 
 ```bash
-codex "Read docs/architecture/codex-app-server-bridge-spec.md, refine the Codex App Server bridge boundary exactly, keep it docs-first, do not implement App Server or runner, and test until complete."
+codex "docs/architecture/codex-app-server-bridge-spec.md を読み、Sprint9 Phase 1 docs-first の範囲だけでCodex App Server bridge境界仕様を整えてください。App Serverやrunnerは実装せず、検証まで完了してください。"
 ```
