@@ -21,6 +21,24 @@ const FORBIDDEN_EXPRESSIONS = [
 // Control chars excluding tab (\x09), LF (\x0A), CR (\x0D)
 const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 
+// U+FFFD: encoding failure sentinel
+const REPLACEMENT_CHAR = '�';
+
+// Terms that must appear in the rendered output per issue number.
+// Derived from the manifest content for each PBI.
+const ISSUE_REQUIRED_KEYWORDS = {
+  197: ['characterId', 'assetBundleId', 'worldDirectoryName', 'character-asset-bundle', 'character-narrative-pack'],
+  198: ['.godsandbox/jobs/', 'assets/generated/', 'narrative/generated/', 'manifests/drafts/', 'npm run guard'],
+  199: ['pending', 'running', 'done', 'failed', 'ready', 'adopted'],
+  200: ['pull_request_target', 'agent-routine'],
+  201: ['#197', '#198', 'main入り'],
+  202: ['#197', '#198', 'main入り'],
+  203: ['#197', '#198', 'main入り'],
+};
+
+// Wave gate constants
+const MVP_MAX_WAVE = 1; // Wave 2/3 start is not supported
+
 // --- arg parsing ---
 
 function parseArgs(argv) {
@@ -102,17 +120,88 @@ function render(template, entry) {
 
 // --- validation ---
 
-function validate(text) {
+function validate(text, issueNumber) {
   const errors = [];
+
+  // Forbidden expressions
   for (const expr of FORBIDDEN_EXPRESSIONS) {
-    if (text.includes(expr)) {
-      errors.push(`Forbidden expression: "${expr}"`);
+    if (text.includes(expr)) errors.push(`Forbidden expression: "${expr}"`);
+  }
+
+  // Control characters (excluding tab and newline)
+  if (CONTROL_CHAR_RE.test(text)) errors.push('Control characters detected (excluding tab and newline)');
+
+  // Replacement character — encoding failure
+  if (text.includes(REPLACEMENT_CHAR)) {
+    errors.push('Replacement character (U+FFFD) detected — possible encoding issue');
+  }
+
+  // Per-issue required keywords
+  const required = ISSUE_REQUIRED_KEYWORDS[issueNumber];
+  if (required) {
+    for (const kw of required) {
+      if (!text.includes(kw)) errors.push(`Required keyword missing for #${issueNumber}: "${kw}"`);
     }
   }
-  if (CONTROL_CHAR_RE.test(text)) {
-    errors.push('Control characters detected (excluding tab and newline)');
-  }
+
   return errors;
+}
+
+// --- wave gate ---
+
+function getIssueState(issueNumber) {
+  try {
+    return ghExec(`issue view ${issueNumber} --json state --jq '.state'`).trim();
+  } catch {
+    return 'UNKNOWN';
+  }
+}
+
+function enforceWaveGate(args, entries) {
+  const { mode, post, dryRun } = args;
+
+  // prep mode: Wave 1 only
+  if (mode === 'prep') {
+    const invalid = entries.filter(e => e.wave !== 1);
+    if (invalid.length > 0) {
+      console.error('Error: --mode prep is only allowed for Wave 1 entries.');
+      console.error(`  Non-Wave-1: ${invalid.map(e => `#${e.issue} (wave ${e.wave})`).join(', ')}`);
+      process.exit(1);
+    }
+    return;
+  }
+
+  // blocked mode: any wave allowed
+  if (mode === 'blocked') return;
+
+  // start mode
+  if (mode !== 'start') return;
+
+  // Wave 2/3: not supported in MVP — fail always (even dry-run)
+  const highWave = entries.filter(e => e.wave > MVP_MAX_WAVE);
+  if (highWave.length > 0) {
+    console.error(`Error: Wave ${highWave.map(e => e.wave).join('/')} start is not supported in this MVP dispatcher.`);
+    console.error(`  Issues: ${highWave.map(e => `#${e.issue} (wave ${e.wave})`).join(', ')}`);
+    console.error('  Use --mode blocked or --mode prep for non-MVP waves.');
+    process.exit(1);
+  }
+
+  // Wave 1 start: dependency gate — enforced only when actually posting (--post without --dry-run)
+  if (post && !dryRun) {
+    const wave1 = entries.filter(e => e.wave === 1);
+    if (wave1.length > 0) {
+      const deps = [...new Set(wave1.flatMap(e => e.dependencies))];
+      if (deps.length > 0) {
+        const openDeps = deps.filter(d => getIssueState(d) !== 'CLOSED');
+        if (openDeps.length > 0) {
+          console.error('Error: Wave 1 dependency gate failed.');
+          console.error(`  Open (not yet merged to main): ${openDeps.map(d => `#${d}`).join(', ')}`);
+          console.error('  All Wave 1 dependencies must be merged to main before posting start instructions.');
+          process.exit(1);
+        }
+      }
+    }
+  }
 }
 
 // --- GitHub operations ---
@@ -148,14 +237,6 @@ function postComment(repo, issueNumber, body) {
     input: body,
     stdio: ['pipe', 'inherit', 'inherit'],
   });
-}
-
-function getIssueState(issueNumber) {
-  try {
-    return ghExec(`issue view ${issueNumber} --json state --jq '.state'`).trim();
-  } catch {
-    return 'UNKNOWN';
-  }
 }
 
 // --- status display ---
@@ -205,6 +286,13 @@ Options:
   --status       Show current wave / merge status
   --help, -h     Show this help
 
+Wave gate rules:
+  start + wave 0:   no dependency check
+  start + wave 1:   dependency gate enforced when using --post
+  start + wave 2/3: not supported in MVP (always fails)
+  prep:             Wave 1 only
+  blocked:          any wave allowed
+
 Examples:
   npm run sprint9:dispatch -- --wave 0 --dry-run
   npm run sprint9:dispatch -- --issue 197 --dry-run
@@ -243,6 +331,8 @@ if (entries.length === 0) {
   process.exit(1);
 }
 
+enforceWaveGate(args, entries);
+
 const template = loadTemplate(args.mode);
 let repo = null;
 
@@ -251,7 +341,7 @@ for (const entry of entries) {
   const marker = `<!-- sprint9-dispatch issue=${entry.issue} wave=${entry.wave} mode=${args.mode} -->`;
   const fullBody = `${rendered}\n\n${marker}`;
 
-  const errors = validate(fullBody);
+  const errors = validate(fullBody, entry.issue);
   if (errors.length > 0) {
     console.error(`Validation failed for issue #${entry.issue}:`);
     errors.forEach(e => console.error(`  ${e}`));

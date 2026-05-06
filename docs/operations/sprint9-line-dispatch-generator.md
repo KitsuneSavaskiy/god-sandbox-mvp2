@@ -32,9 +32,9 @@ Thread-ORCHは実装Lineではない。dispatch生成・Wave移行確認・PR競
 tools/sprint9-dispatch/
 ├── sprint9-phase2-dispatch.json   ← 正本manifest
 ├── templates/
-│   ├── start.md                   ← 実装開始指示テンプレート
-│   ├── prep.md                    ← 準備期間指示テンプレート
-│   └── blocked.md                 ← ブロック通知テンプレート
+│   ├── line-start.md              ← 実装開始指示テンプレート
+│   ├── line-prep.md               ← 準備期間指示テンプレート
+│   └── line-blocked.md            ← ブロック通知テンプレート
 └── dispatch.mjs                   ← generator本体
 ```
 
