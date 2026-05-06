@@ -5,6 +5,15 @@
 - この repository は `god-sandbox-mvp2` の MVP 専用です。
 - 変更は小さく、巻き戻し可能で、現在の PBI scope 内に保ちます。
 
+## 作業を始めるとき
+
+1. `npm run sprint9:dispatch -- --status` を実行して現在の Wave 状態と依存関係を確認する。
+2. 担当 Issue の最新 dispatch comment（`<!-- sprint9-dispatch ... -->` マーカー）を読む。これが作業指示の正本。
+3. dispatch comment 内の `requiredDocs` リストを順番に読む。
+4. 実装に入る。
+
+dispatch comment がまだない場合はまだ作業開始タイミングではない（Wave gate 未解放）。PO に確認すること。
+
 ## 最初に読むもの
 
 - 完成版ユーザーフローの正本は `docs/product/godsandbox-user-flow.md` です。
@@ -12,6 +21,7 @@
 - 固定運用ルール、レーン境界表、PBI差分指示テンプレ、現在状態メモのテンプレは `docs/agent-operating-rules.md` にあります。
 - PR の事前確認と監査チェックリストは `docs/agent-pr-checklists.md` にあります。
 - Line 別の責務境界と必読 docs は `docs/architecture/line-responsibilities.md` にあります。
+- dispatch ツールの仕様（Wave gate、mode、idempotency）は `docs/operations/sprint9-line-dispatch-generator.md` にあります。
 
 ## 最重要ルール
 
