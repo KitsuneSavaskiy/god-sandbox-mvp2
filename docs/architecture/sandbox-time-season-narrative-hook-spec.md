@@ -36,6 +36,7 @@ Owner: Line 4 / Event Experience / Tutorial / Narrative
 
 - `docs/architecture/event-and-intervention-spec.md`
 - `docs/architecture/ui-state-model.md`
+- `docs/architecture/sandbox-clock-season-cycle-spec.md`
 - `docs/architecture/sandbox-generated-content-state-matrix.md`
 - `docs/architecture/generated-content-status-copy-spec.md`
 - `docs/architecture/sandbox-narrative-surface-spec.md` if merged

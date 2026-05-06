@@ -117,6 +117,12 @@ interface TutorialAnchorBinding {
 - 箱庭上にキャラ名、場所、状態ラベルを戻さない。
 - 詳細は `docs/architecture/sandbox-generated-content-fallback-spec.md` を参照する。
 
+## 箱庭時間・季節HUDルール
+
+- 箱庭時間と季節は、実時間やdomain効果ではなく `/sandbox` の演出UIとして扱う。
+- 時計、時間帯、季節遷移の対応は `docs/architecture/sandbox-clock-season-cycle-spec.md` を参照する。
+- 時間帯・季節を narrative context として使う場合は `docs/architecture/sandbox-time-season-narrative-hook-spec.md` を参照する。
+
 ## キャラクター詳細の子画面ルール
 
 - キャラクター詳細は event-first 主画面の補助子画面である。
