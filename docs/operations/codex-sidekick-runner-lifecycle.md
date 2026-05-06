@@ -371,5 +371,5 @@ atomic move、stale lock timeout、runner session id生成、具体的なfilesys
 ## One-line Codex resume instruction
 
 ```bash
-codex "Read docs/operations/codex-sidekick-runner-lifecycle.md, refine the Codex Sidekick runner lifecycle specification exactly, keep it docs-first, and test until complete."
+codex "docs/operations/codex-sidekick-runner-lifecycle.md を読み、Sprint9 Phase 1 docs-first の範囲だけでCodex Sidekick runner lifecycle仕様を整えてください。runnerやApp Serverは実装せず、検証まで完了してください。"
 ```
