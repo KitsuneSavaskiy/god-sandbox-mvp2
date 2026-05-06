@@ -248,6 +248,33 @@ const sandboxBackgroundImages: Record<
   },
 };
 
+const sandboxDayPhaseVisuals: Record<
+  SandboxDayPhase,
+  {
+    brightness: number;
+    opacity: number;
+    saturation: number;
+  }
+> = {
+  morning: { brightness: 1.08, opacity: 0.92, saturation: 1.04 },
+  noon: { brightness: 1, opacity: 0.94, saturation: 1 },
+  evening: { brightness: 0.88, opacity: 0.94, saturation: 1.08 },
+  night: { brightness: 0.62, opacity: 0.9, saturation: 0.82 },
+};
+
+const sandboxSeasonVisuals: Partial<
+  Record<
+    SandboxSeason,
+    {
+      saturation: number;
+    }
+  >
+> = {
+  summer: { saturation: 1.08 },
+  autumn: { saturation: 1.04 },
+  winter: { saturation: 0.88 },
+};
+
 export function EventFirstSandbox({
   runtimeState,
   routePath,
@@ -421,14 +448,14 @@ export function EventFirstSandbox({
       return;
     }
 
-    const intervalId = window.setInterval(() => {
+    const timeoutId = window.setTimeout(() => {
       setBackgroundCycleStep((currentStep) => currentStep + 1);
     }, SANDBOX_BACKGROUND_PHASE_INTERVAL_MS);
 
     return () => {
-      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
     };
-  }, [backgroundCyclePaused]);
+  }, [backgroundCyclePaused, backgroundCycleStep]);
 
   useEffect(() => {
     if (!sandboxPaused) {
@@ -1037,9 +1064,17 @@ function resolveSandboxBackground(cycleStep: number): SandboxBackgroundState {
 function createSandboxBackgroundStyle(
   background: SandboxBackgroundState,
 ): CSSProperties {
+  const phaseVisual = sandboxDayPhaseVisuals[background.dayPhase];
+  const seasonVisual = sandboxSeasonVisuals[background.season];
+
   return {
     "--sandbox-world-background": `url("${background.imagePath}")`,
     "--sandbox-world-background-fallback": `url("${background.fallbackImagePath}")`,
+    "--sandbox-background-brightness": String(phaseVisual.brightness),
+    "--sandbox-background-opacity": String(phaseVisual.opacity),
+    "--sandbox-background-saturation": String(
+      seasonVisual?.saturation ?? phaseVisual.saturation,
+    ),
   } as CSSProperties;
 }
 
