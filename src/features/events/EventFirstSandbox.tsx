@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type MouseEvent,
 } from "react";
 import { selectActiveCharacterAssetBundleReadModels } from "../../application/characterAssetBundles.js";
@@ -539,25 +538,20 @@ export function EventFirstSandbox({
     }));
   }
 
-  function handleResidentClick(
-    event: MouseEvent<HTMLElement>,
-    characterId: CharacterId,
-  ) {
+  function handleResidentClick(event: MouseEvent<HTMLElement>, characterId: CharacterId) {
     event.stopPropagation();
     onOpenCharacterDetail(characterId);
   }
 
-  function handleResidentKeyDown(
-    event: KeyboardEvent<HTMLElement>,
-    characterId: CharacterId,
-  ) {
-    if (event.key !== "Enter" && event.key !== " ") {
+  function handleEventAlertBubbleClick(event: MouseEvent<HTMLElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (eventWindowOpen || latestOutcome) {
       return;
     }
 
-    event.preventDefault();
-    event.stopPropagation();
-    onOpenCharacterDetail(characterId);
+    setEventWindowOpen(true);
   }
 
   return (
@@ -593,25 +587,39 @@ export function EventFirstSandbox({
             } ${
               sandboxPaused ? "event-first-sandbox__resident--paused" : ""
             }`}
-            role="button"
-            tabIndex={0}
-            aria-label={`${resident.displayName}の詳細を開く`}
             data-resident-depth={resident.depthClassName.replace(
               "event-first-sandbox__resident--depth-",
               "",
             )}
             data-resident-motion={resident.motion}
             data-resident-visual={resident.visualMode}
-            onClick={(event) => handleResidentClick(event, resident.id)}
-            onKeyDown={(event) => handleResidentKeyDown(event, resident.id)}
             style={createResidentStyle(resident)}
           >
-            <span
-              className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
+            {resident.emote === "event-alert" ? (
+              <button
+                type="button"
+                className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
+                aria-label="イベント子画面を開く"
+                aria-haspopup="dialog"
+                aria-expanded={eventWindowOpen || latestOutcome !== null}
+                disabled={eventWindowOpen || latestOutcome !== null}
+                onClick={handleEventAlertBubbleClick}
+              >
+                {emoteLabels[resident.emote]}
+              </button>
+            ) : (
+              <span
+                className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
+              >
+                {emoteLabels[resident.emote]}
+              </span>
+            )}
+            <button
+              type="button"
+              className="event-first-sandbox__resident-card"
+              aria-label={`${resident.displayName}の詳細を開く`}
+              onClick={(event) => handleResidentClick(event, resident.id)}
             >
-              {emoteLabels[resident.emote]}
-            </span>
-            <div className="event-first-sandbox__resident-card">
               <div className="event-first-sandbox__resident-figure" aria-hidden="true">
                 {resident.spriteSheetPath ? (
                   <span className="event-first-sandbox__resident-sprite" />
@@ -623,7 +631,7 @@ export function EventFirstSandbox({
                   <span className="event-first-sandbox__resident-placeholder" />
                 )}
               </div>
-            </div>
+            </button>
           </article>
         ))}
         <div
