@@ -266,6 +266,8 @@
   --resident-scale: 0.96;
   --resident-tilt: -0.5deg;
   --resident-shadow-scale: 1;
+  --resident-grounding-offset: clamp(20px, 4vh, 36px);
+  --resident-grounding-bottom-clearance: clamp(96px, 24vw, 156px);
   --resident-figure-width: clamp(78px, 8vw, 124px);
   --resident-figure-height: clamp(112px, 13vw, 176px);
   --resident-frame-size: 96px;
@@ -314,7 +316,10 @@
   --resident-patrol-duration: 6.2s;
 
   left: 21%;
-  top: 50%;
+  top: min(
+    calc(50% + var(--resident-grounding-offset)),
+    calc(100% - var(--resident-grounding-bottom-clearance))
+  );
   animation-delay: -0.4s;
 }
 
@@ -323,7 +328,10 @@
   --resident-patrol-duration: 6.8s;
 
   left: 58%;
-  top: 38%;
+  top: min(
+    calc(38% + var(--resident-grounding-offset)),
+    calc(100% - var(--resident-grounding-bottom-clearance))
+  );
   animation-delay: -1.3s;
 }
 
@@ -332,7 +340,10 @@
   --resident-patrol-duration: 5.5s;
 
   left: 37%;
-  top: 62%;
+  top: min(
+    calc(62% + var(--resident-grounding-offset)),
+    calc(100% - var(--resident-grounding-bottom-clearance))
+  );
   animation-delay: -0.9s;
 }
 
@@ -341,7 +352,10 @@
   --resident-patrol-duration: 6.5s;
 
   left: 72%;
-  top: 56%;
+  top: min(
+    calc(56% + var(--resident-grounding-offset)),
+    calc(100% - var(--resident-grounding-bottom-clearance))
+  );
   animation-delay: -1.8s;
 }
 
