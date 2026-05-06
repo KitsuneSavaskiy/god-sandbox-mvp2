@@ -26,7 +26,9 @@ jobs:
               '.github/',
               '.codex/',
               '.agents/',
+              '.pre-commit-config.yaml',
               'AGENTS.md',
+              'CLAUDE.md',
               'package.json',
               'package-lock.json',
               'pnpm-lock.yaml',
@@ -44,7 +46,10 @@ jobs:
               'src/domain/',
               'src/features/',
               'src/persistence/',
+              'src/platform/',
+              'src/routes/',
               'src/state/',
+              'src/ui/',
               'scripts/'
             ];
 
