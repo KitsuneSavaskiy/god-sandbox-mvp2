@@ -606,7 +606,13 @@ function testRuntimeSelectorsAndCommands(): void {
     "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
   );
   assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, undefined);
-  assert.equal(activeAssetBundles.slice(1).every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.ready, true);
+  assert.equal(
+    activeAssetBundles[1]?.spriteSheet.path,
+    "/art/characters/defaults/garan/sprites/resident-sprite-sheet.png",
+  );
+  assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, undefined);
+  assert.equal(activeAssetBundles.slice(2).every((bundle) => bundle.spriteSheet.ready === false), true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
