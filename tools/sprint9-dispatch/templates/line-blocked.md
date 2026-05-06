@@ -31,6 +31,12 @@
 
 ---
 
+### Wave開始ポリシー
+
+{{waveStartPolicy}}
+
+---
+
 ### 必読ドキュメント（待機中に読む）
 
 {{requiredDocs}}

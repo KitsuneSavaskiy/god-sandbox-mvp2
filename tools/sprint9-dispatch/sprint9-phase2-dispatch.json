@@ -104,6 +104,13 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "characterId",
+      "assetBundleId",
+      "worldDirectoryName",
+      "character-asset-bundle",
+      "character-narrative-pack"
     ]
   },
   {
@@ -191,6 +198,14 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      ".godsandbox/jobs/",
+      "assets/generated/",
+      "narrative/generated/",
+      "manifests/drafts/",
+      "dist",
+      "npm run guard"
     ]
   },
   {
@@ -267,6 +282,16 @@
       "API key不要方針",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "pending",
+      "running",
+      "done",
+      "failed",
+      "ready",
+      "adopted",
+      "npm run typecheck",
+      "npm run build"
     ]
   },
   {
@@ -305,7 +330,8 @@
       ".pre-commit-config.yamlをprotected pathsに追加する",
       "CLAUDE.mdをprotected pathsに追加する",
       "src/ui/, src/routes/, src/platform/をprotected pathsに追加する",
-      "pull_request_targetの設計根拠と安全条件をdocsに記録する"
+      "pull_request_targetの設計根拠と安全条件をdocsに記録する",
+      "`manual-review-required` ラベル付与ルールが意図通りに動作することを確認する"
     ],
     "notDo": [
       "workflow権限の拡張",
@@ -341,6 +367,13 @@
       "app / gameplay変更なし",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "pull_request_target",
+      "agent-routine",
+      "manual-review-required",
+      "npm run typecheck",
+      "npm run build"
     ]
   },
   {
@@ -369,7 +402,7 @@
       "sidekick:runner:dry-run"
     ],
     "dependencies": [197, 198],
-    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。それ以前はdocs読み込み・設計メモ・branch準備のみ可。",
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。それ以前は事前準備のみ可（docs読み込み・設計メモ・branch準備）、PR作成禁止。",
     "conflictNotes": [],
     "requiredDocs": [
       "AGENTS.md",
@@ -435,6 +468,13 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
     ]
   },
   {
@@ -467,7 +507,7 @@
       "sidekick:bridge:dry-run"
     ],
     "dependencies": [197, 198],
-    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。設計メモはそれ以前から可。",
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。それ以前は事前準備のみ可（設計メモ・branch準備）、PR作成禁止。",
     "conflictNotes": [],
     "requiredDocs": [
       "AGENTS.md",
@@ -529,6 +569,13 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
     ]
   },
   {
@@ -559,7 +606,7 @@
       "test:sidekick:bridge"
     ],
     "dependencies": [197, 198],
-    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にtest harness実装PRを開始。それ以前はdocs読み込み・test観点整理・配置案・依存質問のみ可。final mergeは#201と#202のmain入り後。",
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にtest harness実装PRを開始。それ以前は事前準備のみ可（docs読み込み・test観点整理・配置案・依存質問）、PR作成禁止。final mergeは#201と#202のmain入り後。",
     "conflictNotes": [
       "final mergeは#201と#202のmain入り後に行う。Wave 1内でsequentialに最後にマージ。"
     ],
@@ -628,6 +675,13 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
     ]
   },
   {
@@ -719,6 +773,13 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "characterId",
+      "assetBundleId",
+      "candidate",
+      "ready",
+      "PO visual"
     ]
   },
   {
@@ -809,6 +870,12 @@
       "今回やらないこと",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "candidate",
+      "needs-review",
+      "adopted",
+      "player-facing"
     ]
   },
   {
@@ -885,6 +952,12 @@
       "follow-up",
       "scope外変更なし",
       "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "Phase 2",
+      "Phase 3",
+      "npm run typecheck",
+      "npm run build"
     ]
   }
 ]

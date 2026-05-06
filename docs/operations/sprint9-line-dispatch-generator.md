@@ -55,10 +55,14 @@ npm run sprint9:dispatch -- --status
 
 # Issue #201のstart指示をGitHub issueへ投稿 (post)
 npm run sprint9:dispatch -- --issue 201 --post
+
+# 別manifestを指定 (Sprint10以降)
+npm run sprint9:dispatch -- --manifest tools/sprint10-dispatch/sprint10-dispatch.json --status
 ```
 
 `--post` はidempotencyマーカーで重複投稿を防ぐ。
 `--dry-run` と `--post` を同時に指定した場合は投稿内容を標準出力だけに出す。
+`--manifest` を省略した場合は `tools/sprint9-dispatch/sprint9-phase2-dispatch.json` を使う。
 
 ## Wave制御
 
@@ -110,6 +114,64 @@ npm run sprint9:dispatch -- --wave 1 --mode start --post
 # 4. ブロック通知が必要な場合
 npm run sprint9:dispatch -- --issue 203 --mode blocked --post
 ```
+
+## 新Issue追加手順
+
+新しいPBI / Issueをdispatch対象に追加する場合は、手書きの長文指示を作らず、manifest entryを追加する。
+Issue追加のたびに `dispatch.mjs` を書き換えない。
+
+### 手順
+
+1. Issueを作成する。
+2. Issue番号、PBI、担当Thread、Wave、依存Issueを確認する。
+3. manifest JSONにentryを追加する（`--manifest` で別ファイルを指定してもよい）。
+4. `ownedPaths` / `forbiddenPaths` / `reservedScripts` / `dependencies` / `waveStartPolicy` / `conflictNotes` を必ず書く。
+5. `requiredDocs` / `tasks` / `notDo` / `requiredTests` / `acceptanceCriteria` / `prBodyRequirements` を書く。
+6. 文字化け・重要語欠落を防ぐため `validationKeywords` を書く。空配列でも可（チェックをskip）。
+7. dry-runで生成結果を確認する。
+8. 問題がなければPR化する。
+
+### dry-run例
+
+```bash
+npm run sprint9:dispatch -- --issue <issue-number> --dry-run
+npm run sprint9:dispatch -- --wave <wave-number> --dry-run
+npm run sprint9:dispatch -- --status
+```
+
+### `validationKeywords` の書き方
+
+rendered outputに必ず含まれるべき語句を列挙する。
+templateが正しく展開されたか、重要な禁止事項が抜けていないかを自動確認できる。
+
+```json
+{
+  "issue": 207,
+  "pbi": "PBI-NEW-...",
+  "line": "Thread-L1",
+  "wave": 1,
+  "validationKeywords": [
+    "重要な語句1",
+    "重要な語句2"
+  ]
+}
+```
+
+### Sprint10以降のmanifest
+
+別sprintのmanifestは別ファイルに切り出して `--manifest PATH` で指定する。
+
+```bash
+npm run sprint9:dispatch -- --manifest tools/sprint10-dispatch/sprint10-dispatch.json --status
+npm run sprint9:dispatch -- --manifest tools/sprint10-dispatch/sprint10-dispatch.json --wave 0 --dry-run
+```
+
+### 禁止
+
+- Issue追加のたびに `dispatch.mjs` を書き換えない
+- 各Line向け長文指示を手書きしない
+- 旧一括配布文を再利用しない
+- `Readyまたはmain入り` などの旧危険表現を復活させない
 
 ## 正本manifest
 

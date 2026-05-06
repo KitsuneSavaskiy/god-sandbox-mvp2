@@ -4,11 +4,11 @@
 import { readFileSync, existsSync } from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const MANIFEST_PATH = join(__dirname, 'sprint9-phase2-dispatch.json');
+const DEFAULT_MANIFEST = join(__dirname, 'sprint9-phase2-dispatch.json');
 const TEMPLATES_DIR = join(__dirname, 'templates');
 
 const FORBIDDEN_EXPRESSIONS = [
@@ -24,25 +24,14 @@ const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 // U+FFFD: encoding failure sentinel
 const REPLACEMENT_CHAR = '�';
 
-// Terms that must appear in the rendered output per issue number.
-// Derived from the manifest content for each PBI.
-const ISSUE_REQUIRED_KEYWORDS = {
-  197: ['characterId', 'assetBundleId', 'worldDirectoryName', 'character-asset-bundle', 'character-narrative-pack'],
-  198: ['.godsandbox/jobs/', 'assets/generated/', 'narrative/generated/', 'manifests/drafts/', 'npm run guard'],
-  199: ['pending', 'running', 'done', 'failed', 'ready', 'adopted'],
-  200: ['pull_request_target', 'agent-routine'],
-  201: ['#197', '#198', 'main入り'],
-  202: ['#197', '#198', 'main入り'],
-  203: ['#197', '#198', 'main入り'],
-};
-
 // Wave gate constants
-const MVP_MAX_WAVE = 1; // Wave 2/3 start is not supported
+const MVP_MAX_WAVE = 1; // Wave 2/3 start not supported in MVP
 
 // --- arg parsing ---
 
 function parseArgs(argv) {
   const args = {
+    manifest: null,
     wave: null,
     issue: null,
     mode: 'start',
@@ -53,7 +42,8 @@ function parseArgs(argv) {
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
-    if (a === '--wave') args.wave = parseInt(argv[++i], 10);
+    if (a === '--manifest') args.manifest = argv[++i];
+    else if (a === '--wave') args.wave = parseInt(argv[++i], 10);
     else if (a === '--issue') args.issue = parseInt(argv[++i], 10);
     else if (a === '--mode') args.mode = argv[++i];
     else if (a === '--dry-run') args.dryRun = true;
@@ -66,8 +56,13 @@ function parseArgs(argv) {
 
 // --- manifest ---
 
-function loadManifest() {
-  return JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
+function loadManifest(manifestPath) {
+  const p = resolve(manifestPath);
+  if (!existsSync(p)) {
+    console.error(`Manifest not found: ${p}`);
+    process.exit(1);
+  }
+  return JSON.parse(readFileSync(p, 'utf8'));
 }
 
 // --- template rendering ---
@@ -120,7 +115,7 @@ function render(template, entry) {
 
 // --- validation ---
 
-function validate(text, issueNumber) {
+function validate(text, entry) {
   const errors = [];
 
   // Forbidden expressions
@@ -136,11 +131,12 @@ function validate(text, issueNumber) {
     errors.push('Replacement character (U+FFFD) detected — possible encoding issue');
   }
 
-  // Per-issue required keywords
-  const required = ISSUE_REQUIRED_KEYWORDS[issueNumber];
-  if (required) {
-    for (const kw of required) {
-      if (!text.includes(kw)) errors.push(`Required keyword missing for #${issueNumber}: "${kw}"`);
+  // Per-entry required keywords from manifest.
+  // validationKeywords: [] or omitted = skip keyword check.
+  const required = entry.validationKeywords ?? [];
+  for (const kw of required) {
+    if (!text.includes(kw)) {
+      errors.push(`Required keyword missing for #${entry.issue}: "${kw}"`);
     }
   }
 
@@ -148,6 +144,10 @@ function validate(text, issueNumber) {
 }
 
 // --- wave gate ---
+
+function ghExec(cmd, opts = {}) {
+  return execSync(`gh ${cmd}`, { encoding: 'utf8', ...opts });
+}
 
 function getIssueState(issueNumber) {
   try {
@@ -177,16 +177,16 @@ function enforceWaveGate(args, entries) {
   // start mode
   if (mode !== 'start') return;
 
-  // Wave 2/3: not supported in MVP — fail always (even dry-run)
+  // Wave 2/3: not supported in MVP — always fail
   const highWave = entries.filter(e => e.wave > MVP_MAX_WAVE);
   if (highWave.length > 0) {
-    console.error(`Error: Wave ${highWave.map(e => e.wave).join('/')} start is not supported in this MVP dispatcher.`);
+    console.error(`Error: Wave ${[...new Set(highWave.map(e => e.wave))].join('/')} start is not supported in this MVP dispatcher.`);
     console.error(`  Issues: ${highWave.map(e => `#${e.issue} (wave ${e.wave})`).join(', ')}`);
-    console.error('  Use --mode blocked or --mode prep for non-MVP waves.');
+    console.error('  Use --mode blocked or --mode prep for non-MVP waves, or update MVP_MAX_WAVE.');
     process.exit(1);
   }
 
-  // Wave 1 start: dependency gate — enforced only when actually posting (--post without --dry-run)
+  // Wave 1 start: dependency gate — enforced when posting (not dry-run)
   if (post && !dryRun) {
     const wave1 = entries.filter(e => e.wave === 1);
     if (wave1.length > 0) {
@@ -205,10 +205,6 @@ function enforceWaveGate(args, entries) {
 }
 
 // --- GitHub operations ---
-
-function ghExec(cmd, opts = {}) {
-  return execSync(`gh ${cmd}`, { encoding: 'utf8', ...opts });
-}
 
 function getRepo() {
   try {
@@ -278,18 +274,19 @@ function printHelp() {
   console.log(`Usage: npm run sprint9:dispatch -- [options]
 
 Options:
-  --wave N       Target wave number
-  --issue N      Target issue number
-  --mode M       Template mode: start | prep | blocked  (default: start)
-  --dry-run      Print rendered output without posting
-  --post         Post to GitHub issue comment (uses gh CLI)
-  --status       Show current wave / merge status
-  --help, -h     Show this help
+  --manifest PATH  Path to manifest JSON (default: sprint9-phase2-dispatch.json)
+  --wave N         Target wave number
+  --issue N        Target issue number
+  --mode M         Template mode: start | prep | blocked  (default: start)
+  --dry-run        Print rendered output without posting
+  --post           Post to GitHub issue comment (uses gh CLI)
+  --status         Show current wave / merge status
+  --help, -h       Show this help
 
 Wave gate rules:
   start + wave 0:   no dependency check
   start + wave 1:   dependency gate enforced when using --post
-  start + wave 2/3: not supported in MVP (always fails)
+  start + wave 2+:  not supported in MVP (always fails)
   prep:             Wave 1 only
   blocked:          any wave allowed
 
@@ -299,6 +296,11 @@ Examples:
   npm run sprint9:dispatch -- --wave 1 --mode prep --dry-run
   npm run sprint9:dispatch -- --status
   npm run sprint9:dispatch -- --issue 201 --post
+  npm run sprint9:dispatch -- --manifest tools/sprint10-dispatch/sprint10-dispatch.json --status
+
+New issue notes:
+  Add a new entry to the manifest JSON with validationKeywords field.
+  Do NOT edit dispatch.mjs per issue — extend the manifest instead.
 
 Notes:
   --post checks for idempotency marker before posting.
@@ -315,7 +317,8 @@ if (args.help) {
   process.exit(0);
 }
 
-const manifest = loadManifest();
+const manifestPath = args.manifest ?? DEFAULT_MANIFEST;
+const manifest = loadManifest(manifestPath);
 
 if (args.status) {
   showStatus(manifest);
@@ -341,7 +344,7 @@ for (const entry of entries) {
   const marker = `<!-- sprint9-dispatch issue=${entry.issue} wave=${entry.wave} mode=${args.mode} -->`;
   const fullBody = `${rendered}\n\n${marker}`;
 
-  const errors = validate(fullBody, entry.issue);
+  const errors = validate(fullBody, entry);
   if (errors.length > 0) {
     console.error(`Validation failed for issue #${entry.issue}:`);
     errors.forEach(e => console.error(`  ${e}`));
