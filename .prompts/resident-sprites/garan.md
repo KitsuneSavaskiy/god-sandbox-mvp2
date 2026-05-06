@@ -73,5 +73,5 @@ Important:
 - Do not use a resized portrait as the sprite.
 - Keep every frame recognizable as Garan.
 - Every frame must stand on its own without borrowing pixels from neighboring cells.
-- For this sprint, generate only Garan. Do not expand to Eve, Ryo, or Suzu.
+- This prompt is for Garan. For other characters use their own prompt file.
 - If Codex pet / external generation UI cannot be used, do not create a substitute local sprite sheet. Stop and report `generation step unavailable`.
