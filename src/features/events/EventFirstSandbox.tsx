@@ -114,8 +114,15 @@ const sandboxSeasons = ["spring", "summer", "autumn", "winter"] as const;
 type SandboxSeason = (typeof sandboxSeasons)[number];
 
 type SandboxBackgroundState = {
+  cycleStep: number;
   season: SandboxSeason;
   dayPhase: SandboxDayPhase;
+  seasonIndex: number;
+  dayPhaseIndex: number;
+  hourHandStartDegrees: number;
+  hourHandEndDegrees: number;
+  minuteHandStartDegrees: number;
+  minuteHandEndDegrees: number;
   imagePath: string;
   fallbackImagePath: string;
 };
@@ -272,6 +279,10 @@ export function EventFirstSandbox({
     sandboxDayPhases.indexOf("noon"),
   );
   const apostleMotionRef = useRef(apostleMotion);
+  const previousBackgroundRef = useRef<SandboxBackgroundState | null>(null);
+  const backgroundFadeTimeoutRef = useRef<number | null>(null);
+  const [previousSandboxBackground, setPreviousSandboxBackground] =
+    useState<SandboxBackgroundState | null>(null);
 
   const currentEvent = selectCurrentEvent(runtimeState);
   const observationPreset = selectObservationPreset(runtimeState);
@@ -372,6 +383,34 @@ export function EventFirstSandbox({
   );
   const sandboxSeasonLabel = sandboxSeasonLabels[sandboxBackground.season];
   const sandboxDayPhaseLabel = sandboxDayPhaseLabels[sandboxBackground.dayPhase];
+
+  useEffect(() => {
+    const previousBackground = previousBackgroundRef.current;
+    if (
+      previousBackground &&
+      previousBackground.imagePath !== sandboxBackground.imagePath
+    ) {
+      setPreviousSandboxBackground(previousBackground);
+      if (backgroundFadeTimeoutRef.current !== null) {
+        window.clearTimeout(backgroundFadeTimeoutRef.current);
+      }
+      backgroundFadeTimeoutRef.current = window.setTimeout(() => {
+        setPreviousSandboxBackground(null);
+        backgroundFadeTimeoutRef.current = null;
+      }, 950);
+    }
+
+    previousBackgroundRef.current = sandboxBackground;
+  }, [sandboxBackground]);
+
+  useEffect(
+    () => () => {
+      if (backgroundFadeTimeoutRef.current !== null) {
+        window.clearTimeout(backgroundFadeTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     apostleMotionRef.current = apostleMotion;
@@ -609,21 +648,36 @@ export function EventFirstSandbox({
         data-sandbox-season={sandboxBackground.season}
         data-sandbox-day-phase={sandboxBackground.dayPhase}
       >
-        <div
-          className="event-first-sandbox__world-backdrop"
-          aria-hidden="true"
-          style={createSandboxBackgroundStyle(sandboxBackground)}
-        />
+        <div className="event-first-sandbox__world-backdrop" aria-hidden="true">
+          {previousSandboxBackground ? (
+            <div
+              key={`previous-${previousSandboxBackground.cycleStep}`}
+              className="event-first-sandbox__world-backdrop-layer event-first-sandbox__world-backdrop-layer--previous"
+              style={createSandboxBackgroundStyle(previousSandboxBackground)}
+            />
+          ) : null}
+          <div
+            key={`current-${sandboxBackground.cycleStep}`}
+            className="event-first-sandbox__world-backdrop-layer event-first-sandbox__world-backdrop-layer--current"
+            style={createSandboxBackgroundStyle(sandboxBackground)}
+          />
+        </div>
         <div
           className="event-first-sandbox__time-season-hud"
           aria-label={`箱庭の時間は${sandboxDayPhaseLabel}、季節は${sandboxSeasonLabel.label}です`}
         >
           <span
-            key={`${sandboxBackground.season}-${sandboxBackground.dayPhase}`}
+            key={`clock-${sandboxBackground.cycleStep}`}
             className="event-first-sandbox__clock"
             aria-hidden="true"
+            style={createSandboxClockStyle(sandboxBackground)}
           >
-            <span className="event-first-sandbox__clock-hand" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--zero" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--three" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--six" />
+            <span className="event-first-sandbox__clock-mark event-first-sandbox__clock-mark--nine" />
+            <span className="event-first-sandbox__clock-hand event-first-sandbox__clock-hand--hour" />
+            <span className="event-first-sandbox__clock-hand event-first-sandbox__clock-hand--minute" />
           </span>
           <span className="event-first-sandbox__hud-pill">
             {sandboxDayPhaseLabel}
@@ -953,20 +1007,28 @@ function clamp(value: number, min: number, max: number): number {
 
 function resolveSandboxBackground(cycleStep: number): SandboxBackgroundState {
   const normalizedStep = Math.max(0, cycleStep);
-  const dayPhase = sandboxDayPhases[normalizedStep % sandboxDayPhases.length];
-  const season =
-    sandboxSeasons[
-      Math.floor(normalizedStep / sandboxDayPhases.length) % sandboxSeasons.length
-    ];
+  const dayPhaseIndex = normalizedStep % sandboxDayPhases.length;
+  const seasonIndex =
+    Math.floor(normalizedStep / sandboxDayPhases.length) % sandboxSeasons.length;
+  const dayPhase = sandboxDayPhases[dayPhaseIndex];
+  const season = sandboxSeasons[seasonIndex];
   const seasonImages = sandboxBackgroundImages[season];
   const imagePath =
     seasonImages[dayPhase] ??
     seasonImages.noon ??
     DEFAULT_SANDBOX_BACKGROUND_PATH;
+  const hourHandStartDegrees = dayPhaseIndex * 180;
 
   return {
+    cycleStep: normalizedStep,
     season,
     dayPhase,
+    seasonIndex,
+    dayPhaseIndex,
+    hourHandStartDegrees,
+    hourHandEndDegrees: hourHandStartDegrees + 180,
+    minuteHandStartDegrees: 0,
+    minuteHandEndDegrees: 360,
     imagePath,
     fallbackImagePath: DEFAULT_SANDBOX_BACKGROUND_PATH,
   };
@@ -978,6 +1040,15 @@ function createSandboxBackgroundStyle(
   return {
     "--sandbox-world-background": `url("${background.imagePath}")`,
     "--sandbox-world-background-fallback": `url("${background.fallbackImagePath}")`,
+  } as CSSProperties;
+}
+
+function createSandboxClockStyle(background: SandboxBackgroundState): CSSProperties {
+  return {
+    "--sandbox-clock-hour-start": `${background.hourHandStartDegrees}deg`,
+    "--sandbox-clock-hour-end": `${background.hourHandEndDegrees}deg`,
+    "--sandbox-clock-minute-start": `${background.minuteHandStartDegrees}deg`,
+    "--sandbox-clock-minute-end": `${background.minuteHandEndDegrees}deg`,
   } as CSSProperties;
 }
 
