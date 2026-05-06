@@ -24,8 +24,9 @@ git pull --ff-only
 docs/operations/resident-sprite-spec.md
 tools/sidekick/sidekick-intake.mjs
 tools/sidekick/tasks/resident-sprite-sheet-candidate.json
-.prompts/resident-sprites/ryo.md
 ```
+
+`.prompts/resident-sprites/ryo.md` は `sidekick:intake` が自動生成するため、Codex が事前に開く必要はない。
 
 ## Codex が実行してよいこと・してはいけないこと
 
@@ -94,11 +95,13 @@ generation step unavailable
 sidekick:intake は正常終了した。
 次は、オペレーターが以下を行う必要がある。
 
-  1. .prompts/resident-sprites/ryo.md を開く
-  2. Codex pet または承認済みの外部画像生成 UI を開く
-  3. portrait reference をアップロードする:
+  1. Codex pet または承認済みの外部画像生成 UI を開く
+  2. intake が出力した portrait reference をアップロードする:
      assets/generated/residents/ryo/reference/ryo-portrait-reference-*.png
-  4. プロンプトを貼り付けて sprite sheet を生成する
+  3. intake が出力した prompt path の内容を貼り付ける:
+     .prompts/resident-sprites/ryo.md
+     （intake が自動生成済み。非技術者はこのファイルを作成・編集しない）
+  4. sprite sheet を生成して PNG をダウンロードする
   5. 生成した PNG を以下に置く:
      assets/generated/residents/ryo/incoming/
   6. 連絡を受けたら npm run sprite:check -- ryo を実行する
@@ -150,6 +153,8 @@ blocker が出た場合は、ready 化へ進まず失敗分類を報告する。
 - job path:
 - portrait ref:
 - incoming:
+- prompt: （auto-generated / already existed）
+- prompt path:
 - Operator next steps 出力: yes / no
 
 ## generation step

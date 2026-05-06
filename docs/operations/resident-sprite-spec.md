@@ -101,10 +101,12 @@ external generation UI operation
 
 Everything else is handled by the intake pipeline (Layer 1–2) and an authorized operator:
 
-1. `npm run sidekick:intake -- --slug <slug> --portrait <path>` auto-generates the job and sets up folders.
-2. The operator takes the generated prompt and portrait reference to Codex pet or an approved external subscription UI.
+1. `npm run sidekick:intake -- --slug <slug> --portrait <path>` auto-generates the job, sets up folders, and generates the prompt file from `_template.md` if it does not already exist.
+2. The operator takes the auto-generated prompt and portrait reference to Codex pet or an approved external subscription UI.
 3. The operator places the resulting PNG in `assets/generated/residents/<slug>/incoming/`.
 4. The operator runs `npm run sprite:check -- <slug>` to validate the candidate.
+
+The non-technical user never needs to open, create, or edit any prompt file.
 
 ### Generation rules
 
