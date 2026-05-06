@@ -1,0 +1,963 @@
+[
+  {
+    "issue": 197,
+    "pbi": "PBI-ARCH-CODEX-SIDEKICK-JOB-SCHEMA-VALIDATOR-MVP-001",
+    "line": "Thread-L2",
+    "wave": 0,
+    "mode": "start",
+    "mergeOrder": 1,
+    "ownedPaths": [
+      "tools/sidekick/validator/**",
+      "src/application/sidekickJobSchema.ts",
+      "src/application/sidekickJobSchema.test.ts"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/runner/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/narrative/**",
+      "tools/sidekick/guard/**",
+      ".github/workflows/**",
+      "src/domain/**",
+      "src/features/**",
+      "src/ui/**",
+      "src/app/**",
+      "public/**",
+      "docs/product/**",
+      "docs/architecture/**"
+    ],
+    "reservedScripts": [
+      "sidekick:validate",
+      "test:sidekick:validator"
+    ],
+    "dependencies": [],
+    "waveStartPolicy": "Wave 0 — 依存なし。即時開始可。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/operations/codex-job-queue.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-app-server-bridge-spec.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/security/codex-app-server-file-system-scope.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md",
+      "docs/operations/sprint8-closeout-git-hygiene.md"
+    ],
+    "tasks": [
+      "character-asset-bundle / character-narrative-packのjobを検証する",
+      "jobVersion / jobId / jobType / createdAt / characterId / assetBundleId / worldDirectoryNameを検証する",
+      "characterIdとassetBundleIdを分離して検証する",
+      "secret / token / API key / PATらしき値をrejectする",
+      "個人PC絶対パスらしき値をrejectする",
+      "worldDirectoryNameをsafe identifierとして検証する",
+      "reject messageにsecretや絶対パスを出さない"
+    ],
+    "notDo": [
+      "runner実装",
+      "App Server bridge実装",
+      "watcher / job processor実装",
+      "API接続",
+      "UI実装",
+      "実job JSON追加",
+      "generated output追加",
+      "ready / adopted promotion",
+      "Passport schema変更",
+      "gameplay behavior変更"
+    ],
+    "requiredTests": [
+      "validなcharacter-asset-bundle jobはpass",
+      "validなcharacter-narrative-pack jobはpass",
+      "必須field不足はreject",
+      "未知job typeはreject",
+      "characterId / assetBundleId混同をreject",
+      "secret / token / API keyらしき値をreject",
+      "個人PC絶対パスらしき値をreject",
+      "invalid worldDirectoryNameをreject",
+      "reject messageに危険値が出ないことを確認"
+    ],
+    "acceptanceCriteria": [
+      "validなasset / narrative jobがpass",
+      "missing fieldsとunknown job typeがreject",
+      "characterId / assetBundleId混同が検出される",
+      "secret / token / API key / personal pathがreject",
+      "invalid worldDirectoryNameがreject",
+      "reject messageにsecretやhost絶対パスが含まれない",
+      "runner / bridge / UI / generationを実装していない"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #197",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "validator配置理由",
+      "対応job type",
+      "reject条件",
+      "secret / path redaction方針",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "characterId",
+      "assetBundleId",
+      "worldDirectoryName",
+      "character-asset-bundle",
+      "character-narrative-pack"
+    ]
+  },
+  {
+    "issue": 198,
+    "pbi": "PBI-SEC-CODEX-SIDEKICK-GIT-BOUNDARY-GUARD-001",
+    "line": "Thread-SEC",
+    "wave": 0,
+    "mode": "start",
+    "mergeOrder": 2,
+    "ownedPaths": [
+      "tools/security/**",
+      "tools/sidekick/guard/**",
+      ".github/workflows/**",
+      "docs/security/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/runner/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/narrative/**",
+      "src/**",
+      "public/**"
+    ],
+    "reservedScripts": [
+      "sidekick:guard"
+    ],
+    "dependencies": [],
+    "waveStartPolicy": "Wave 0 — 依存なし。即時開始可。#200はこのPRがmain入り後に開始。",
+    "conflictNotes": [
+      "#200も.github/workflows/routine-pr-guardian.ymlに触る可能性がある。#198と#200を並行させない。#200は#198のmain入り後に開始。"
+    ],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/operations/codex-job-queue.md",
+      "docs/operations/sprint8-closeout-git-hygiene.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/security/codex-app-server-file-system-scope.md"
+    ],
+    "tasks": [
+      ".godsandbox/jobs/**, assets/generated/**, narrative/generated/**, manifests/drafts/**, dist/** などをGit差分で検出する",
+      "error messageにhost絶対パスやsecretを出さない",
+      "npm run guard が存在する場合は統合する。存在しない場合はPR本文で説明する",
+      "workflow権限を拡張しない",
+      "routine guardianのauto-approve範囲を拡張しない"
+    ],
+    "notDo": [
+      "generated output commit",
+      "real job JSON commit",
+      "secret出力",
+      "workflow権限拡大",
+      "routine guardianのauto-approve範囲拡大",
+      "package / CI変更（guard統合に最小限必要な場合を除く）",
+      "src/**変更"
+    ],
+    "requiredTests": [
+      "禁止pathが差分にある場合はfail",
+      "許可されたdocs / source変更ではfailしない",
+      "error messageに個人パスやsecretが出ない",
+      "guard scriptがnode --checkを通る"
+    ],
+    "acceptanceCriteria": [
+      "禁止path一覧がIssue #198の補正コメントと一致している",
+      "package / CIを変更せずstandalone scriptにした場合はPR本文で説明している",
+      "error messageに個人パスやsecretを出さない方針が守れている",
+      "generated output / real job JSON / manifest draftをGit管理へ入れていない"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #198",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "guard対象パス一覧",
+      "npm run guard統合有無と理由",
+      "workflow権限変更なし",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      ".godsandbox/jobs/",
+      "assets/generated/",
+      "narrative/generated/",
+      "manifests/drafts/",
+      "dist",
+      "npm run guard"
+    ]
+  },
+  {
+    "issue": 199,
+    "pbi": "PBI-UX-CODEX-SIDEKICK-NONTECH-DRY-RUN-WALKTHROUGH-001",
+    "line": "Thread-L3",
+    "wave": 0,
+    "mode": "start",
+    "mergeOrder": 3,
+    "ownedPaths": [
+      "docs/operations/codex-sidekick-dry-run-walkthrough-nontechnical.md"
+    ],
+    "forbiddenPaths": [
+      "tools/**",
+      "src/**",
+      "public/**",
+      ".github/workflows/**",
+      "docs/product/**",
+      "docs/architecture/**"
+    ],
+    "reservedScripts": [],
+    "dependencies": [],
+    "waveStartPolicy": "Wave 0 — 依存なし。即時開始可。docs-onlyスコープ。実装なし。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/operations/codex-sidekick-local-setup-nontechnical.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-app-server-bridge-spec.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md"
+    ],
+    "tasks": [
+      "dry-runで何を確認しているかを非技術者向けに説明する",
+      "pending / running / done / failedを平易な言葉で説明する",
+      "doneはadopted / readyではないと明記する",
+      "ready / adoptedの違いを説明する",
+      "エラー時の停止条件を定義する",
+      "PO確認メモのテンプレートを追加する",
+      "CLI操作と人間の判断を分ける"
+    ],
+    "notDo": [
+      "runner / bridge / UI / API実装",
+      "tools/**変更",
+      "src/**変更",
+      "workflow変更"
+    ],
+    "requiredTests": [
+      "git diff --check origin/main...HEAD",
+      "npm run typecheck",
+      "npm run build"
+    ],
+    "acceptanceCriteria": [
+      "非技術者がGodSandboxはSidekickなしでも動くと理解できる",
+      "dry-run結果がready / adoptedと混同されない",
+      "エラー停止条件が明確",
+      "PO確認メモのテンプレートがある",
+      "docs-onlyスコープ"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #199",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "walkthrough内容",
+      "stop condition",
+      "PO memo template",
+      "API key不要方針",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "pending",
+      "running",
+      "done",
+      "failed",
+      "ready",
+      "adopted",
+      "npm run typecheck",
+      "npm run build"
+    ]
+  },
+  {
+    "issue": 200,
+    "pbi": "PBI-SEC-ROUTINE-GUARDIAN-P3-HARDENING-001",
+    "line": "Thread-SEC",
+    "wave": 0,
+    "mode": "start",
+    "mergeOrder": 4,
+    "ownedPaths": [
+      ".github/workflows/routine-pr-guardian.yml",
+      "docs/security/routine-pr-guardian-security-rationale.md"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/**",
+      "src/**",
+      "public/**"
+    ],
+    "reservedScripts": [],
+    "dependencies": [198],
+    "waveStartPolicy": "Wave 0 — #198のmain入り後にのみ開始。Thread-SEC内で#198の後に順番に処理。",
+    "conflictNotes": [
+      "#198と同じ.github/workflows/routine-pr-guardian.ymlに触る。並行禁止。同一Thread-SEC内でsequentialに処理。"
+    ],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/security/codex-app-server-file-system-scope.md",
+      "docs/operations/sprint8-closeout-git-hygiene.md",
+      ".github/workflows/routine-pr-guardian.yml"
+    ],
+    "tasks": [
+      ".pre-commit-config.yamlをprotected pathsに追加する",
+      "CLAUDE.mdをprotected pathsに追加する",
+      "src/ui/, src/routes/, src/platform/をprotected pathsに追加する",
+      "pull_request_targetの設計根拠と安全条件をdocsに記録する",
+      "`manual-review-required` ラベル付与ルールが意図通りに動作することを確認する"
+    ],
+    "notDo": [
+      "workflow権限の拡張",
+      "routine guardianのauto-approve / auto-mergeスコープの拡張",
+      "app / gameplay codeの変更",
+      "src/**変更"
+    ],
+    "requiredTests": [
+      "既存CI",
+      "git diff --check origin/main...HEAD",
+      "npm run typecheck",
+      "npm run build",
+      "PR本文にguardian動作の説明を書く"
+    ],
+    "acceptanceCriteria": [
+      "R-001〜R-004が対応されている",
+      "agent-routineがprotected path reviewをbypassできない",
+      "pull_request_targetがPR headのコードをcheckout / executeしない",
+      "workflow権限を拡張していない",
+      "auto-approve / auto-mergeスコープを拡張していない",
+      "app / gameplay codeを変更していない"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #200",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "P3対応内容",
+      "pull_request_target安全性の説明",
+      "workflow権限変更なし",
+      "app / gameplay変更なし",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "pull_request_target",
+      "agent-routine",
+      "manual-review-required",
+      "npm run typecheck",
+      "npm run build"
+    ]
+  },
+  {
+    "issue": 201,
+    "pbi": "PBI-OPS-CODEX-SIDEKICK-RUNNER-MVP-DRY-RUN-001",
+    "line": "Thread-L1",
+    "wave": 1,
+    "mode": "start",
+    "mergeOrder": 5,
+    "ownedPaths": [
+      "tools/sidekick/runner/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/narrative/**",
+      "tools/sidekick/guard/**",
+      "tools/security/**",
+      ".github/workflows/**",
+      "src/**",
+      "public/**"
+    ],
+    "reservedScripts": [
+      "sidekick:runner:dry-run"
+    ],
+    "dependencies": [197, 198],
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。それ以前は事前準備のみ可（docs読み込み・設計メモ・branch準備）、PR作成禁止。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-app-server-bridge-spec.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/security/codex-app-server-file-system-scope.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md",
+      "docs/operations/codex-job-queue.md"
+    ],
+    "tasks": [
+      ".godsandbox/jobs/pendingを読む",
+      "job schema validatorを使う",
+      "lockまたはatomic moveで二重実行を防止する",
+      "jobをrunningへ移動する",
+      "dry-run結果をdoneまたはfailedへ書く",
+      "result / failedにsecretや個人パスを含めない",
+      "doneとready / adoptedを分ける",
+      "generated outputをGit管理外に置く"
+    ],
+    "notDo": [
+      "実生成",
+      "GodSandbox runtimeへの依存",
+      "gameplay停止",
+      "ready / adopted promotion",
+      "API接続",
+      "UI実装"
+    ],
+    "requiredTests": [
+      "valid jobがpending -> running -> doneになる",
+      "invalid jobがfailedになる",
+      "同じjobが二重実行されない",
+      "doneはready / adoptedではない",
+      "failed resultにsecret / token / personal pathが含まれない",
+      "generated output / real jobがGit diffに含まれない"
+    ],
+    "acceptanceCriteria": [
+      "Runner MVP dry-runが存在する",
+      "実生成なし",
+      "GodSandbox runtimeへの依存なし",
+      "gameplay停止なし",
+      "requiredTestsがpass"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #201",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "runner配置理由",
+      "validator連携",
+      "lifecycle動作",
+      "lock / double-run防止",
+      "result / failed内容",
+      "ready / adopted未昇格",
+      "Git混入なし",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
+    ]
+  },
+  {
+    "issue": 202,
+    "pbi": "PBI-ARCH-CODEX-APP-SERVER-BRIDGE-MVP-DRY-RUN-001",
+    "line": "Thread-L2",
+    "wave": 1,
+    "mode": "start",
+    "mergeOrder": 6,
+    "ownedPaths": [
+      "tools/sidekick/bridge/**",
+      "src/application/sidekick/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/runner/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/narrative/**",
+      "tools/sidekick/guard/**",
+      "tools/security/**",
+      ".github/workflows/**",
+      "src/domain/**",
+      "src/features/**",
+      "src/ui/**",
+      "src/app/**",
+      "public/**"
+    ],
+    "reservedScripts": [
+      "sidekick:bridge:dry-run"
+    ],
+    "dependencies": [197, 198],
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にのみ実装開始。それ以前は事前準備のみ可（設計メモ・branch準備）、PR作成禁止。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/architecture/codex-app-server-bridge-spec.md",
+      "docs/security/codex-app-server-file-system-scope.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md"
+    ],
+    "tasks": [
+      "bridge入出力境界を実装する",
+      "App Server不在時はdry-run fallbackを使う",
+      "allowed rootsの外にあるファイルへのアクセスをrejectする",
+      "worldDirectoryNameをraw pathではなくsafe identifierとして扱う",
+      "result / failedにsecretや個人パスを含めない",
+      "runner lifecycleと整合させる",
+      "App ServerをGodSandbox runtimeの必須起動条件にしない"
+    ],
+    "notDo": [
+      "生成API接続",
+      "ready / adopted promotion",
+      "GodSandbox runtimeへの直接依存",
+      "gameplay停止",
+      "UI実装"
+    ],
+    "requiredTests": [
+      "valid worldDirectoryNameをacceptする",
+      "/, \\\\, ., ..をrejectする",
+      "encoded separatorをrejectする",
+      "absolute pathをrejectする",
+      "drive letterをrejectする",
+      "App Server不在時はdry-run fallbackになる",
+      "gameplay停止なし"
+    ],
+    "acceptanceCriteria": [
+      "Bridge MVP dry-runが存在する",
+      "App Serverが任意",
+      "ファイルスコープがfail-closed",
+      "生成API接続なし",
+      "ready / adopted promotion なし"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #202",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "bridge配置理由",
+      "dry-run fallback動作",
+      "file scope検査",
+      "worldDirectoryName検査",
+      "App Server非必須",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
+    ]
+  },
+  {
+    "issue": 203,
+    "pbi": "PBI-QA-CODEX-SIDEKICK-RUNNER-BRIDGE-TEST-HARNESS-001",
+    "line": "Thread-L4",
+    "wave": 1,
+    "mode": "start",
+    "mergeOrder": 7,
+    "ownedPaths": [
+      "tools/sidekick/tests/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/runner/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/narrative/**",
+      "tools/sidekick/guard/**",
+      "tools/security/**",
+      ".github/workflows/**",
+      "src/**",
+      "public/**"
+    ],
+    "reservedScripts": [
+      "test:sidekick",
+      "test:sidekick:runner",
+      "test:sidekick:bridge"
+    ],
+    "dependencies": [197, 198],
+    "waveStartPolicy": "Wave 1 — #197と#198のmain入り後にtest harness実装PRを開始。それ以前は事前準備のみ可（docs読み込み・test観点整理・配置案・依存質問）、PR作成禁止。final mergeは#201と#202のmain入り後。",
+    "conflictNotes": [
+      "final mergeは#201と#202のmain入り後に行う。Wave 1内でsequentialに最後にマージ。"
+    ],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-app-server-bridge-spec.md",
+      "docs/security/codex-sidekick-local-security.md",
+      "docs/security/codex-app-server-file-system-scope.md",
+      "docs/architecture/narrative-adopted-gate-consumer-spec.md",
+      "docs/security/asset-css-path-sanitization.md"
+    ],
+    "tasks": [
+      "App Server不在のfallbackテストを追加する",
+      "pending -> running -> doneのライフサイクルテストを追加する",
+      "invalid jobのfailedテストを追加する",
+      "二重実行防止テストを追加する",
+      "doneがready / adoptedにならないテストを追加する",
+      "generated candidateがplayer-facing UIに出ないことを確認する",
+      "CSS asset path 9ケースのテスト場所を整理する",
+      "narrative adopted-only 8ケースのleak testの場所を整理する"
+    ],
+    "notDo": [
+      "UI実装",
+      "App Server実装",
+      "runner実装",
+      "watcher実装",
+      "job processor実装",
+      "API接続",
+      "生成処理",
+      "src/**変更（test以外）"
+    ],
+    "requiredTests": [
+      "App Server不在fallback",
+      "ライフサイクル成功と失敗",
+      "二重実行防止",
+      "ready / adopted自動昇格なし",
+      "generated candidate UIへのleakなし",
+      "Git境界チェック（generated output / real jobs / manifests / local logs）"
+    ],
+    "acceptanceCriteria": [
+      "runner / bridge安全条件の主要テストが実行可能",
+      "fallbackがgameplayを停止させない",
+      "ready / adopted自動化の不在がテスト可能",
+      "UI変更は後続PBI扱い（必要な場合）"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #203",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "test harness内容",
+      "fallbackテスト",
+      "lifecycleテスト",
+      "double-runテスト",
+      "ready / adopted未昇格確認",
+      "generated UI leak確認",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "事前準備のみ",
+      "PR作成禁止",
+      "#197",
+      "#198",
+      "main入り"
+    ]
+  },
+  {
+    "issue": 204,
+    "pbi": "PBI-SIDEKICK-ASSET-REPRESENTATIVE-CASE-DRY-RUN-001",
+    "line": "Thread-L3",
+    "wave": 2,
+    "mode": "start",
+    "mergeOrder": 8,
+    "ownedPaths": [
+      "tools/sidekick/asset/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/runner/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/narrative/**",
+      "tools/sidekick/guard/**",
+      "tools/security/**",
+      ".github/workflows/**",
+      "src/**",
+      "public/**",
+      "assets/generated/**",
+      "assets/residents/**"
+    ],
+    "reservedScripts": [
+      "sidekick:asset:dry-run"
+    ],
+    "dependencies": [197, 198, 201, 202, 203],
+    "waveStartPolicy": "Wave 2 — Wave 1全PBI(#201, #202, #203)のmain入り後にのみ開始。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/architecture/asset-sidekick-batch-review-spec.md",
+      "docs/operations/asset-sidekick-parallel-lanes.md",
+      "docs/architecture/codex-sidekick-subagent-personas.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/security/asset-css-path-sanitization.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md",
+      "docs/architecture/narrative-adopted-gate-consumer-spec.md"
+    ],
+    "tasks": [
+      "local-only dry-run jobを使う",
+      "characterIdとassetBundleIdを分ける",
+      "resident-sprite-sheet, portrait-expressions, derived-iconのrequested outputsを扱う",
+      "dry-run結果をcandidateとして扱う",
+      "PO visual review reportを生成する",
+      "iconはsprite front-facing frameから派生させる",
+      "real job / generated outputがGit diffに入らないことを確認する"
+    ],
+    "notDo": [
+      "実画像生成",
+      "ready promotion",
+      "PO visual OKなしでのsandbox表示",
+      "generated outputのGit commit"
+    ],
+    "requiredTests": [
+      "asset dry-runが完了する",
+      "結果がcandidateであってreadyではない",
+      "PO visual review reportが生成される",
+      "generated output / real job JSON / manifest draft / local logs / distがGit diffに含まれない",
+      "gameplayが停止しない",
+      "CSS asset path sanitization期待値が守られている"
+    ],
+    "acceptanceCriteria": [
+      "asset代表ケースdry-runが完了している",
+      "実画像生成なし",
+      "ready promotion なし",
+      "PO visual OKなしでsandboxに表示なし"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #204",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "asset dry-run結果",
+      "candidate状態",
+      "PO visual report",
+      "ready promotion なし",
+      "Git混入なし",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "characterId",
+      "assetBundleId",
+      "candidate",
+      "ready",
+      "PO visual"
+    ]
+  },
+  {
+    "issue": 205,
+    "pbi": "PBI-SIDEKICK-NARRATIVE-REPRESENTATIVE-CASE-DRY-RUN-001",
+    "line": "Thread-L4",
+    "wave": 2,
+    "mode": "start",
+    "mergeOrder": 9,
+    "ownedPaths": [
+      "tools/sidekick/narrative/**"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/validator/**",
+      "tools/sidekick/runner/**",
+      "tools/sidekick/bridge/**",
+      "tools/sidekick/tests/**",
+      "tools/sidekick/asset/**",
+      "tools/sidekick/guard/**",
+      "tools/security/**",
+      ".github/workflows/**",
+      "src/**",
+      "public/**",
+      "narrative/generated/**"
+    ],
+    "reservedScripts": [
+      "sidekick:narrative:dry-run"
+    ],
+    "dependencies": [197, 198, 201, 202, 203],
+    "waveStartPolicy": "Wave 2 — Wave 1全PBI(#201, #202, #203)のmain入り後にのみ開始。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md",
+      "docs/architecture/narrative-pack-schema.md",
+      "docs/operations/narrative-sidekick-workspace.md",
+      "docs/architecture/narrative-adopted-gate-consumer-spec.md",
+      "docs/architecture/codex-sidekick-subagent-personas.md",
+      "docs/operations/codex-sidekick-runner-lifecycle.md",
+      "docs/architecture/codex-sidekick-bridge-test-plan.md"
+    ],
+    "tasks": [
+      "narrative packをcandidate / needs-reviewとして扱う",
+      "domain eventを上書きしない",
+      "intervention resultを上書きしない",
+      "adopted promotionをしない",
+      "PO narrative review summaryを生成する",
+      "candidateをplayer-facing UIに出さない",
+      "fallback gameplayが継続することを確認する"
+    ],
+    "notDo": [
+      "adopted promotion",
+      "domain event / intervention resultの上書き",
+      "player-facing UIへのcandidate表示",
+      "generated narrativeのGit commit"
+    ],
+    "requiredTests": [
+      "narrative dry-runが完了する",
+      "結果がcandidate / needs-reviewであってadoptedではない",
+      "candidateがplayer-facingに出ない",
+      "gameplayが停止しない",
+      "generated output / real job JSON / manifest draft / local logs / distがGit diffに含まれない",
+      "narrative candidate leakage preventionが確認されている"
+    ],
+    "acceptanceCriteria": [
+      "narrative代表ケースdry-runが完了している",
+      "generated narrativeがUIにleakしない",
+      "adopted promotion なし",
+      "domain event / intervention resultが正本のまま"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #205",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "narrative dry-run結果",
+      "candidate / needs-review状態",
+      "PO narrative summary",
+      "adopted promotion なし",
+      "UI leakなし",
+      "Git混入なし",
+      "SPECA CONDITIONAL GO確認",
+      "今回やらないこと",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "candidate",
+      "needs-review",
+      "adopted",
+      "player-facing"
+    ]
+  },
+  {
+    "issue": 206,
+    "pbi": "PBI-OPS-SPRINT9-PHASE2-CLOSEOUT-PHASE3-GATE-001",
+    "line": "Thread-ORCH",
+    "wave": 3,
+    "mode": "start",
+    "mergeOrder": 10,
+    "ownedPaths": [
+      "docs/operations/sprint9-phase2-closeout-phase3-gate.md"
+    ],
+    "forbiddenPaths": [
+      "tools/sidekick/**",
+      "src/**",
+      "public/**",
+      ".github/workflows/**"
+    ],
+    "reservedScripts": [],
+    "dependencies": [201, 202, 203, 204, 205],
+    "waveStartPolicy": "Wave 3 — Wave 2全PBI(#204, #205)のmain入り後にのみ開始。",
+    "conflictNotes": [],
+    "requiredDocs": [
+      "AGENTS.md",
+      "docs/agent-operating-rules.md",
+      "docs/agent-pr-checklists.md",
+      "docs/architecture/line-responsibilities.md",
+      "docs/product/sprint9-planning.md"
+    ],
+    "tasks": [
+      "mainを更新して確認commitを特定する",
+      "Phase 2成果物がmainに入っていることを確認する",
+      "GodSandbox runtimeがApp Serverなしで動くことを確認する",
+      "generated outputがGit管理外のままであることを確認する",
+      "doneがready / adoptedへ自動昇格していないことを確認する",
+      "asset / narrative代表ケース実行条件を整理する",
+      "Phase 3を進めるか判定する"
+    ],
+    "notDo": [
+      "代表ケース生成の実行",
+      "ready / adopted promotion",
+      "src/**変更",
+      "tools/sidekick/**変更"
+    ],
+    "requiredTests": [
+      "git fetch origin main",
+      "git checkout main",
+      "git pull --ff-only",
+      "git status --short --branch",
+      "npm run typecheck",
+      "npm run build",
+      "Phase 2で追加されたtest scriptをすべて実行"
+    ],
+    "acceptanceCriteria": [
+      "確認commitが特定されている",
+      "Phase 2成果物がリストアップされている",
+      "Security確認が完了している",
+      "Phase 3判定がproceed / blockedで明示されている",
+      "blockerとfollow-upが明示されている",
+      "代表ケース生成を実行していない"
+    ],
+    "prBodyRequirements": [
+      "対象PBI",
+      "Closes #206",
+      "branch",
+      "changed files",
+      "参照したdocs",
+      "今回のLine責務",
+      "確認commit",
+      "Phase 2成果物リスト",
+      "Security確認結果",
+      "Phase 3開始判定",
+      "blocker",
+      "follow-up",
+      "scope外変更なし",
+      "確認コマンドと結果"
+    ],
+    "validationKeywords": [
+      "Phase 2",
+      "Phase 3",
+      "npm run typecheck",
+      "npm run build"
+    ]
+  }
+]
