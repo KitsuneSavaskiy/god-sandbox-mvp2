@@ -3,8 +3,8 @@
  * Sidekick Player Asset Intake — Layer 1 + 2
  *
  * The non-technical user provides only: character name (slug) + portrait PNG.
- * This tool auto-generates the job and sets up folders. The operator then
- * takes the prompt and portrait reference to an external image generation UI.
+ * This tool auto-generates the job and sets up folders. The Codex agent then
+ * uses Codex pet with the auto-generated prompt and portrait reference to generate the sprite sheet.
  *
  * Usage:
  *   npm run sidekick:intake -- --slug ryo --portrait <path-to-portrait.png>
@@ -41,10 +41,10 @@ What this tool does:
   4. Creates assets/generated/residents/<slug>/incoming/ folder
   5. Copies portrait to a gitignored reference location
   6. Auto-generates .prompts/resident-sprites/<slug>.md from _template.md if it does not exist
-  7. Prints prompt path and next steps for the operator
+  7. Prints prompt path and next steps for the Codex agent
 
 The non-technical user provides only: character name (slug) + portrait PNG.
-The operator uses the auto-generated prompt with an external image generation UI.
+The Codex agent performs all remaining steps including image generation via Codex pet.
 `);
 }
 
@@ -198,13 +198,12 @@ function main() {
     console.log(`  incoming:       ${incomingRelDir}/`);
     console.log(`  prompt:         ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
 
-    console.log(`\nOperator next steps:`);
-    console.log(`  1. Open Codex pet or an approved external image generation UI.`);
-    console.log(`  2. Upload the portrait reference: ${refRelPath}`);
-    console.log(`  3. Paste the contents of ${prompt.path} as the prompt.`);
-    console.log(`  4. Generate the sprite sheet and download the PNG.`);
-    console.log(`  5. Place the PNG in: ${incomingRelDir}/`);
-    console.log(`  6. Run: npm run sprite:check -- ${slug}`);
+    console.log(`\nGeneration input for Codex pet:`);
+    console.log(`  portrait ref: ${refRelPath}`);
+    console.log(`  prompt:       ${prompt.path}`);
+    console.log(`  save PNG to:  ${incomingRelDir}/`);
+    console.log(`\nValidation:`);
+    console.log(`  npm run sprite:check -- ${slug}`);
     console.log(``);
   } catch (error) {
     console.error(`\nError: ${error instanceof Error ? error.message : String(error)}`);

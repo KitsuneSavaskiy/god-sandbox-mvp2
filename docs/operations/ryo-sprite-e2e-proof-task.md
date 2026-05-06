@@ -1,17 +1,32 @@
-# 作業名: Ryo resident sprite end-to-end proof（#233 マージ後版）
+# 作業名: Ryo resident sprite end-to-end proof
 
 対象repo: god-sandbox-mvp2  
-担当: 単独Codexスレッド
+担当: 単独Codexスレッド（サイドキック）
 
-## 目的
+## Codex の役割
 
-`npm run sidekick:intake` が正しく動くことを確認し、Ryo の resident sprite sheet 生成から箱庭アニメーション確認までの通し試験を行う。
+Codex は GodSandbox ゲームアプリとは別プロセスで動作するサイドキックである。
+非技術者が Codex に slug と portrait を渡すと、Codex がゲームのディレクトリ内の資源を
+自律的に生成・配置する。GodSandbox アプリ本体は画像生成 API を呼ばない。
 
-今回の目的は、#233 で入った intake CLI / task recipe / spec 修正が、実際の Ryo フローで機能するかを確認すること。
+## 非技術者が渡すもの（これだけ）
+
+```txt
+キャラ名（slug）: ryo
+立ち絵:           public/art/characters/defaults/ryo/portrait.png
+```
+
+Codex は以下を非技術者に要求しない。
+
+```txt
+characterId / assetBundleId / jobId
+prompt ファイルの操作
+フォルダへのファイル配置
+sprite:check の実行
+Codex pet の操作
+```
 
 ## 最初に必ず行うこと
-
-main を最新化する。
 
 ```bash
 git switch main
@@ -26,42 +41,32 @@ tools/sidekick/sidekick-intake.mjs
 tools/sidekick/tasks/resident-sprite-sheet-candidate.json
 ```
 
-`.prompts/resident-sprites/ryo.md` は `sidekick:intake` が自動生成するため、Codex が事前に開く必要はない。
-
-## Codex が実行してよいこと・してはいけないこと
-
-### してよいこと
+## Codex の実行禁止事項
 
 ```txt
-npm run sidekick:intake -- --slug ryo --portrait public/art/characters/defaults/ryo/portrait.png
-npm run sprite:check -- ryo  （オペレーターが PNG を置いた後）
-npm run sprite:check -- public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png
-```
-
-### してはいけないこと
-
-```txt
-portrait を incoming フォルダへコピーして sprite:check を実行すること
-任意の PNG を sprite sheet 候補として扱うこと
-外部 UI を使わずに sprite sheet を作ること
+portrait をそのまま incoming へコピーして sprite:check を実行すること
+ローカルで手製の PNG を sprite sheet 候補として扱うこと
+Codex pet を使わずに sprite sheet を作ること
 assets/generated/** を git commit すること
 assets/residents/** を git commit すること
-public/art/** へ本採用配置すること
+public/art/** へ本採用配置すること（PO 確認前）
 manifest を ready 化すること
 ```
 
-## ステップ 1: 既存チェック
+---
 
-以下を実行する。
+## ステップ 1: 既存チェック
 
 ```bash
 npm run sprite:check -- public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png
 ```
 
-Eve が fail した場合は停止し、spec または check tool の問題として報告する。  
-Eve が pass した場合（warning は pass と同じ）、次へ進む。
+Eve が exit code 1（fail）の場合: 停止し、spec または check tool の問題として報告する。  
+Eve が exit code 0（pass）の場合: 次へ進む。
 
-**重要: visual audit の warning（`PARTSxN`）は heuristic ヒントであり、exit code 0 = pass である。warning が出ても次へ進む。**
+**visual audit の warning（`PARTSxN` など）は exit code 0 = pass である。blocker ではない。**
+
+---
 
 ## ステップ 2: sidekick:intake を実行する
 
@@ -69,51 +74,53 @@ Eve が pass した場合（warning は pass と同じ）、次へ進む。
 npm run sidekick:intake -- --slug ryo --portrait public/art/characters/defaults/ryo/portrait.png
 ```
 
-確認すること。
+このコマンドが自動で行うこと。
 
 ```txt
-characterId が chr_ryo であること
-assetBundleId が ryo-default-resident-v1 であること
-jobId が ryo-sprite-<timestamp> 形式であること
-.godsandbox/jobs/<jobId>.json が作成されていること
-assets/generated/residents/ryo/incoming/ が作成されていること
-assets/generated/residents/ryo/reference/ryo-portrait-reference-*.png が作成されていること
-Operator next steps が出力されていること
+- characterId (chr_ryo) / assetBundleId / jobId を生成する
+- .godsandbox/jobs/<jobId>.json を書き出す
+- assets/generated/residents/ryo/incoming/ を作成する
+- assets/generated/residents/ryo/reference/ryo-portrait-reference-*.png を作成する
+- .prompts/resident-sprites/ryo.md が存在しなければ _template.md から自動生成する
 ```
 
-intake が fail した場合は、エラーメッセージを報告して停止する。
-
-## ステップ 3: generation step — Codex は停止して報告する
-
-Codex は画像を生成できない。
-
-intake が成功した時点で、Codex は以下を報告して**停止する**。
+出力に含まれる以下の値を記録する。
 
 ```txt
-generation step unavailable
-
-sidekick:intake は正常終了した。
-次は、オペレーターが以下を行う必要がある。
-
-  1. Codex pet または承認済みの外部画像生成 UI を開く
-  2. intake が出力した portrait reference をアップロードする:
-     assets/generated/residents/ryo/reference/ryo-portrait-reference-*.png
-  3. intake が出力した prompt path の内容を貼り付ける:
-     .prompts/resident-sprites/ryo.md
-     （intake が自動生成済み。非技術者はこのファイルを作成・編集しない）
-  4. sprite sheet を生成して PNG をダウンロードする
-  5. 生成した PNG を以下に置く:
-     assets/generated/residents/ryo/incoming/
-  6. 連絡を受けたら npm run sprite:check -- ryo を実行する
+portrait ref path  （ステップ 3 で使用）
+prompt path        （ステップ 3 で使用）
+incoming path      （ステップ 3 で使用）
 ```
 
-portrait を incoming へコピーして sprite:check を実行してはならない。  
-代替の sprite sheet を作ってはならない。  
-このステップを「generation step unavailable」以外の理由で fail と記録してはならない。
+intake が exit code 1 の場合: エラーを報告して停止する。
 
-## ステップ 4: sprite:check（オペレーターが PNG を置いた後）
+---
 
-オペレーターから「PNG を置いた」という連絡を受けた後に実行する。
+## ステップ 3: Codex pet で sprite sheet を生成して incoming に保存する
+
+intake が出力した portrait ref と prompt を使い、Codex pet で sprite sheet を生成する。
+
+生成 PNG の仕様（`docs/operations/resident-sprite-spec.md` 参照）。
+
+```txt
+canvas: 576×1056 px
+frame:  96×96 px
+columns: 6 / rows: 11
+background: transparent alpha
+  （alpha が出力できない場合は #ff00ff chroma-key を使う）
+```
+
+生成した PNG を以下に保存する。
+
+```txt
+assets/generated/residents/ryo/incoming/
+```
+
+保存後、ファイルが存在することを確認する。
+
+---
+
+## ステップ 4: sprite:check を実行する
 
 ```bash
 npm run sprite:check -- ryo
@@ -122,59 +129,71 @@ npm run sprite:check -- ryo
 blocker 判定。
 
 ```txt
-以下は blocker:
-  - alpha check fail（exit code 1）
-  - validate fail（exit code 1）
-  - visual audit fail（exit code 1）
+blocker（exit code 1）:
+  - alpha check fail
+  - validate fail
+  - visual audit fail
 
-以下は blocker ではない:
-  - visual audit warning（exit code 0、PARTS / TOP / BOT / BOUND）
+blocker ではない（exit code 0）:
+  - visual audit warning（PARTS / TOP / BOT / BOUND）
   - "note: warnings are heuristic hints" の出力
 ```
 
-blocker が出た場合は、ready 化へ進まず失敗分類を報告する。
+blocker が出た場合: 次ステップへ進まず、失敗分類を報告する。
+
+---
+
+## ステップ 5: 箱庭アニメーション確認（sprite:check pass 後のみ）
+
+```txt
+idle / walk / emote 行が行順どおりに見えるか
+96×96 frame の切り出しが壊れていないか
+歩行時に頭・足・胴が欠けないか
+途中で線が出ないか
+Ryo らしさがあるか
+箱庭サイズ感が Eve に近いか
+```
+
+---
 
 ## 完了報告の形式
 
 ```md
 # Ryo resident sprite end-to-end proof result
 
-## 入力
+## 非技術者入力
 - display name: Ryo
-- portrait source:
-- prompt: .prompts/resident-sprites/ryo.md
-- spec: docs/operations/resident-sprite-spec.md
+- portrait: public/art/characters/defaults/ryo/portrait.png
 
 ## sidekick:intake
 - exit code:
 - characterId:
 - assetBundleId:
 - jobId:
-- job path:
 - portrait ref:
-- incoming:
-- prompt: （auto-generated / already existed）
+- prompt: （auto-generated / pre-existing）
 - prompt path:
-- Operator next steps 出力: yes / no
-
-## generation step
-- 実行者: Codex（実行不可）/ オペレーター（実行）
-- 状態: generation step unavailable / 完了
-- 使用 UI: （オペレーターが記入）
+- incoming:
 
 ## 既存確認
-- Eve sprite:check: pass / fail
-- Eve warning: PARTSxN（pass 扱い）
+- Eve sprite:check exit code:
+- Eve warning:
 
-## Ryo sprite:check（PNG 配置後）
+## Codex pet 生成
+- portrait ref 使用:
+- prompt 使用:
+- 生成 PNG 保存先:
+- ファイル確認: yes / no
+
+## sprite:check
 - exit code:
-- alpha:
-- validate:
-- visual audit:
+- alpha: pass / fail
+- validate: pass / fail
+- visual audit: pass / fail
 - warning codes:
 - blocker:
 
-## 箱庭アニメーション確認（sprite:check pass 後のみ）
+## 箱庭アニメーション確認
 - idle:
 - walk:
 - emote:
@@ -182,12 +201,11 @@ blocker が出た場合は、ready 化へ進まず失敗分類を報告する。
 - サイズ感:
 - Ryo らしさ:
 - 線・見切れ:
-- click 導線:
 
 ## 判定
-- proof result: pass / fail / generation step unavailable
+- proof result: pass / fail
 - PO visual review へ進めるか:
-- ready 化してよいか: no
+- ready 化してよいか: no（PO 確認前は常に no）
 - Suzu へ展開してよいか: yes / no / pending
 
 ## 失敗分類（失敗した場合）
@@ -198,19 +216,13 @@ blocker が出た場合は、ready 化へ進まず失敗分類を報告する。
 - E. Ryo 立ち絵の収まり問題
 - F. 箱庭アニメーション側の切り出し・表示問題
 - G. sidekick:intake の不具合
-- H. 手順理解ミス
-
-## 修正が必要な場合
-- sidekick:intake 修正:
-- prompt 修正:
-- spec 修正:
-- check tool 修正:
-- 次にやること:
+- H. Codex pet 生成の失敗
+- I. 手順理解ミス
 ```
 
-## PR 方針
+---
 
-このタスクで PR を作る場合、候補生成・検査・report に閉じる。
+## PR 方針
 
 PR に含めてよいもの。
 
@@ -233,8 +245,6 @@ manifest ready 化
 runtime test 更新
 ```
 
-本採用 ready 化は、PO visual OK 後の別 PR にする。
-
 ## 今回やらないこと
 
 ```txt
@@ -243,9 +253,6 @@ Ryo ready 化
 public/art への本採用配置
 manifest ready 化
 runtime test 更新
-API 接続
-画像生成 API の GodSandbox 本体への追加
-generated output commit
-assets/generated/** commit
-assets/residents/** commit
+GodSandbox アプリ本体への画像生成 API 追加
+assets/generated/** / assets/residents/** の commit
 ```
