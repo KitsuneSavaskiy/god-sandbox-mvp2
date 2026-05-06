@@ -1,0 +1,67 @@
+.sidekick-setup-surface {
+  padding: 1.5rem;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.sidekick-setup-surface__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidekick-setup-surface__lead {
+  color: var(--color-text-secondary, #666);
+}
+
+.sidekick-setup-surface__step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 6px;
+}
+
+.sidekick-setup-surface__step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.sidekick-setup-surface__command {
+  background: var(--color-surface-alt, #f5f5f5);
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.sidekick-setup-surface__notice {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  margin: 0;
+}
+
+.sidekick-setup-surface__notice--ok {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.sidekick-setup-surface__notice--warn {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.sidekick-setup-surface__connected,
+.sidekick-setup-surface__connect {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidekick-setup-surface__actions {
+  padding-top: 0.5rem;
+}

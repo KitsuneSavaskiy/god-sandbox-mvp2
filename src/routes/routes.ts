@@ -7,6 +7,7 @@ export type AppRouteId =
   | "passport-detail"
   | "handoff"
   | "character-editor"
+  | "sidekick-setup"
   | "not-found";
 
 export interface AppRoute {
@@ -45,6 +46,10 @@ export function parseRoute(pathname: string): AppRoute {
 
   if (pathname === "/handoff") {
     return { id: "handoff", path: "/handoff", label: "持ち出し" };
+  }
+
+  if (pathname === "/sidekick-setup") {
+    return { id: "sidekick-setup", path: "/sidekick-setup", label: "サイドキック設定" };
   }
 
   const passportMatch = pathname.match(/^\/passports\/([^/]+)$/);
