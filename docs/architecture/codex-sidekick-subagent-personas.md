@@ -484,5 +484,5 @@ npm run build
 ## One-line Codex resume instruction
 
 ```bash
-codex "Read docs/architecture/codex-sidekick-subagent-personas.md and docs/product/sprint9-planning.md, keep Sprint9 Phase 1 docs-first only, do not implement runner or App Server, and test until complete."
+codex "docs/architecture/codex-sidekick-subagent-personas.md と docs/product/sprint9-planning.md を読み、Sprint9 Phase 1 docs-first の範囲だけでCodex Sidekick subagent personas仕様を整えてください。runnerやApp Serverは実装せず、検証まで完了してください。"
 ```
