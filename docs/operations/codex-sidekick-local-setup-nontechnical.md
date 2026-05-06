@@ -318,5 +318,5 @@ App Server bridge、runner lifecycle、security specがmainへ入った後、必
 ## One-line Codex resume instruction
 
 ```bash
-codex "Read docs/operations/codex-sidekick-local-setup-nontechnical.md, refine the Codex Sidekick nontechnical setup flow exactly, keep it docs-first, do not implement App Server or runner, and test until complete."
+codex "docs/operations/codex-sidekick-local-setup-nontechnical.md を読み、Sprint9 Phase 1 docs-first の範囲だけでCodex Sidekickの非技術者向けsetup flowを整えてください。App Serverやrunnerは実装せず、検証まで完了してください。"
 ```
