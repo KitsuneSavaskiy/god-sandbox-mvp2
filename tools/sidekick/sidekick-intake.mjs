@@ -102,26 +102,32 @@ function assertPortrait(portraitPath, resolvedPath) {
   }
 }
 
-function ensurePrompt(slug, portraitRelPath) {
-  const promptPath = path.join(repoRoot, ".prompts", "resident-sprites", `${slug}.md`);
+function ensurePromptFromTemplate(templateName, outputName, slug, portraitRelPath) {
+  const promptPath = path.join(repoRoot, ".prompts", "resident-sprites", outputName);
   const promptRelPath = path.relative(repoRoot, promptPath);
 
   if (existsSync(promptPath)) return { generated: false, path: promptRelPath };
 
-  const templatePath = path.join(repoRoot, ".prompts", "resident-sprites", "_template.md");
+  const templatePath = path.join(repoRoot, ".prompts", "resident-sprites", templateName);
   if (!existsSync(templatePath)) {
-    throw new Error(`Prompt template not found: .prompts/resident-sprites/_template.md`);
+    throw new Error(`Prompt template not found: .prompts/resident-sprites/${templateName}`);
   }
 
   const raw = readFileSync(templatePath, "utf8");
   const separatorIndex = raw.indexOf("\n---\n");
-  if (separatorIndex === -1) throw new Error("Prompt template is missing the --- separator.");
-
-  const body = raw.slice(separatorIndex + 5);
+  const body = separatorIndex === -1 ? raw : raw.slice(separatorIndex + 5);
   const filled = body.replaceAll("[CHARACTER]", slug).replaceAll("[PORTRAIT_PATH]", portraitRelPath);
 
-  writeFileSync(promptPath, `# ${slug} resident sprite sheet prompt\n\n${filled}`);
+  writeFileSync(promptPath, filled.trim() + "\n");
   return { generated: true, path: promptRelPath };
+}
+
+function ensurePrompt(slug, portraitRelPath) {
+  return ensurePromptFromTemplate("_template.md", `${slug}.md`, slug, portraitRelPath);
+}
+
+function ensureExtendedPrompt(slug, portraitRelPath) {
+  return ensurePromptFromTemplate("_template-extended.md", `${slug}-extended.md`, slug, portraitRelPath);
 }
 
 function generateJobId(slug) {
@@ -198,6 +204,7 @@ function main() {
 
     const portraitRelPath = path.relative(repoRoot, portraitResolved);
     const prompt = ensurePrompt(slug, portraitRelPath);
+    const extendedPrompt = ensureExtendedPrompt(slug, portraitRelPath);
     const incomingRelDir = path.relative(repoRoot, incomingDir);
     const jobRelPath = path.relative(repoRoot, jobFilePath);
 
@@ -212,12 +219,17 @@ function main() {
     console.log(`  job:            ${jobRelPath}`);
     console.log(`  portrait ref:   ${refRelPath}`);
     console.log(`  incoming:       ${incomingRelDir}/`);
-    console.log(`  prompt:         ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
+    console.log(`  prompt (Sheet 1): ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
+    console.log(`  prompt (Sheet 2): ${extendedPrompt.path}${extendedPrompt.generated ? "  (auto-generated)" : ""}`);
 
-    console.log(`\nGeneration input for Codex pet:`);
+    console.log(`\nGeneration input for Codex pet — Sheet 1 (motion):`);
     console.log(`  portrait ref: ${refRelPath}`);
     console.log(`  prompt:       ${prompt.path}`);
-    console.log(`  save PNG to:  ${incomingRelDir}/`);
+    console.log(`  save PNG to:  ${incomingRelDir}/  (filename: resident-sprite-sheet.png)`);
+    console.log(`\nGeneration input for Codex pet — Sheet 2 (extended):`);
+    console.log(`  portrait ref: ${refRelPath}`);
+    console.log(`  prompt:       ${extendedPrompt.path}`);
+    console.log(`  save PNG to:  ${incomingRelDir}/  (filename: resident-sprite-sheet-extended.png)`);
     console.log(`\nValidation:`);
     console.log(`  npm run sprite:check -- ${slug}`);
     console.log(``);

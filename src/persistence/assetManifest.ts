@@ -13,17 +13,20 @@ export type SpriteSheetMotionName =
   | "emote-sad"
   | "emote-surprised";
 
+export type SpriteSheetKind = "motion" | "extended";
+
 export type SpriteSheetMotionSlot = {
   row: number;
   frames: number;
 };
 
 export type SpriteSheetMetadata = {
+  kind: SpriteSheetKind;
   frameWidth: number;
   frameHeight: number;
   columns: number;
   rows: number;
-  motions: Record<SpriteSheetMotionName, SpriteSheetMotionSlot>;
+  motions: Partial<Record<SpriteSheetMotionName, SpriteSheetMotionSlot>>;
 };
 
 export type AssetReadinessStatus = "ready" | "placeholder" | "rejected" | "missing";
@@ -42,6 +45,7 @@ export type AssetManifestEntry = {
     | "appearance-variant"
     | "icon"
     | "sprite-sheet"
+    | "sprite-sheet-extended"
     | "video-source";
   status?: AssetReadinessStatus;
   sourcePath?: string;

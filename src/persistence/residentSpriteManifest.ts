@@ -4,6 +4,7 @@ import type {
   AssetManifestEntry,
   AssetMissingReason,
   AssetReadinessStatus,
+  SpriteSheetKind,
   SpriteSheetMotionName,
   SpriteSheetMotionSlot,
 } from "./assetManifest.js";
@@ -24,9 +25,10 @@ export type ResidentSpriteManifestSpriteSheet = {
   frameSize: ResidentSpriteFrameSize;
   columns: number;
   rows: number;
-  motions: Record<SpriteSheetMotionName, SpriteSheetMotionSlot>;
+  motions: Partial<Record<SpriteSheetMotionName, SpriteSheetMotionSlot>>;
   fallbackAssetId?: AssetId;
   missingReason?: AssetMissingReason;
+  kind?: SpriteSheetKind;
 };
 
 export type ResidentSpriteManifestEntry = {
@@ -112,6 +114,7 @@ export function residentSpriteEntryToAssetManifestEntry(
         ? undefined
         : resolveResidentSpriteMissingReason(spriteSheet, status),
     spriteSheet: {
+      kind: spriteSheet.kind ?? "motion",
       frameWidth: spriteSheet.frameSize.width,
       frameHeight: spriteSheet.frameSize.height,
       columns: spriteSheet.columns,

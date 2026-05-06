@@ -1,12 +1,13 @@
-# [CHARACTER] resident motion sprite sheet prompt (Sheet 1)
+# [CHARACTER] extended sprite sheet prompt (Sheet 2)
 
 Replace [CHARACTER] with the character slug (e.g. ryo, suzu).
 Replace [PORTRAIT_PATH] with the portrait path (e.g. public/art/characters/defaults/ryo/portrait.png).
-Save the filled-in file as .prompts/resident-sprites/<characterId>.md before use.
+Save the filled-in file as .prompts/resident-sprites/<characterId>-extended.md before use.
 
 ---
 
-You are creating Sheet 1 (motion sprite sheet) for a GodSandbox resident character.
+You are creating Sheet 2 (extended sprite sheet) for a GodSandbox resident character.
+Sheet 2 provides 2.5D directional walks and emotional emotes not covered by Sheet 1.
 
 Workflow note:
 - This prompt is for an external subscription UI such as ChatGPT or Codex pet.
@@ -15,26 +16,23 @@ Workflow note:
 
 Generation source requirement:
 - Use your own image generation tool (hatch-pet or approved external UI) to generate the sprite sheet.
+- Use the same visual style as Sheet 1 for this character for consistency.
 - If generation is unavailable, stop and report `generation step unavailable`.
 - Do not create a local handmade, synthetic, placeholder, or validation-only sprite sheet as a substitute.
-- Do not treat a validation-only image as a character candidate.
 
 Reference:
 - Use `[PORTRAIT_PATH]` only as the identity reference.
-- Do not crop, resize, or paste the portrait into the sprite sheet.
-- Reinterpret [CHARACTER] as a small pixel-art resident who can walk and emote inside a 2.5D papercraft sandbox.
+- Use the Sheet 1 sprite appearance as the style target for motion consistency.
+- Do not crop, resize, or paste the portrait or Sheet 1 into Sheet 2.
 
 Character handling:
-- Preserve the recognizable hair, outfit colors, silhouette, and overall mood from the reference portrait.
-- Do not infer official lore, age, job, origin, or relationships from the image.
-- Do not add unrelated accessories.
+- Match the hair, outfit colors, silhouette, and overall mood from Sheet 1 exactly.
+- Do not add unrelated accessories or change the character design.
 
 Style:
-- cute small pixel art resident
-- chibi / SD game character
+- Same style as Sheet 1: cute small pixel art, chibi / SD game character
 - transparent background (or flat `#ff00ff` chroma-key if true alpha unavailable)
-- clean outline
-- consistent scale and baseline across all rows
+- clean outline, consistent scale and baseline
 - readable at 192×208 px
 
 Visual correctness:
@@ -42,35 +40,36 @@ Visual correctness:
 - Keep head, torso, and feet inside the same frame.
 - Do not let the body cross into a neighboring row or column.
 - Keep at least about 10px left/right margin and 8px top/bottom margin when possible.
-- If the character would exceed the frame, scale the character down instead of cropping.
+- Emote particles (sparkles, sweat drops, etc.) are allowed but must not look like detached body parts.
 - Do not include labels, frame numbers, guide lines, or any square background.
 
-Sprite sheet spec (Sheet 1 — motion-sheet):
+Sprite sheet spec (Sheet 2 — extended-sheet):
 - Downloaded PNG must go through: `assets/generated/residents/[CHARACTER]/incoming/`
-- Adopted output: `public/art/characters/defaults/[CHARACTER]/sprites/resident-sprite-sheet.png`
+- Adopted output: `public/art/characters/defaults/[CHARACTER]/sprites/resident-sprite-sheet-extended.png`
 - PNG with real alpha channel (or `#ff00ff` chroma-key background)
 - Canvas: 1536 × 1872 px
-- frame size: 192 × 208 px (non-square)
+- frame size: 192 × 208 px (non-square, same as Sheet 1)
 - columns: 8
-- rows: 9
+- rows: 9 (rows 0–7 are used; row 8 may be left empty)
 - each row is one motion, each column is one animation frame
 - no labels, numbers, UI frames, or background inside the image
 
-Motion rows (Sheet 1):
-1. `idle` — character at rest, subtle breathing or blinking loop
-2. `run-right` — running or walking toward the right
-3. `run-left` — running or walking toward the left (mirror of run-right)
-4. `waving` — friendly wave or greeting gesture
-5. `jumping` — hop or jump cycle
-6. `failed` — slumped, dejected, or sad pose
-7. `waiting` — idle waiting, looking around or tapping foot
-8. `running` — forward-facing run (toward viewer)
-9. `review` — looking forward attentively, slight forward lean
+Motion rows (Sheet 2):
+1. `walk-up` — walking away from viewer (back view, 2.5D up direction)
+2. `walk-down` — walking toward viewer (front view, 2.5D down direction)
+3. `walk-forward` — walking straight toward viewer (2.5D front-center, slight depth)
+4. `walk-back` — walking straight away from viewer (2.5D back-center, slight depth)
+5. `emote-happy` — joyful bounce or cheer, expressive happiness
+6. `emote-angry` — crossed arms or stomp, expressive frustration
+7. `emote-sad` — drooping shoulders or wiping tears, expressive sadness
+8. `emote-surprised` — jump or wide eyes, expressive surprise
+9. (spare row — leave transparent or duplicate row 7)
 
 Important:
 - This must be a real sprite sheet generated by your image generation tool.
 - Do not use a resized portrait as the sprite.
 - Keep every frame recognizable as [CHARACTER].
+- Maintain strict visual consistency with Sheet 1 (same art style, same character proportions).
 - Every frame must stand on its own without borrowing pixels from neighboring cells.
 - This prompt is for [CHARACTER]. For other characters use their own prompt file.
 - If generation is unavailable, do not create a substitute. Stop and report `generation step unavailable`.

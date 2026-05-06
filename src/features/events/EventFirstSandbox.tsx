@@ -70,6 +70,26 @@ export type ActiveResidentPreview = {
   statusSummary: string[];
 };
 
+const EXTENDED_SHEET_MOTIONS = new Set<ResidentMotionKey>([
+  "walk-up",
+  "walk-down",
+  "walk-forward",
+  "walk-back",
+  "emote-happy",
+  "emote-angry",
+  "emote-sad",
+  "emote-surprised",
+]);
+
+type ResidentSpriteMetadata = {
+  frameWidth: number;
+  frameHeight: number;
+  columns: number;
+  rows: number;
+  row: number;
+  frames: number;
+};
+
 type ResidentViewModel = ActiveResidentPreview & {
   emote: EmoteKind;
   positionClassName: string;
@@ -79,14 +99,8 @@ type ResidentViewModel = ActiveResidentPreview & {
   portraitPath: string | null;
   iconPath: string | null;
   spriteSheetPath: string | null;
-  spriteSheetMetadata: {
-    frameWidth: number;
-    frameHeight: number;
-    columns: number;
-    rows: number;
-    row: number;
-    frames: number;
-  } | null;
+  extendedSheetPath: string | null;
+  spriteSheetMetadata: ResidentSpriteMetadata | null;
 };
 
 type InterventionOutcome = {
@@ -333,6 +347,10 @@ export function EventFirstSandbox({
           assetBundle.spriteSheet.path
             ? assetBundle.spriteSheet.path
             : null;
+        const extendedSheetPath =
+          assetBundle?.extendedSheet?.ready && assetBundle.extendedSheet.path
+            ? assetBundle.extendedSheet.path
+            : null;
         const portraitPath =
           assetBundle?.portrait.ready && assetBundle.portrait.path
             ? assetBundle.portrait.path
@@ -346,8 +364,13 @@ export function EventFirstSandbox({
           isSupporting,
           latestOutcome,
         });
-        const spriteSheetMetadata = spriteSheetPath
-          ? resolveResidentSpriteSheetMetadata(assetBundle?.spriteSheet.metadata, motion)
+        const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
+          ? resolveResidentSpriteSheetMetadata(
+              assetBundle?.spriteSheet.metadata,
+              assetBundle?.extendedSheet?.metadata,
+              motion,
+              Boolean(extendedSheetPath),
+            )
           : null;
 
         return {
@@ -367,7 +390,7 @@ export function EventFirstSandbox({
             latestOutcome,
           }),
           motion,
-          visualMode: spriteSheetPath
+          visualMode: spriteSheetPath || extendedSheetPath
             ? "sprite"
             : portraitPath
               ? "portrait"
@@ -377,6 +400,7 @@ export function EventFirstSandbox({
           portraitPath,
           iconPath,
           spriteSheetPath,
+          extendedSheetPath,
           spriteSheetMetadata,
           statusSummary: [
             `活力 ${character.state.status.vitality}`,
@@ -1167,48 +1191,38 @@ function resolveResidentMotion(input: {
 }
 
 function resolveResidentSpriteSheetMetadata(
-  metadata: {
-    frameWidth: number;
-    frameHeight: number;
-    columns: number;
-    rows: number;
-    motions: object;
-  } | null | undefined,
+  motionMetadata: { frameWidth: number; frameHeight: number; columns: number; rows: number; motions: object } | null | undefined,
+  extendedMetadata: { frameWidth: number; frameHeight: number; columns: number; rows: number; motions: object } | null | undefined,
   motion: ResidentMotionKey,
+  extendedSheetAvailable: boolean,
 ): ResidentViewModel["spriteSheetMetadata"] {
-  if (!metadata) {
-    return null;
-  }
+  const useExtended = extendedSheetAvailable && EXTENDED_SHEET_MOTIONS.has(motion);
+  const active = useExtended ? extendedMetadata : motionMetadata;
+  if (!active) return null;
 
-  const motionSlots = metadata.motions as Record<
-    string,
-    { row: number; frames: number } | undefined
-  >;
-  const motionSlot =
-    motionSlots[motion] ??
-    motionSlots[motion.startsWith("walk") ? "walk" : "idle"] ??
-    motionSlots.idle;
-
+  const slots = active.motions as Record<string, { row: number; frames: number } | undefined>;
+  const slot = slots[motion] ?? slots.idle;
   return {
-    frameWidth: metadata.frameWidth,
-    frameHeight: metadata.frameHeight,
-    columns: metadata.columns,
-    rows: metadata.rows,
-    row: motionSlot?.row ?? 0,
-    frames: motionSlot?.frames ?? metadata.columns,
+    frameWidth: active.frameWidth,
+    frameHeight: active.frameHeight,
+    columns: active.columns,
+    rows: active.rows,
+    row: slot?.row ?? 0,
+    frames: slot?.frames ?? active.columns,
   };
 }
 
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
-  if (!resident.spriteSheetPath) {
-    return {};
-  }
+  const useExtended = EXTENDED_SHEET_MOTIONS.has(resident.motion) && resident.extendedSheetPath !== null;
+  const activeSheetPath = useExtended ? resident.extendedSheetPath : resident.spriteSheetPath;
+  if (!activeSheetPath) return {};
 
   const metadata = resident.spriteSheetMetadata;
 
   return {
-    "--resident-sprite-sheet": `url("${resident.spriteSheetPath}")`,
-    "--resident-frame-size": metadata ? `${metadata.frameWidth}px` : undefined,
+    "--resident-sprite-sheet": `url("${activeSheetPath}")`,
+    "--resident-frame-width": metadata ? `${metadata.frameWidth}px` : undefined,
+    "--resident-frame-height": metadata ? `${metadata.frameHeight}px` : undefined,
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
       : undefined,

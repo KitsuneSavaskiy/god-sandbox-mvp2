@@ -4,12 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const expected = {
-  frameWidth: 96,
-  frameHeight: 96,
-  columns: 6,
-  rows: 11,
-  width: 576,
-  height: 1056,
+  frameWidth: 192,
+  frameHeight: 208,
+  columns: 8,
+  rows: 9,
+  width: 1536,
+  height: 1872,
 };
 
 const pngSignature = Buffer.from([
@@ -176,7 +176,7 @@ function validateFile(filePath) {
       lines: [
         `NG: ${relative}`,
         ...failures.map((failure) => `  ${failure}`),
-        `  期待値: 96x96 frame、6列、11行、画像全体 ${expected.width}x${expected.height}px。`,
+        `  期待値: 192x208 frame、8列、9行、画像全体 ${expected.width}x${expected.height}px。`,
         `  この画像は採用済みにはせず、incoming または tmp で直してください。`,
       ],
     };
