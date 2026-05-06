@@ -6,7 +6,7 @@ Workflow note:
 - This prompt is for an external subscription UI such as ChatGPT.
 - GodSandbox must not call an image generation API from inside the app.
 - Do not include API keys, account details, personal paths, or billing details in the output.
-- Follow the visual correctness rules from `docs/operations/resident-sprite-visual-correctness-task.md`.
+- Follow the visual correctness rules from `docs/operations/resident-sprite-spec.md`.
 
 Reference:
 - Use `public/art/characters/defaults/garan/portrait.png` only as the identity reference.
