@@ -133,7 +133,7 @@ narrative surface chainとは別軸で進める。
 | PR | merge前に見る観点 | blocker例 |
 | --- | --- | --- |
 | `#161` | narrative schema / workspace / GM persona と #152 / #154 / #157 / #158 の接続mapとして妥当。`ready` / `adopted` 差分がfollow-up扱いでよい。 | mapが古いPR状態を正本のように断定する。generated narrativeをadopted前に表示可とする。 |
-| `#152` | `#146` / `#149` / `#150` と用語が合っている。`candidate` / `needs-review` / `rejected` / `adopted` / `fallback` がUI surfaceで誤用されていない。 | generated narrativeをadopted前に公式表示する。domain event正本を上書きする。 |
+| `#152` | `#146` / `#149` / `#150` と用語が合っている。`candidate` / `needs-review` / `rejected` / `adopted` と runtime / display fallback がUI surfaceで誤用されていない。 | generated narrativeをadopted前に公式表示する。domain event正本を上書きする。 |
 | `#154` | event UI acceptance が `focusedEvent` 中心を維持している。watch / help / trial の扱いが既存仕様と矛盾しない。 | `focusedCharacter` 中心へ戻す。介入導線を複数箇所へ戻す。 |
 | `#157` | 390px / 360px、accessibility、fallback時の表示が確認できる。Codex生成待ちでgameplayを止めない。 | pending / needs-review だけでイベント進行が止まる。内部状態名をそのままユーザーへ見せる。 |
 | `#158` | time / season narrative hook が `#144` / `#140` の表示名と矛盾しない。season / phase は演出補助であり、domain効果に踏み込まない。 | 季節イベント生成やdomain season効果をこのPRで定義する。 |
