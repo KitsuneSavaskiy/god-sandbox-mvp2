@@ -11,7 +11,8 @@
     "app:manual-sweep": "vite --host 127.0.0.1 --port 5173 --open /sandbox?mode=manual-sweep",
     "sprint9:dispatch": "node tools/sprint9-dispatch/dispatch.mjs",
     "sprite:check": "node tools/asset-pipeline/check-sprite-suite.mjs",
-    "sidekick:intake": "node tools/sidekick/sidekick-intake.mjs"
+    "sidekick:intake": "node tools/sidekick/sidekick-intake.mjs",
+    "sidekick:watch": "node tools/sidekick/job-watcher.mjs"
   },
   "dependencies": {
     "react": "latest",

@@ -20,6 +20,11 @@ import {
   createCharacterFromDraft,
   type CharacterDraft,
 } from "../features/character-creator/characterDraft";
+import { SidekickSetupSurface } from "../features/sidekick/SidekickSetupSurface";
+import {
+  writeSidekickJobRequest,
+  type SidekickRepoRootHandle,
+} from "../features/sidekick/sidekickJobWriter";
 import { LINE3_CHARACTER_TEMPLATE } from "../features/character-creator/characterTemplate";
 import { EventFirstSandbox, type ActiveResidentPreview } from "../features/events/EventFirstSandbox.js";
 import { ExternalHandoffSurface } from "../features/external-handoff/ExternalHandoffSurface";
@@ -108,6 +113,7 @@ export function AppShell() {
   const [newcomerTutorialCompleted, setNewcomerTutorialCompleted] = useState(
     () => readTutorialState().newcomerCompleted,
   );
+  const [sidekickDirHandle, setSidekickDirHandle] = useState<SidekickRepoRootHandle | null>(null);
 
   const manualSweepQuery = useMemo(
     () => (manualSweep.enabled ? "?mode=manual-sweep" : ""),
@@ -222,6 +228,25 @@ export function AppShell() {
     }));
   }
 
+  async function handleSidekickConnect() {
+    const picker = (
+      window as unknown as { showDirectoryPicker?: () => Promise<SidekickRepoRootHandle> }
+    ).showDirectoryPicker;
+    if (!picker) return;
+    try {
+      const handle = await picker();
+      setSidekickDirHandle(handle);
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        console.warn("[sidekick] connect failed:", e);
+      }
+    }
+  }
+
+  function handleSidekickDisconnect() {
+    setSidekickDirHandle(null);
+  }
+
   function acknowledgeNewcomerTutorial() {
     const existing = readTutorialState();
     const next: TutorialState = {
@@ -238,7 +263,7 @@ export function AppShell() {
     }));
   }
 
-  function saveCharacterDraft(draft: CharacterDraft) {
+  function saveCharacterDraft(draft: CharacterDraft, portraitFile?: File) {
     const now = new Date().toISOString();
 
     setRuntimeState((current) => {
@@ -264,6 +289,18 @@ export function AppShell() {
         session: addCharacterToRoster(current.session, character.id),
       });
     });
+
+    if (sidekickDirHandle) {
+      writeSidekickJobRequest(sidekickDirHandle, {
+        displayName: draft.displayName,
+        personality: draft.personalityNote,
+        tone: draft.speechStyleId,
+        age: draft.age,
+        portraitFile,
+      }).catch((error: unknown) => {
+        console.warn("[sidekick] job request write failed:", error);
+      });
+    }
 
     navigate("/roster");
   }
@@ -366,6 +403,8 @@ export function AppShell() {
             newcomerTutorialCompleted={newcomerTutorialCompleted}
             manualSweepEnabled={manualSweep.enabled}
             manualSweepRuntimeDirectory={manualSweep.runtimeDirectory}
+            sidekickIsConnected={sidekickDirHandle !== null}
+            sidekickFolderName={sidekickDirHandle?.name}
             onRuntimeStateChange={setRuntimeState}
             onFocusedEventIdChange={handleFocusedEventIdChange}
             onStoryEntriesChange={handleStoryEntriesChange}
@@ -373,6 +412,8 @@ export function AppShell() {
             onOpenCharacterDetail={openCharacterDetail}
             onTutorialStateChange={handleTutorialStateChange}
             onAcknowledgeNewcomerTutorial={acknowledgeNewcomerTutorial}
+            onSidekickConnect={handleSidekickConnect}
+            onSidekickDisconnect={handleSidekickDisconnect}
             onCancelEditor={() => navigate("/roster")}
             onEdit={(characterId) => navigate(`/character-editor/${encodeURIComponent(characterId)}`)}
             onIssuePassport={issuePassport}
@@ -449,6 +490,8 @@ type PrimaryRouteSurfaceProps = {
   newcomerTutorialCompleted: boolean;
   manualSweepEnabled: boolean;
   manualSweepRuntimeDirectory: string;
+  sidekickIsConnected: boolean;
+  sidekickFolderName: string | undefined;
   onRuntimeStateChange: (state: RuntimeWorldState) => void;
   onFocusedEventIdChange: (focusedEventId: string) => void;
   onStoryEntriesChange: (entries: StoryLogEntry[]) => void;
@@ -456,13 +499,15 @@ type PrimaryRouteSurfaceProps = {
   onOpenCharacterDetail: (characterId: CharacterId) => void;
   onTutorialStateChange: (tutorialStateId: string | null) => void;
   onAcknowledgeNewcomerTutorial: () => void;
+  onSidekickConnect: () => void;
+  onSidekickDisconnect: () => void;
   onCancelEditor: () => void;
   onEdit: (characterId: CharacterId) => void;
   onIssuePassport: (snapshotId: string) => void;
   onIssueSnapshot: (input: { characterId: CharacterId; memo?: string; tags: string[] }) => void;
   onNavigate: (path: string) => void;
   onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
-  onSaveCharacter: (draft: CharacterDraft) => void;
+  onSaveCharacter: (draft: CharacterDraft, portraitFile?: File) => void;
 };
 
 function PrimaryRouteSurface({
@@ -472,6 +517,8 @@ function PrimaryRouteSurface({
   newcomerTutorialCompleted,
   manualSweepEnabled,
   manualSweepRuntimeDirectory,
+  sidekickIsConnected,
+  sidekickFolderName,
   onRuntimeStateChange,
   onFocusedEventIdChange,
   onStoryEntriesChange,
@@ -479,6 +526,8 @@ function PrimaryRouteSurface({
   onOpenCharacterDetail,
   onTutorialStateChange,
   onAcknowledgeNewcomerTutorial,
+  onSidekickConnect,
+  onSidekickDisconnect,
   onCancelEditor,
   onEdit,
   onIssuePassport,
@@ -552,6 +601,19 @@ function PrimaryRouteSurface({
         <SnapshotSurface state={runtimeState} onIssueSnapshot={onIssueSnapshot} />
         <PassportSurface state={runtimeState} onIssuePassport={onIssuePassport} />
       </div>
+    );
+  }
+
+  if (route.id === "sidekick-setup") {
+    return (
+      <SidekickSetupSurface
+        isConnected={sidekickIsConnected}
+        connectedFolderName={sidekickFolderName}
+        supportsFileSystemAccess={typeof window !== "undefined" && "showDirectoryPicker" in window}
+        onConnect={onSidekickConnect}
+        onDisconnect={onSidekickDisconnect}
+        onReturnToSandbox={() => onNavigate("/sandbox")}
+      />
     );
   }
 

@@ -16,7 +16,7 @@ type CharacterEditorProps = {
   character?: Character;
   mode: CharacterEditorMode;
   onCancel: () => void;
-  onSave: (draft: CharacterDraft) => void;
+  onSave: (draft: CharacterDraft, portraitFile?: File) => void;
 };
 
 type DirectoryPicker = () => Promise<FileSystemDirectoryHandleLike>;
@@ -107,7 +107,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
       return;
     }
 
-    onSave(draft);
+    onSave(draft, selectedImageFile ?? undefined);
   }
 
   function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
