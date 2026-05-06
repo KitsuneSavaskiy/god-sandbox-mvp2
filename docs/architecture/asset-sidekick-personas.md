@@ -1,8 +1,10 @@
 # Asset Sidekick Personas
 
-Status: Sprint8 docs-first specification
+Status: Sprint8 docs-first specification, finalized against the parallel lane and batch review specs
 
 PBI: `PBI-UX-ASSET-SIDEKICK-PERSONA-SPEC-001`
+
+Finalize PBI: `PBI-UX-ASSET-SIDEKICK-PERSONA-SPEC-FINALIZE-001`
 
 Owner: Line 3 / Character Lifecycle / Roster / Passport
 
@@ -34,13 +36,15 @@ Asset Sidekick は、最大4名を1 batch として扱い、resident sprite shee
 この仕様は次を正本として扱う。
 
 - Line 3 の責務: `docs/architecture/line-responsibilities.md`
+- parallel lane / item status / folder boundary: `docs/operations/asset-sidekick-parallel-lanes.md`
+- batch visual review / safe fallback: `docs/architecture/asset-sidekick-batch-review-spec.md`
 - asset bundle と fallback: `docs/architecture/character-detail-asset-spec.md`
 - generated content status copy: `docs/architecture/generated-content-status-copy-spec.md`
 - resident sprite pipeline: `docs/operations/resident-sprite-pipeline.md`
 - asset pipeline guardrail: `.agents/skills/godsandbox-scrum-orchestrator/references/asset-pipeline-guardrails.md`
 - Sprint8 guardrail: `.agents/skills/godsandbox-scrum-orchestrator/references/sprint8-guardrails.md`
 
-Line 1 の `docs/operations/asset-sidekick-parallel-lanes.md` が追加された後は、batch、lane、item status、folder boundary の詳細はそちらを優先参照する。
+この文書は persona と責務分離を定義する。batch、lane、item status、folder boundary の詳細は `docs/operations/asset-sidekick-parallel-lanes.md` を優先する。review 順、warning 判断、PO batch report は `docs/architecture/asset-sidekick-batch-review-spec.md` を優先する。
 
 ## Required rules
 
@@ -93,6 +97,7 @@ Asset Sidekick のサブエージェント persona は次を基本にする。
 - item ごとの status を整理する。
 - PO確認が必要な item をまとめる。
 - `characterId` と `assetBundleId` の対応を確認する。
+- `ready-promotion-candidate` と `ready-promoted` を混同しない。
 
 ### Must not
 
@@ -276,20 +281,39 @@ POが見るべき点を短くまとめる。
 
 ### Output template
 
-```md
-## PO Asset Review Summary
+PO Review Summarizer の出力は `docs/architecture/asset-sidekick-batch-review-spec.md` の `PO Batch Asset Review` を正本形式にする。
 
-- character:
+```md
+## PO Batch Asset Review
+
+- batchId:
+- characters:
+- sprite results:
+- expression results:
+- icon results:
+- warnings:
+- mobile:
+- sandbox:
+- decisions:
+  - approve
+  - approve except item
+  - regenerate item
+  - fallback item
+```
+
+必要な場合だけ、上記 report の中に character 単位の短い内訳を入れる。
+
+```md
+### Character item summary
+
+- displayName:
 - characterId:
 - assetBundleId:
 - sprite:
 - expressions:
 - icon:
 - warnings:
-- recommendation:
-  - approve
-  - regenerate
-  - fallback
+- recommended item decision:
 ```
 
 ### Must not
@@ -297,6 +321,7 @@ POが見るべき点を短くまとめる。
 - PO visual OK を代行しない。
 - `approve` 推奨を ready promotion と同義にしない。
 - 不確かな候補を「完成」と書かない。
+- #138 の batch review report と別形式の採用判断を作らない。
 
 ## Asset Persona Sheet template
 
@@ -359,6 +384,23 @@ lanes:
 - derived-icon: max 4 item, depends on resident-sprite-sheet
 ```
 
+## Alignment with parallel lane and batch review specs
+
+`docs/operations/asset-sidekick-parallel-lanes.md` との整合:
+
+- lane 名は `resident-sprite-sheet`、`portrait-expressions`、`derived-icon` にそろえる。
+- 各 lane は最大4 item とし、全体の論理上限は `3 lane x 4 item = 最大12 item` とする。
+- `derived-icon` は sprite sheet 候補と正面 frame の選定に依存する。
+- `characterId` は runtime / domain / roster / activeSlots 用、`assetBundleId` は asset / prompt / folder / asset id prefix 用として分ける。
+
+`docs/architecture/asset-sidekick-batch-review-spec.md` との整合:
+
+- PO 向け report は `PO Batch Asset Review` 形式を使う。
+- 1 item が不合格でも batch 全体を止めない。
+- 不合格 item は item 単位で `regenerate item` または `fallback item` にする。
+- icon は sprite sheet 正面 frame から派生し、別AI生成しない。
+- PO visual OK なしで ready 扱いにしない。
+
 ## Ready / Done conditions
 
 - asset担当サブエージェントpersonaが定義されている。
@@ -366,6 +408,8 @@ lanes:
 - iconはsprite正面frameから派生する方針が明記されている。
 - 4名batchでキャラごとの見た目が混ざらないようになっている。
 - `characterId` / `assetBundleId` の分離が明記されている。
+- `docs/operations/asset-sidekick-parallel-lanes.md` の3 lane / 最大12 item / icon依存と矛盾していない。
+- `docs/architecture/asset-sidekick-batch-review-spec.md` の PO batch review / safe fallback と矛盾していない。
 - UI実装やasset生成に踏み込んでいない。
 
 ## Testing requirements
