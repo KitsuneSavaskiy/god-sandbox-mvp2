@@ -22,6 +22,14 @@ const CHARACTER_ID_PATTERN = /^chr_[a-z0-9_-]{1,60}$/;
 
 type SupportedJobType = (typeof SUPPORTED_JOB_TYPES)[number];
 
+type CharacterProfile = {
+  displayName: string;
+  personality: string;
+  tone: string;
+  age: number;
+  portraitRef: string;
+};
+
 type SidekickJobBase = {
   jobVersion: typeof SIDEKICK_JOB_VERSION;
   jobId: string;
@@ -30,6 +38,7 @@ type SidekickJobBase = {
   characterId: string;
   assetBundleId: string;
   worldDirectoryName: string;
+  characterProfile: CharacterProfile;
   requestedOutputs: Record<string, unknown>;
 };
 
@@ -94,6 +103,7 @@ export function validateSidekickJob(input: unknown): SidekickJobValidationResult
   validateRequiredString(input, "assetBundleId", issues, isAssetBundleId);
   validateCharacterAssetBoundary(input, issues);
   validateRequiredString(input, "worldDirectoryName", issues, isWorldDirectoryName);
+  validateCharacterProfile(input, issues);
   validateRequestedOutputs(input, issues);
 
   if (issues.length > 0) {
@@ -183,6 +193,34 @@ function validateCharacterAssetBoundary(
       path: "assetBundleId",
       message: "assetBundleId must be an asset key, not a character id.",
     });
+  }
+}
+
+function validateCharacterProfile(input: JsonRecord, issues: SidekickJobValidationIssue[]): void {
+  const profile = input.characterProfile;
+  if (!isPlainRecord(profile)) {
+    issues.push({
+      code: "missing-field",
+      path: "characterProfile",
+      message: "characterProfile is required.",
+    });
+    return;
+  }
+
+  if (typeof profile.displayName !== "string" || profile.displayName.trim().length === 0) {
+    issues.push({ code: "missing-field", path: "characterProfile.displayName", message: "displayName is required." });
+  }
+  if (typeof profile.personality !== "string" || profile.personality.trim().length === 0) {
+    issues.push({ code: "missing-field", path: "characterProfile.personality", message: "personality is required." });
+  }
+  if (typeof profile.tone !== "string" || profile.tone.trim().length === 0) {
+    issues.push({ code: "missing-field", path: "characterProfile.tone", message: "tone is required." });
+  }
+  if (typeof profile.age !== "number" || !Number.isInteger(profile.age) || profile.age < 0) {
+    issues.push({ code: "invalid-field", path: "characterProfile.age", message: "age must be a non-negative integer." });
+  }
+  if (typeof profile.portraitRef !== "string" || profile.portraitRef.trim().length === 0) {
+    issues.push({ code: "missing-field", path: "characterProfile.portraitRef", message: "portraitRef is required." });
   }
 }
 

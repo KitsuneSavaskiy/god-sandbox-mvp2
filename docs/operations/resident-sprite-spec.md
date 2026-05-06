@@ -82,32 +82,37 @@ Not allowed:
 
 ### Non-technical user flow
 
-The non-technical user provides only two inputs:
+The non-technical user provides only five inputs via the game's character creation screen:
 
 ```txt
-character name (display name)
-portrait image (one PNG)
+キャラ名（display name）
+性格（personality）
+口調（tone）
+年齢（age）
+１枚絵（portrait PNG）
 ```
 
 The user is not expected to know or provide any of the following:
 
 ```txt
-characterId / assetBundleId / jobId
+characterId / assetBundleId / jobId / slug
 prompt file or prompt text
 incoming folder path
 sprite:check command
 Codex pet operation
-image generation UI operation
+any file system operation
 ```
 
-Everything else is handled by the Codex agent:
+Everything else is handled autonomously by the Codex sidekick (a separate process from the game app):
 
-1. `npm run sidekick:intake -- --slug <slug> --portrait <path>` auto-generates the job, sets up folders, and generates the prompt file from `_template.md` if it does not already exist.
-2. The Codex agent uses Codex pet with the auto-generated prompt and portrait reference to generate the sprite sheet.
-3. The Codex agent saves the resulting PNG to `assets/generated/residents/<slug>/incoming/`.
-4. The Codex agent runs `npm run sprite:check -- <slug>` to validate the candidate.
+1. The game writes a job file to `.godsandbox/jobs/` when the user submits the character creation screen.
+2. The automation layer (configured once via game tutorial) detects the new job and triggers the Codex sidekick.
+3. `npm run sidekick:intake` auto-generates characterId, assetBundleId, jobId, sets up folders, copies the portrait reference, and generates the prompt file from `_template.md` if absent.
+4. The Codex sidekick uses Codex pet with the auto-generated prompt and portrait reference to generate the sprite sheet.
+5. The Codex sidekick saves the resulting PNG to `assets/generated/residents/<slug>/incoming/`.
+6. The Codex sidekick runs `npm run sprite:check -- <slug>` to validate the candidate.
 
-The non-technical user never opens, creates, edits, or operates anything beyond providing the slug and portrait.
+The non-technical user never operates Codex, opens any file, or interacts with any command line.
 
 ### Generation rules
 
