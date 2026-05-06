@@ -40,10 +40,11 @@ What this tool does:
   3. Writes job JSON to .godsandbox/jobs/<jobId>.json
   4. Creates assets/generated/residents/<slug>/incoming/ folder
   5. Copies portrait to a gitignored reference location
-  6. Prints prompt path and next steps for the operator
+  6. Auto-generates .prompts/resident-sprites/<slug>.md from _template.md if it does not exist
+  7. Prints prompt path and next steps for the operator
 
 The non-technical user provides only: character name (slug) + portrait PNG.
-The operator uses the generated prompt with an external image generation UI.
+The operator uses the auto-generated prompt with an external image generation UI.
 `);
 }
 
@@ -94,12 +95,34 @@ function assertPortrait(portraitPath, resolvedPath) {
   }
 }
 
-function assertPromptExists(slug) {
+function ensurePrompt(slug, portraitRelPath) {
   const promptPath = path.join(repoRoot, ".prompts", "resident-sprites", `${slug}.md`);
-  if (!existsSync(promptPath)) {
-    return { exists: false, path: path.relative(repoRoot, promptPath) };
+  const promptRelPath = path.relative(repoRoot, promptPath);
+
+  if (existsSync(promptPath)) {
+    return { generated: false, path: promptRelPath };
   }
-  return { exists: true, path: path.relative(repoRoot, promptPath) };
+
+  const templatePath = path.join(repoRoot, ".prompts", "resident-sprites", "_template.md");
+  if (!existsSync(templatePath)) {
+    throw new Error(`Prompt template not found: .prompts/resident-sprites/_template.md`);
+  }
+
+  const raw = readFileSync(templatePath, "utf8");
+  const separatorIndex = raw.indexOf("\n---\n");
+  if (separatorIndex === -1) {
+    throw new Error("Prompt template is missing the --- separator.");
+  }
+  const body = raw.slice(separatorIndex + 5); // skip "\n---\n"
+
+  const filled = body
+    .replaceAll("[CHARACTER]", slug)
+    .replaceAll("[PORTRAIT_PATH]", portraitRelPath);
+
+  const header = `# ${slug} resident sprite sheet prompt\n\n`;
+  writeFileSync(promptPath, header + filled);
+
+  return { generated: true, path: promptRelPath };
 }
 
 function generateJobId(slug) {
@@ -160,7 +183,8 @@ function main() {
     const refFilePath = path.join(refDir, refFileName);
     copyFileSync(portraitResolved, refFilePath);
 
-    const { exists: promptExists, path: promptRelPath } = assertPromptExists(slug);
+    const portraitRelPath = path.relative(repoRoot, portraitResolved);
+    const prompt = ensurePrompt(slug, portraitRelPath);
     const incomingRelDir = path.relative(repoRoot, incomingDir);
     const jobRelPath = path.relative(repoRoot, jobFilePath);
     const refRelPath = path.relative(repoRoot, refFilePath);
@@ -172,23 +196,14 @@ function main() {
     console.log(`  job:            ${jobRelPath}`);
     console.log(`  portrait ref:   ${refRelPath}`);
     console.log(`  incoming:       ${incomingRelDir}/`);
-
-    if (!promptExists) {
-      console.log(`\nWARNING: Prompt file not found: ${promptRelPath}`);
-      console.log(`  Create it from the template: .prompts/resident-sprites/_template.md`);
-      console.log(`  Then run intake again or proceed manually.`);
-    }
+    console.log(`  prompt:         ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
 
     console.log(`\nOperator next steps:`);
-    if (promptExists) {
-      console.log(`  1. Open ${promptRelPath} in a text editor.`);
-    } else {
-      console.log(`  1. Create ${promptRelPath} from .prompts/resident-sprites/_template.md`);
-    }
-    console.log(`  2. Open Codex pet or an approved external image generation UI.`);
-    console.log(`  3. Upload the portrait reference: ${refRelPath}`);
-    console.log(`  4. Paste the prompt and generate the sprite sheet.`);
-    console.log(`  5. Download the resulting PNG and place it in: ${incomingRelDir}/`);
+    console.log(`  1. Open Codex pet or an approved external image generation UI.`);
+    console.log(`  2. Upload the portrait reference: ${refRelPath}`);
+    console.log(`  3. Paste the contents of ${prompt.path} as the prompt.`);
+    console.log(`  4. Generate the sprite sheet and download the PNG.`);
+    console.log(`  5. Place the PNG in: ${incomingRelDir}/`);
     console.log(`  6. Run: npm run sprite:check -- ${slug}`);
     console.log(``);
   } catch (error) {
