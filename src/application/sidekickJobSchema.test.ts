@@ -157,6 +157,29 @@ function testSecretLookingValuesAreRejectedAndRedacted(): void {
   }
 }
 
+function testGithubOauthTokenLikeValuesAreRejectedAndRedacted(): void {
+  for (const prefix of ["gho", "ghu", "ghs", "ghr"]) {
+    const tokenValue = [prefix, "thisShouldNotAppearInValidationMessage123456"].join("_");
+    const result = validate({
+      ...baseJob,
+      jobType: "character-narrative-pack",
+      requestedOutputs: {
+        voiceProfile: true,
+      },
+      input: {
+        sidekickRef: tokenValue,
+      },
+    });
+
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      const messages = formatSidekickJobValidationIssues(result.issues).join("\n");
+      assert.ok(result.issues.some((issue) => issue.code === "unsafe-content"));
+      assert.equal(messages.includes(tokenValue), false);
+    }
+  }
+}
+
 function testPersonalPathValuesAreRejectedAndRedacted(): void {
   const personalPath = ["C:", "Users", "sample", "Desktop", "source.png"].join("\\");
   const result = validate({
@@ -195,6 +218,48 @@ function testInvalidWorldDirectoryNameIsRejected(): void {
   }
 }
 
+function testRequestedOutputFalseValueIsRejected(): void {
+  const result = validate({
+    ...baseJob,
+    jobType: "character-asset-bundle",
+    requestedOutputs: {
+      residentSpriteSheet: false,
+    },
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.ok(
+      result.issues.some(
+        (issue) =>
+          issue.code === "invalid-requested-output" &&
+          issue.path === "requestedOutputs.residentSpriteSheet",
+      ),
+    );
+  }
+}
+
+function testRequestedOutputStringValueIsRejected(): void {
+  const result = validate({
+    ...baseJob,
+    jobType: "character-asset-bundle",
+    requestedOutputs: {
+      residentSpriteSheet: "yes",
+    },
+  });
+
+  assert.equal(result.ok, false);
+  if (!result.ok) {
+    assert.ok(
+      result.issues.some(
+        (issue) =>
+          issue.code === "invalid-requested-output" &&
+          issue.path === "requestedOutputs.residentSpriteSheet",
+      ),
+    );
+  }
+}
+
 function testRequestedOutputsAreCheckedByJobType(): void {
   const result = validate({
     ...baseJob,
@@ -217,8 +282,11 @@ const tests: Array<[string, () => void]> = [
   ["unknown job type is rejected", testUnknownJobTypeIsRejected],
   ["characterId and assetBundleId confusion is rejected", testCharacterIdAndAssetBundleIdConfusionIsRejected],
   ["secret-looking values are rejected and redacted", testSecretLookingValuesAreRejectedAndRedacted],
+  ["GitHub OAuth token-like values are rejected and redacted", testGithubOauthTokenLikeValuesAreRejectedAndRedacted],
   ["personal path values are rejected and redacted", testPersonalPathValuesAreRejectedAndRedacted],
   ["invalid worldDirectoryName is rejected", testInvalidWorldDirectoryNameIsRejected],
+  ["requested output false value is rejected", testRequestedOutputFalseValueIsRejected],
+  ["requested output string value is rejected", testRequestedOutputStringValueIsRejected],
   ["requested outputs are checked by job type", testRequestedOutputsAreCheckedByJobType],
 ];
 

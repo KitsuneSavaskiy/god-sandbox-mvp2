@@ -216,6 +216,7 @@ function validateRequestedOutputs(input: JsonRecord, issues: SidekickJobValidati
       ? ASSET_REQUESTED_OUTPUTS
       : NARRATIVE_REQUESTED_OUTPUTS;
   const allowedOutputSet = new Set<string>(allowedOutputs);
+  let hasEnabledOutput = false;
 
   for (const outputName of outputNames) {
     if (!allowedOutputSet.has(outputName)) {
@@ -224,7 +225,27 @@ function validateRequestedOutputs(input: JsonRecord, issues: SidekickJobValidati
         path: `requestedOutputs.${outputName}`,
         message: "requested output is not allowed for this job type.",
       });
+      continue;
     }
+
+    if (requestedOutputs[outputName] !== true) {
+      issues.push({
+        code: "invalid-requested-output",
+        path: `requestedOutputs.${outputName}`,
+        message: "requested output value must be true.",
+      });
+      continue;
+    }
+
+    hasEnabledOutput = true;
+  }
+
+  if (!hasEnabledOutput) {
+    issues.push({
+      code: "invalid-requested-output",
+      path: "requestedOutputs",
+      message: "requestedOutputs must include at least one enabled output.",
+    });
   }
 }
 
@@ -313,6 +334,7 @@ function looksLikeSecretValue(value: string): boolean {
   return (
     /sk-[A-Za-z0-9_-]{16,}/.test(value) ||
     /ghp_[A-Za-z0-9_]{16,}/.test(value) ||
+    /gh[ousr]_[A-Za-z0-9_]{16,}/.test(value) ||
     /github_pat_[A-Za-z0-9_]{16,}/.test(value) ||
     /xox[baprs]-[A-Za-z0-9-]{16,}/.test(value) ||
     /AKIA[0-9A-Z]{16}/.test(value) ||
