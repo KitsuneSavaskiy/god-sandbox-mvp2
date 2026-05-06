@@ -75,6 +75,7 @@ export type CharacterAssetBundleReadModel = {
   portrait: ResolvedCharacterAssetRef;
   icon: ResolvedCharacterAssetRef;
   spriteSheet: ResolvedCharacterSpriteSheetRef;
+  extendedSheet: ResolvedCharacterSpriteSheetRef;
   expressions: Record<CharacterExpressionId, CharacterExpressionSlot>;
   basicSettings: {
     narrativeRole: CharacterDetailTextField;
@@ -119,6 +120,11 @@ export function resolveCharacterAssetBundleReadModel(
     icon: resolveAssetRef(bundle.iconAssetId, manifest),
     spriteSheet: resolveSpriteSheetRef(
       bundle.spriteSheetAssetId ?? inferSpriteSheetAssetId(bundle.portraitAssetId),
+      bundle.portraitAssetId,
+      manifest,
+    ),
+    extendedSheet: resolveSpriteSheetRef(
+      inferExtendedSheetAssetId(bundle.portraitAssetId),
       bundle.portraitAssetId,
       manifest,
     ),
@@ -355,6 +361,15 @@ function inferSpriteSheetAssetId(neutralAssetId: AssetId): AssetId | null {
   }
 
   return `${bundleId}-sprite-sheet`;
+}
+
+function inferExtendedSheetAssetId(neutralAssetId: AssetId): AssetId | null {
+  const bundleId = neutralAssetId.replace(/-portrait-neutral$/, "");
+  if (!bundleId || bundleId === neutralAssetId) {
+    return null;
+  }
+
+  return `${bundleId}-sprite-sheet-extended`;
 }
 
 function resolveIntroductionField(character: Character): CharacterDetailTextField {

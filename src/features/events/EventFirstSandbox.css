@@ -338,12 +338,13 @@
   --resident-grounding-bottom-clearance: clamp(96px, 24vw, 156px);
   --resident-figure-width: clamp(78px, 8vw, 124px);
   --resident-figure-height: clamp(112px, 13vw, 176px);
-  --resident-frame-size: 96px;
-  --resident-sheet-width: 576px;
-  --resident-sheet-height: 1056px;
-  --resident-sheet-x-end: -576px;
+  --resident-frame-width: 192px;
+  --resident-frame-height: 208px;
+  --resident-sheet-width: 1536px;
+  --resident-sheet-height: 1872px;
+  --resident-sheet-x-end: -1536px;
   --resident-motion-row: 0;
-  --resident-sprite-frames: 6;
+  --resident-sprite-frames: 8;
   --resident-patrol-x: 0px;
   --resident-patrol-y: 0px;
   --resident-patrol-duration: 5.8s;
@@ -620,8 +621,8 @@ button.event-first-sandbox__emote:disabled {
 }
 
 .event-first-sandbox__resident--sprite-ready .event-first-sandbox__resident-figure {
-  width: var(--resident-frame-size);
-  height: var(--resident-frame-size);
+  width: var(--resident-frame-width);
+  height: var(--resident-frame-height);
   place-items: center;
   overflow: hidden;
 }
@@ -639,8 +640,8 @@ button.event-first-sandbox__emote:disabled {
 
 .event-first-sandbox__resident-sprite {
   display: block;
-  width: var(--resident-frame-size);
-  height: var(--resident-frame-size);
+  width: var(--resident-frame-width);
+  height: var(--resident-frame-height);
   background-image: var(--resident-sprite-sheet);
   background-position: 0 var(--resident-motion-row);
   background-repeat: no-repeat;

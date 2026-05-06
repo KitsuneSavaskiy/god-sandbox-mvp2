@@ -1,29 +1,56 @@
 import { CURRENT_SAVE_VERSION } from "./migrations.js";
 import type { AssetManifest, AssetManifestEntry, SpriteSheetMetadata } from "./assetManifest.js";
 
-const updatedAt = "2026-05-05T00:00:00.000Z";
+const updatedAt = "2026-05-07T00:00:00.000Z";
 
-export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA: SpriteSheetMetadata = {
-  frameWidth: 96,
-  frameHeight: 96,
-  columns: 6,
-  rows: 11,
+// Sheet 1: hatch-pet native format (8 columns × 9 rows, 192×208 px per frame)
+// Rows: idle / run-right / run-left / waving / jumping / failed / waiting / running / review
+export const DEFAULT_MOTION_SHEET_METADATA: SpriteSheetMetadata = {
+  kind: "motion",
+  frameWidth: 192,
+  frameHeight: 208,
+  columns: 8,
+  rows: 9,
   motions: {
-    idle: { row: 0, frames: 6 },
-    "walk-up": { row: 1, frames: 6 },
-    "walk-down": { row: 2, frames: 6 },
-    "walk-left": { row: 3, frames: 6 },
-    "walk-right": { row: 4, frames: 6 },
-    "walk-forward": { row: 5, frames: 6 },
-    "walk-back": { row: 6, frames: 6 },
-    "emote-happy": { row: 7, frames: 6 },
-    "emote-angry": { row: 8, frames: 6 },
-    "emote-sad": { row: 9, frames: 6 },
-    "emote-surprised": { row: 10, frames: 6 },
+    idle: { row: 0, frames: 8 },
+    "walk-right": { row: 1, frames: 8 },
+    "walk-left": { row: 2, frames: 8 },
+    // Fallback approximations for Sheet 2 motions when extended sheet is absent
+    "walk-up": { row: 0, frames: 8 },
+    "walk-down": { row: 0, frames: 8 },
+    "walk-forward": { row: 7, frames: 8 },
+    "walk-back": { row: 2, frames: 8 },
+    "emote-happy": { row: 3, frames: 8 },
+    "emote-angry": { row: 0, frames: 8 },
+    "emote-sad": { row: 5, frames: 8 },
+    "emote-surprised": { row: 4, frames: 8 },
   },
 };
 
-function createResidentSpriteSheetPlaceholder(
+// Sheet 2: GodSandbox extended sheet — 2.5D directions + emotes
+// Also uses hatch-pet tool with a different prompt; same canvas dimensions as Sheet 1
+export const DEFAULT_EXTENDED_SHEET_METADATA: SpriteSheetMetadata = {
+  kind: "extended",
+  frameWidth: 192,
+  frameHeight: 208,
+  columns: 8,
+  rows: 9,
+  motions: {
+    "walk-up": { row: 0, frames: 8 },
+    "walk-down": { row: 1, frames: 8 },
+    "walk-forward": { row: 2, frames: 8 },
+    "walk-back": { row: 3, frames: 8 },
+    "emote-happy": { row: 4, frames: 8 },
+    "emote-angry": { row: 5, frames: 8 },
+    "emote-sad": { row: 6, frames: 8 },
+    "emote-surprised": { row: 7, frames: 8 },
+  },
+};
+
+// Keep legacy export alias so runtime.test.ts can update incrementally
+export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA = DEFAULT_MOTION_SHEET_METADATA;
+
+function createResidentMotionSheetPlaceholder(
   bundleId: string,
   ownerCharacterId: string,
   missingReason: AssetManifestEntry["missingReason"] = "not-generated-yet",
@@ -40,26 +67,27 @@ function createResidentSpriteSheetPlaceholder(
     generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
     isPlaceholder: true,
     missingReason,
-    spriteSheet: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
+    spriteSheet: DEFAULT_MOTION_SHEET_METADATA,
   };
 }
 
-function createResidentSpriteSheetReady(
+function createResidentExtendedSheetPlaceholder(
   bundleId: string,
   ownerCharacterId: string,
 ): AssetManifestEntry {
   return {
-    id: `${bundleId}-sprite-sheet`,
+    id: `${bundleId}-sprite-sheet-extended`,
     ownerCharacterId,
-    kind: "sprite-sheet",
-    status: "ready",
-    sourcePath: `public/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
-    publicPath: `/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
-    relativePath: `art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`,
+    kind: "sprite-sheet-extended",
+    status: "placeholder",
+    sourcePath: `assets/residents/${bundleId}/sprites/resident-sprite-sheet-extended.png`,
+    publicPath: `/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet-extended.png`,
+    plannedRelativePath: `art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet-extended.png`,
     fallbackAssetId: `${bundleId}-portrait-neutral`,
     generatedFromAssetIds: [`${bundleId}-portrait-neutral`],
-    isPlaceholder: false,
-    spriteSheet: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA,
+    isPlaceholder: true,
+    missingReason: "not-generated-yet",
+    spriteSheet: DEFAULT_EXTENDED_SHEET_METADATA,
   };
 }
 
@@ -73,7 +101,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
-    createResidentSpriteSheetReady("eve", "chr_eve"),
+    createResidentMotionSheetPlaceholder("eve", "chr_eve"),
+    createResidentExtendedSheetPlaceholder("eve", "chr_eve"),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",
@@ -108,7 +137,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/garan/portrait.png",
     },
-    createResidentSpriteSheetReady("garan", "chr_garan"),
+    createResidentMotionSheetPlaceholder("garan", "chr_garan"),
+    createResidentExtendedSheetPlaceholder("garan", "chr_garan"),
     {
       id: "garan-expression-happy",
       ownerCharacterId: "chr_garan",
@@ -143,7 +173,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/ryo/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("ryo", "chr_ryo"),
+    createResidentMotionSheetPlaceholder("ryo", "chr_ryo"),
+    createResidentExtendedSheetPlaceholder("ryo", "chr_ryo"),
     {
       id: "ryo-expression-happy",
       ownerCharacterId: "chr_ryo",
@@ -178,7 +209,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/suzu/portrait.png",
     },
-    createResidentSpriteSheetPlaceholder("suzu", "chr_suzu"),
+    createResidentMotionSheetPlaceholder("suzu", "chr_suzu"),
+    createResidentExtendedSheetPlaceholder("suzu", "chr_suzu"),
     {
       id: "suzu-expression-happy",
       ownerCharacterId: "chr_suzu",

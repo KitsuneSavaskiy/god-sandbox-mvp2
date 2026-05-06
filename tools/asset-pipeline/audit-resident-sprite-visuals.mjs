@@ -13,33 +13,32 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { inflateSync } from "node:zlib";
 
 const expected = {
-  frameWidth: 96,
-  frameHeight: 96,
-  columns: 6,
-  rows: 11,
-  width: 576,
-  height: 1056,
+  frameWidth: 192,
+  frameHeight: 208,
+  columns: 8,
+  rows: 9,
+  width: 1536,
+  height: 1872,
 };
 
 const safeArea = {
-  left: 6,
-  right: 6,
-  top: 4,
-  bottom: 4,
+  left: 10,
+  right: 10,
+  top: 8,
+  bottom: 8,
 };
 
+// Sheet 1 (motion-sheet) row labels — hatch-pet native format
 const motionRows = [
   "idle",
-  "walk-up",
-  "walk-down",
-  "walk-left",
-  "walk-right",
-  "walk-forward",
-  "walk-back",
-  "emote-happy",
-  "emote-angry",
-  "emote-sad",
-  "emote-surprised",
+  "run-right",
+  "run-left",
+  "waving",
+  "jumping",
+  "failed",
+  "waiting",
+  "running",
+  "review",
 ];
 
 const pngSignature = Buffer.from([

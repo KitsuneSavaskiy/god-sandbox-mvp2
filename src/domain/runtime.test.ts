@@ -575,23 +575,22 @@ function testRuntimeSelectorsAndCommands(): void {
   );
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 96);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 96);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 6);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 11);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle.row, 0);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle.frames, 6);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-up"].row, 1);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-down"].row, 2);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"].row, 3);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"].row, 4);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-forward"].row, 5);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-back"].row, 6);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-happy"].row, 7);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-angry"].row, 8);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-sad"].row, 9);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-surprised"].row, 10);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["emote-surprised"].frames, 6);
+  // Motion sheet (Sheet 1): hatch-pet native format 192×208, 8 cols, 9 rows
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 192);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 208);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 8);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 9);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 8);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"]?.row, 2);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"]?.row, 1);
+  // Extended sheet (Sheet 2): 2.5D directions + emotes
+  assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 192);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-up"]?.row, 0);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-forward"]?.row, 2);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-happy"]?.row, 4);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-surprised"]?.row, 7);
   assert.equal(ryoAssetBundle.basicSettings.introduction.isPlaceholder, true);
   assert.equal(ryoAssetBundle.basicSettings.introduction.source, "placeholder");
   assert.equal(activeAssetBundles[0]?.portrait.ready, true);
@@ -613,6 +612,7 @@ function testRuntimeSelectorsAndCommands(): void {
   );
   assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, undefined);
   assert.equal(activeAssetBundles.slice(2).every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.metadata !== null), true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
@@ -784,7 +784,7 @@ function testResidentSpriteManifestReadModel(): void {
     ryoAssetBundle.spriteSheet.path,
     "/art/characters/defaults/ryo/sprites/resident-sprite-sheet.png",
   );
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"].frames, 6);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"]?.frames, 8);
 
   assert.equal(isUnmanagedAssetPipelinePath("asset-pipeline/incoming/eve.png"), true);
   assert.equal(isUnmanagedAssetPipelinePath("assets/residents/ryo/sprites/sheet.png"), false);
