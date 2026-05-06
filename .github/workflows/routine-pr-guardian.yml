@@ -25,17 +25,26 @@ jobs:
             const protectedPatterns = [
               '.github/',
               '.codex/',
+              '.agents/',
               'AGENTS.md',
               'package.json',
               'package-lock.json',
               'pnpm-lock.yaml',
               'yarn.lock',
+              '.gitignore',
               'tsconfig',
               'vite.config',
               'docs/product/',
               'docs/architecture/',
+              'docs/security/',
+              'docs/operations/',
+              'tools/',
+              'src/application/',
               'src/core/',
+              'src/domain/',
+              'src/features/',
               'src/persistence/',
+              'src/state/',
               'scripts/'
             ];
 
@@ -46,11 +55,15 @@ jobs:
               per_page: 100
             });
 
-            const touchesProtected = files.some(f =>
-              protectedPatterns.some(p =>
-                f.filename === p || f.filename.startsWith(p)
+            const protectedMatches = files
+              .filter(f =>
+                protectedPatterns.some(p =>
+                  f.filename === p || f.filename.startsWith(p)
+                )
               )
-            );
+              .map(f => f.filename);
+
+            const touchesProtected = protectedMatches.length > 0;
 
             const hasManual = labels.includes('manual-review-required');
             const hasRoutine = labels.includes('agent-routine');
@@ -76,9 +89,17 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: pr.number,
-                body: 'Protected paths were changed, so this PR was routed to manual review.'
+                body: [
+                  'Protected paths were changed, so this PR was routed to manual review.',
+                  '',
+                  'Matched protected paths:',
+                  ...protectedMatches.map(filename => `- \`${filename}\``)
+                ].join('\n')
               });
             }
+
+            core.setOutput('protected_paths', protectedMatches.join('\n'));
+            core.notice(`Protected path matches: ${protectedMatches.length ? protectedMatches.join(', ') : 'none'}`);
 
             core.setOutput(
               'routine',
