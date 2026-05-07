@@ -91,6 +91,13 @@ function resolveFaithBand(faith: number): FaithBand {
 | trial | 乗り越えた（意味を見出した） | +5 |
 | trial | 失敗（理不尽と感じた） | -4 |
 
+`player_memo_bonus` / `player_memo_penalty` はスタンドアロンの介入トリガーではなく、
+`applyFaithChangeWithPersonality` 内部で playerMemo 一貫性チェック後に呼ばれる補正専用トリガーである。
+- `player_memo_bonus` → +1（基本 delta を上向き補正）
+- `player_memo_penalty` → -1（基本 delta を下向き補正）
+これらを `applyFaithChange` 単体に渡した場合は ±1 を返す。
+通常の介入フローでは `applyFaithChangeWithPersonality` が上位関数として呼ばれ、これらのトリガーを内部的に使用する。
+
 ### playerMemo 補正
 
 介入時に `playerMemo` または `playerReason` が設定されており、かつその内容が前回介入と方向性が一貫している場合、補正を適用する。

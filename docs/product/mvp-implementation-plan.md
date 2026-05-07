@@ -136,9 +136,10 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - 発話生成 UI（PBI 4）
 
 **重要な分離:**
-- 箱庭内発話の `doNotSay`（ユーザー直接呼びかけ禁止、間接神言及は `faithBand` 相応で許可）
-- Passport 後の `doNotSay`（制限緩和、ユーザーへの「あなた」呼びかけ許可）
-- `DEFAULT_DO_NOT_SAY_SANDBOX` と `ALLOWED_GOD_INDIRECT_REFERENCES` の定数を実装
+- 内部 `VoiceProfile.doNotSay`（箱庭内発話用。「あなた」禁止含む）← PBI 3 の実装対象
+- `PassportVoiceProfile.sandboxDoNotSay`（箱庭内制約の Passport 出力版）← PBI 5 で対応
+- `PassportVoiceProfile.outsideWorldDoNotSay`（Passport 後の制約。「あなた」は含めない）← PBI 5 で対応
+- `DEFAULT_DO_NOT_SAY_SANDBOX` と `ALLOWED_GOD_INDIRECT_REFERENCES` の定数を実装（`character-voice-profile-spec.md §4` 参照）
 
 **Done 条件:**
 - [ ] Garan / Ryo / Suzu / Eve の VoiceProfile が `resolveVoiceProfile` で返る
@@ -210,12 +211,16 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - `src/domain/runtime.test.ts` — Passport 生成 integration テスト追加
 
 **生成する型（`passport-outside-world-spec.md §2` に従う）:**
-- `PassportCharacterProfile`（name, personalitySummary, age?, speechStyle）
-- `PassportLifeMemory`（memorySummary, keyEvents, relationshipSummary）
+- `PassportCharacterProfile`（id, name, personalitySummary, age?, assetRef）
+- `PassportLifeMemory`（memorySummary, totalInterventions, keyEvents, relationSummaries）
 - `PassportGodRelationship`（faithBand, currentFaith, faithVisibility, faithChangeSummary, interpretationOfGod, firstEncounterOutsideWorld）
 - `PassportVoiceProfile`（firstPerson, speechPatterns, sandboxDoNotSay, outsideWorldDoNotSay, doNotInvent, continuityRules, sandboxDialogueExamples, passportDialogueExamples）
 - `ExternalAiPromptBlock`（systemPrompt, firstEncounterLines, importantConstraints）
 - `PassportCharacterAssetRef`（portraitAssetId, portraitPath?, spriteSheetAssetId?, spriteSheetPath?）
+
+**`totalInterventions` の導出方法（MVP）:**
+`CharacterSnapshot.recentEvents` の件数を `totalInterventions` の近似値とする。
+将来 `CharacterSnapshot` に `interventionCount: number` を追加した時点で差し替え可能。
 
 **禁止事項（厳守）:**
 - `display` に `wood / fire / earth / metal / water` フィールドを含めない
@@ -274,8 +279,8 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - [ ] JSON ビューアが開かなくてもゲームが進む
 - [ ] 確認画面・ビューアのテキストに禁止ワードが含まれない（negative test）
 - [ ] `faithBand` フィールドに日本語説明が表示される
-- [ ] snapshot test（`mvp-test-scenarios.md §6`）通過
-- [ ] `npm run typecheck && npm run build` が成功
+- [ ] `mvp-test-scenarios.md §6` に記載の UI スナップショットテストの意図を確認（`npm run test:ui` が整備されてから実行）
+- [ ] `npm run typecheck && npm run build` が成功（PBI 6 は UI のみ変更のため `test:domain` 不要）
 
 ---
 

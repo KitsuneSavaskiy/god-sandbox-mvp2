@@ -105,9 +105,9 @@ CharacterPassport（src/domain/models.ts）
   ├─ snapshotId / schemaVersion / fileNameToken（外部契約）
   ├─ display: PassportOutsideWorldPayload
   │   ├─ character（name, age?, personalitySummary）
-  │   ├─ lifeMemory（memorySummary, keyEvents, relationshipSummary）
+  │   ├─ lifeMemory（memorySummary, totalInterventions, keyEvents, relationSummaries）
   │   ├─ godRelationship（faithBand, currentFaith は JSON 内部のみ）
-  │   ├─ voiceProfile（doNotSay, doNotInvent, continuityRules 含む）
+  │   ├─ voiceProfile（sandboxDoNotSay, outsideWorldDoNotSay, doNotInvent, continuityRules 含む）
   │   └─ externalAiPromptBlock（systemPrompt, firstEncounterLines）
   └─ exportHints（referencedAssetIds）
 

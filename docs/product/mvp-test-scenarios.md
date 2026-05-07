@@ -326,7 +326,7 @@ describe("passport generation", () => {
       ],
     });
     const snapshot = createSnapshot(char);
-    const passport = await generatePassport(snapshot);
+    const passport = issueCharacterPassport(snapshot);
 
     expect(passport).not.toBeNull();
     expect(passport.display.godRelationship.faithBand).toBe("senses_presence");
@@ -336,7 +336,7 @@ describe("passport generation", () => {
 
   it("Passport JSON に五行フィールドが存在しない", async () => {
     const char = createCharacter({ faith: 50 });
-    const passport = await generatePassport(createSnapshot(char));
+    const passport = issueCharacterPassport(createSnapshot(char));
     const json = JSON.stringify(passport);
 
     expect(json).not.toMatch(/"wood":/);
@@ -348,7 +348,7 @@ describe("passport generation", () => {
 
   it("Passport JSON の memorySummary に status 数値が含まれない", async () => {
     const char = createCharacter({ faith: 50 });
-    const passport = await generatePassport(createSnapshot(char));
+    const passport = issueCharacterPassport(createSnapshot(char));
 
     expect(passport.display.lifeMemory.memorySummary).not.toMatch(/vitality:\s*\d+/);
     expect(passport.display.lifeMemory.memorySummary).not.toMatch(/faith:\s*\d+/);
@@ -493,7 +493,7 @@ describe("five phase passport prohibition", () => {
   const PHASE_FIELDS = ["wood", "fire", "earth", "metal", "water"];
 
   it("Passport JSON のすべてのネストレベルに五行フィールドがない", async () => {
-    const passport = await generatePassport(createSnapshot(testChar));
+    const passport = issueCharacterPassport(createSnapshot(testChar));
     const json = JSON.stringify(passport);
     PHASE_FIELDS.forEach(field => {
       expect(json).not.toMatch(new RegExp(`"${field}":\\s*\\d`));
