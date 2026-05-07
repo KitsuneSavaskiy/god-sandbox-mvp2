@@ -24,7 +24,7 @@ ChatGPT などのサブスク画面を人間が別ブラウザで使い、GodSan
 5. alpha確認scriptで、透明背景向けのalpha channelと透明ピクセル数を確認する。
 6. alpha channelがない場合、またはalpha channelがあっても透明ピクセルが0件の場合は、明示コマンドでalpha化候補を `tmp` に作るか、背景除去し直して目視確認する。
 7. validatorで画像サイズ、行列、余白、ラベル混入を検査する。
-8. 必要なら processorで `96x96` frame、6列、11行として切り出し可能なローカル作業用出力を作る。
+8. 必要なら processorで `192x208` frame、8列、9行として切り出し可能なローカル作業用出力を作る。
 9. visual audit で contact sheet を作り、split / crop / row mixing の疑いがないか人間が確認する。
 10. デフォルト同梱素材または公式採用 asset として採用できる画像だけを `public/art/characters/defaults/<characterId>/sprites/resident-sprite-sheet.png` へ置く。
 11. `src/persistence/defaultCharacterAssetManifest.ts` と `src/persistence/defaultResidentSpriteManifest.ts` の該当entryを ready に更新する。
@@ -76,7 +76,7 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs eve
 ```
 
 この確認では画像を変更しない。
-PNGが `576x1056` pxで、alpha channelを持ち、透明ピクセルが1件以上あるかを確認する。
+PNGが `1536x1872` pxで、alpha channelを持ち、透明ピクセルが1件以上あるかを確認する。
 alpha channelがあっても透明ピクセルが0件の場合は、背景透過されていない可能性があるため、validatorへ進めない。
 
 alpha channelがない場合は、明示コマンドでalpha化候補を作る。
@@ -110,7 +110,7 @@ assets/generated/residents/<characterId>/tmp/resident-<id>-sprite-alpha-candidat
 ```
 
 元画像は上書きしない。
-alpha化後も `576x1056` pxを維持する。
+alpha化後も `1536x1872` pxを維持する。
 出力後は必ず目視確認する。
 
 normalizerは次をしない。
@@ -150,8 +150,8 @@ node tools/asset-pipeline/validate-resident-sprite-sheet.mjs --all
 この検査で見ること:
 
 - PNGファイルであること。
-- 画像全体が `576x1056` px であること。
-- `96x96` frame、6列、11行として扱えるサイズであること。
+- 画像全体が `1536x1872` px であること。
+- `192x208` frame、8列、9行として扱えるサイズであること。
 
 このscriptは採用済みassetへコピーしない。
 manifestも書き換えない。
@@ -182,7 +182,7 @@ node tools/asset-pipeline/process-resident-sprite-sheet.mjs ryo assets/generated
 ```
 
 processorの入力は `assets/generated/residents/<characterId>/incoming/` のPNGである。
-processorは `576x1056` px、`96x96` frame、6列、11行として扱えることを確認する。
+processorは `1536x1872` px、`192x208` frame、8列、9行として扱えることを確認する。
 processorは同時に visual audit を実行し、contact sheet と report を出力する。
 
 出力先は、Git管理外のローカル作業フォルダである。
@@ -195,7 +195,7 @@ assets/residents/<characterId>/sprites/resident-sprite-sheet.visual-audit.svg
 assets/residents/<characterId>/sprites/resident-sprite-sheet.visual-audit.json
 ```
 
-`resident-sprite-sheet.frames.json` は、96x96セルで切り出せる位置を示すslice mapである。
+`resident-sprite-sheet.frames.json` は、192x208セルで切り出せる位置を示すslice mapである。
 依存追加なしの最小processorなので、フレームごとのPNG分割までは行わない。
 
 `resident-sprite-manifest.draft.json` はローカル作業用のmanifest draftである。
@@ -231,8 +231,8 @@ Eve 1名分のsprite sheet PoCでは、次の順で確認する。
    - alpha化候補は目視確認してから次へ進める。
 3. validator確認
    - PNGとして読める。
-   - 画像全体が `576x1056` px である。
-   - `96x96` frame、6列、11行として扱える。
+   - 画像全体が `1536x1872` px である。
+   - `192x208` frame、8列、9行として扱える。
 4. processor確認
    - `assets/residents/eve/sprites/` のローカル作業先へ出力できる。
    - manifest draftは作れるが、正本manifestとして扱わない。
@@ -304,8 +304,8 @@ tools\asset-pipeline\validate-resident-sprite-sheet.bat eve
 確認すること:
 
 - PNGとして読める。
-- 画像全体が `576x1056` px である。
-- `96x96` frame、6列、11行として扱える。
+- 画像全体が `1536x1872` px である。
+- `192x208` frame、8列、9行として扱える。
 
 validatorは採用済みassetへコピーしません。
 manifestも書き換えません。
@@ -348,7 +348,7 @@ Line 2が Eve を ready に戻すのは、visual audit と PO 確認が終わっ
 
 - PNGである。
 - 透明背景にalpha channelがある。
-- frame sizeが `96x96` として扱える。
+- frame sizeが `192x208` として扱える。
 - columnsが `6`、rowsが `11` として扱える。
 - 行ごとのmotion keyがこの文書の仕様と一致する。
 - 文字、番号、UI枠、背景が画像内に焼き込まれていない。
@@ -397,7 +397,7 @@ Git 管理するのは、次に限定します。
 
 ## sprite sheet仕様
 
-- frame size: `96x96`
+- frame size: `192x208`
 - columns: `6`
 - rows: `11`
 - background: transparent PNG

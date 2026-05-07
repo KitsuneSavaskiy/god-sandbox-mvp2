@@ -64,8 +64,10 @@ type ResidentSpriteMotionKey =
 - `portrait` はプロフィール、会話、イベント、キャラクター詳細の主画像に使う。
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
 - `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
-- 住民sprite sheetのframeは `96x96` を基本にする。
-- 住民sprite sheetのmotion keyは `idle`、`walk-up`、`walk-down`、`walk-left`、`walk-right`、`walk-forward`、`walk-back`、`emote-happy`、`emote-angry`、`emote-sad`、`emote-surprised` に統一する。
+- 住民sprite sheetのframeは `192x208` を基本にする。
+- 住民sprite sheetは2枚構成（Sheet 1: motion-sheet、Sheet 2: extended-sheet）。
+- Sheet 1のmotion keyは `idle`、`run-right`、`run-left`、`waving`、`jumping`、`failed`、`waiting`、`running`、`review`。
+- Sheet 2のmotion keyは `walk-up`、`walk-down`、`walk-forward`、`walk-back`、`emote-happy`、`emote-angry`、`emote-sad`、`emote-surprised`。
 - 住民sprite sheetは未生成でも参照枠を持ってよい。未生成時は `isPlaceholder: true` とし、`portrait` または `icon` へ fallback する。
 - sprite sheetの実画像がない状態で、立ち絵を縮小して本物のsprite sheetとして扱わない。
 - 住民sprite sheetは、立ち絵の雰囲気を保ったドット絵風の小さい箱庭キャラとして生成する。

@@ -106,10 +106,10 @@ Sprite sheet の前提:
 
 | Item | Value |
 | --- | --- |
-| frame size | `96 x 96` |
-| columns | `6` |
-| rows | `11` |
-| image size | `576 x 1056` |
+| frame size | `192 x 208` |
+| columns | `8` |
+| rows | `9` |
+| image size | `1536 x 1872` |
 | background | alpha transparent PNG |
 
 Sprite が ready 候補になる条件:

@@ -5,8 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const expected = {
-  width: 576,
-  height: 1056,
+  width: 1536,
+  height: 1872,
 };
 
 const pngSignature = Buffer.from([
