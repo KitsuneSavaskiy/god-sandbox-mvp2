@@ -113,7 +113,7 @@ type PassportRelationSummary = {
 function buildMemorySummary(snapshot: CharacterSnapshot): string;
 ```
 
-- 入力: `snapshot.recentEvents`（最大5件、`occurredAt` 降順）+ `snapshot.relations`（`|relationScore|` 降順・同点は `characterId` 昇順で上位2件）
+- 入力: `snapshot.recentEvents`（最大5件、`createdAt` 降順）+ `snapshot.relations`（`|score|` 降順・同点は `[characterAId, characterBId].sort().join("__")` 昇順で上位2件）
 - 出力: 1〜3文の自然な日本語（三人称描写、固定テンプレート不要）
 - 介入種別の変換: `watch` → 「見守られた」、`help` → 「助けられた」、`trial` → 「試された」
 - **禁止**: `vitality:` `faith:` `stress:` `wood:` 等の数値ラベル形式。`status` オブジェクト・五行値を埋め込まない

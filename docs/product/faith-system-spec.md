@@ -95,7 +95,7 @@ function resolveFaithBand(faith: number): FaithBand {
 `applyFaithChangeWithPersonality` 内部で playerMemo 一貫性チェック後に呼ばれる補正専用トリガーである。
 - `player_memo_bonus` → +1（基本 delta を上向き補正）
 - `player_memo_penalty` → -1（基本 delta を下向き補正）
-これらを `applyFaithChange` 単体に渡した場合は ±1 を返す。
+これらを `resolveFaithDelta` に渡した場合は ±1 を返す。
 通常の介入フローでは `applyFaithChangeWithPersonality` が上位関数として呼ばれ、これらのトリガーを内部的に使用する。
 
 ### playerMemo 補正
@@ -164,7 +164,13 @@ type FaithChangeTrigger =
   | "trial_success" | "trial_failure"
   | "player_memo_bonus" | "player_memo_penalty";
 
-// personality 修正なし、playerMemo 補正なしの基本変化量を返す
+// delta のみを返す（personality 修正・clamp なし）
+function resolveFaithDelta(trigger: FaithChangeTrigger): number;
+
+// 新しい faith 値を返す（0–100 クランプ済み。personality 修正なし・playerMemo 補正なし）
+// 例: applyFaithChange(30, "help_success") → 34
+// 例: applyFaithChange(30, "player_memo_bonus") → 31
+// 例: applyFaithChange(30, "player_memo_penalty") → 29
 function applyFaithChange(currentFaith: number, trigger: FaithChangeTrigger): number;
 
 // personality 修正と playerMemo 補正を含む実際の適用関数。
