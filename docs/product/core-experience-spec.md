@@ -7,6 +7,7 @@
 **正本の優先順位：**
 - ユーザー導線の正本は `docs/product/godsandbox-user-flow.md` とする。
 - この文書はプロダクト体験原則の正本とする。
+- 仕様の優先順位体系は `docs/product/spec-integration-matrix.md` §1 を正本とする。
 - この文書と godsandbox-user-flow.md が矛盾する場合、PO は両方を同一 PR で更新しない限りマージしない。
 - 個別実装仕様がこの文書と矛盾する場合は、PO が先にこの文書を更新しない限り、この文書を優先する。
 
