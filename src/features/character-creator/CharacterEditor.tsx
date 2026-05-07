@@ -44,17 +44,17 @@ type WindowWithFileSystemAccess = Window & {
 const copyByMode: Record<CharacterEditorMode, { title: string; body: string; action: string }> = {
   initial: {
     title: "最初の4人を同じ画面で整える",
-    body: "最初の設定も後からの追加も同じ入力画面を使います。画像だけ必須で、性格、口調、年齢は空欄でも進められます。",
+    body: "最初の設定も後からの追加も同じ入力画面を使います。入力は名前、見た目画像、性格、口調、年齢の5項目です。",
     action: "最初の設定を保存",
   },
   new: {
     title: "新しい住民を迎える",
-    body: "保存すると、まず住民一覧に加わります。今の箱庭の4人はすぐには変わらず、入れ替えはあとで選べます。",
+    body: "保存すると、見た目画像とプロフィールをもとにスプライトの準備が自動で始まります。今の箱庭の4人はすぐには変わらず、入れ替えはあとで選べます。",
     action: "住民一覧に保存",
   },
   edit: {
     title: "住民プロフィールを再編集する",
-    body: "箱庭で育った状態は保ち、プレイヤーが編集できるプロフィールだけを更新します。",
+    body: "箱庭で育った状態は保ち、プレイヤーが編集できる5項目だけを更新します。",
     action: "編集を保存",
   },
 };
@@ -125,7 +125,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
 
     const nextImageAssetId = createWorkingImageFileName(file, draft, imageDraftId);
     setSelectedImageFile(file);
-    setImagePickerMessage("画像を選択しました。ゲーム内で使う名前を下に表示しています。");
+    setImagePickerMessage("画像を選択しました。保存すると、この画像を使って見た目の準備が進みます。");
     setImageSaveStatus(null);
     updateDraft({ imageAssetId: nextImageAssetId });
   }
@@ -144,14 +144,14 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
       const writable = await fileHandle.createWritable();
       await writable.write(selectedImageFile);
       await writable.close();
-      setImageSaveStatus(`作業フォルダへ保存しました: ${draft.imageAssetId.trim()}`);
+      setImageSaveStatus("作業フォルダへ画像をコピーしました。通常はこのまま保存へ進めます。");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setImageSaveStatus("保存先フォルダの選択をキャンセルしました。");
         return;
       }
 
-      setImageSaveStatus("このブラウザでは自動保存できませんでした。下の案内に沿って手動で配置してください。");
+      setImageSaveStatus("事前コピーは使えませんでした。通常はそのまま保存してください。");
     }
   }
 
@@ -196,7 +196,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
                 </strong>
                 <small>
                   {draft.imageAssetId.trim()
-                    ? `ゲーム内で使う名前: ${draft.imageAssetId.trim()}`
+                    ? "保存すると、この画像を使ってスプライト準備へ進みます。"
                     : "PNG / JPG / JPEG / WebP に対応しています。個人PCの絶対パスは入力しません。"}
                 </small>
               </div>
@@ -217,15 +217,15 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
                       onClick={handleSaveSelectedImageToFolder}
                       disabled={!selectedImageFile || !draft.imageAssetId.trim()}
                     >
-                      作業フォルダへ保存
+                      必要なときだけ事前コピーする
                     </Button>
                     <small>
-                      対応ブラウザでは、保存先フォルダを選んで画像をコピーできます。
+                      通常は保存ボタンだけで進められます。対応ブラウザでは、必要なときだけ事前コピーもできます。
                     </small>
                   </>
                 ) : (
                   <small>
-                    このブラウザでは、任意フォルダへ直接コピーできません。表示された名前で画像を手動配置してください。
+                    このブラウザでは事前コピーは使えません。通常はそのまま保存してください。
                   </small>
                 )}
               </div>
@@ -274,7 +274,7 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
         </div>
 
         <p className="character-editor__hint">
-          ここで設定した画像とプロフィールは、Snapshot と Passport で外へ持ち出す時の顔になります。
+          ここで設定した5項目は、住民の見た目準備とプロフィール表示のもとになります。
         </p>
 
         {!validation.valid ? (

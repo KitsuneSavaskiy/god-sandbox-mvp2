@@ -313,38 +313,19 @@ npm run typecheck
 
 exit code 0 → pass。エラーがある場合は内容をすべて報告して停止すること。
 
-### テスト 2: スプライトシート寸法検証（8 枚一括）
+### テスト 2: sprite:check（4 キャラ）
 
 ```bash
-node tools/asset-pipeline/validate-resident-sprite-sheet.mjs eve
-node tools/asset-pipeline/validate-resident-sprite-sheet.mjs garan
-node tools/asset-pipeline/validate-resident-sprite-sheet.mjs ryo
-node tools/asset-pipeline/validate-resident-sprite-sheet.mjs suzu
+npm run sprite:check -- eve
+npm run sprite:check -- garan
+npm run sprite:check -- ryo
+npm run sprite:check -- suzu
 ```
 
-`incoming/` フォルダ内の両シート（Sheet 1 + Sheet 2）が 1536 × 1872 px / 192 × 208 / 8col × 9row であることを検証する。
-
-### テスト 3: ビジュアルフレーム監査（4 キャラ）
-
-```bash
-node tools/asset-pipeline/audit-resident-sprite-visuals.mjs eve
-node tools/asset-pipeline/audit-resident-sprite-visuals.mjs garan
-node tools/asset-pipeline/audit-resident-sprite-visuals.mjs ryo
-node tools/asset-pipeline/audit-resident-sprite-visuals.mjs suzu
-```
-
-各キャラクターの contact sheet が `assets/generated/residents/<slug>/audit/` に出力される。
+`incoming/` フォルダ内の両シート（Sheet 1 + Sheet 2）が 1536 × 1872 px / 192 × 208 / 8col × 9row であることを、alpha / grid / visual audit をまとめて検証する。
+contact sheet は `assets/residents/<slug>/sprites/` に出力される。
 警告（safe margin 不足等）は記録するが blocker にはならない。
 エラー（キャラ消失・全フレーム空等）は blocker として報告する。
-
-### テスト 4: アルファチャンネル検証（4 キャラ）
-
-```bash
-node tools/asset-pipeline/check-resident-sprite-alpha.mjs eve
-node tools/asset-pipeline/check-resident-sprite-alpha.mjs garan
-node tools/asset-pipeline/check-resident-sprite-alpha.mjs ryo
-node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
-```
 
 ---
 
@@ -403,21 +384,13 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
 
    garan / ryo / suzu も同様に実施する。
 
-3. **manifest を一時的に ready 化する（コミットしないこと）**
+3. **manifest は placeholder のまま維持する**
 
-   `src/persistence/defaultResidentSpriteManifest.ts` を開き、
-   対象キャラクターのエントリの第 3 引数を `"ready"` に変更する。
+   local preview の段階では `ready` を上げない。
 
-   例（Eve と Garan を ready 化する場合）:
-   ```typescript
-   // 変更前
-   createDefaultResidentSpriteManifestEntry("chr_eve", "eve"),
-   createDefaultResidentSpriteManifestEntry("chr_garan", "garan"),
-
-   // 変更後
-   createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
-   createDefaultResidentSpriteManifestEntry("chr_garan", "garan", "ready"),
-   ```
+   - 2-sheet ready の正本は `src/persistence/defaultCharacterAssetManifest.ts`
+   - `src/persistence/defaultResidentSpriteManifest.ts` は旧互換の橋渡し
+   - PO visual OK 前の ready 化は禁止
 
 4. **ブラウザで `http://localhost:5173/sandbox` を開いてアニメーションを確認する**
 
@@ -433,12 +406,10 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
    | イベント窓を閉じる | 「結果を受け取る」後に住民の移動とアニメーションが再開する |
    | クリック動作 | 住民クリックでキャラクター詳細画面が開く |
 
-5. **確認後、一時ファイルを元に戻す（コミットしないこと）**
+5. **確認後、一時ファイルを手動で片付ける（コミットしないこと）**
 
-   ```bash
-   git checkout -- public/art/characters/defaults/
-   git checkout -- src/persistence/defaultResidentSpriteManifest.ts
-   ```
+   preview 用にコピーした `public/art/characters/defaults/*/sprites/` だけを確認して片付ける。
+   既存のローカル変更がある可能性があるため、`git checkout --` でまとめて戻さない。
 
 ---
 

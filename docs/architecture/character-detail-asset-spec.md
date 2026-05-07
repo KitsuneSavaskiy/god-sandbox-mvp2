@@ -25,6 +25,7 @@ interface CharacterAssetBundle {
   portrait?: AssetReference;
   icon?: AssetReference;
   spriteSheet?: SpriteSheetReference;
+  extendedSheet?: SpriteSheetReference;
   expressions: Partial<Record<CharacterExpressionKey, AssetReference>>;
   placeholderReason?: string;
 }
@@ -47,6 +48,12 @@ interface SpriteSheetReference extends AssetReference {
 
 type ResidentSpriteMotionKey =
   | "idle"
+  | "waving"
+  | "jumping"
+  | "failed"
+  | "waiting"
+  | "running"
+  | "review"
   | "walk-up"
   | "walk-down"
   | "walk-left"
@@ -63,10 +70,11 @@ type ResidentSpriteMotionKey =
 
 - `portrait` はプロフィール、会話、イベント、キャラクター詳細の主画像に使う。
 - `icon` は住民サマリ、一覧、短い選択UIに使う。
-- `spriteSheet` は箱庭内の小さい2Dキャラクター表示に使う。
+- `spriteSheet` は Sheet 1 の箱庭アニメ素材に使う。
+- `extendedSheet` は Sheet 2 の方向移動 / emote 素材に使う。
 - 住民sprite sheetのframeは `192x208` を基本にする。
 - 住民sprite sheetは2枚構成（Sheet 1: motion-sheet、Sheet 2: extended-sheet）。
-- Sheet 1のmotion keyは `idle`、`run-right`、`run-left`、`waving`、`jumping`、`failed`、`waiting`、`running`、`review`。
+- Sheet 1のmotion keyは `idle`、`walk-right`、`walk-left`、`waving`、`jumping`、`failed`、`waiting`、`running`、`review`。
 - Sheet 2のmotion keyは `walk-up`、`walk-down`、`walk-forward`、`walk-back`、`emote-happy`、`emote-angry`、`emote-sad`、`emote-surprised`。
 - 住民sprite sheetは未生成でも参照枠を持ってよい。未生成時は `isPlaceholder: true` とし、`portrait` または `icon` へ fallback する。
 - sprite sheetの実画像がない状態で、立ち絵を縮小して本物のsprite sheetとして扱わない。
@@ -76,10 +84,10 @@ type ResidentSpriteMotionKey =
 - MVPのasset pipelineは、ChatGPTなどのサブスク画面で生成した画像をローカルで検査し、採用済みPNGだけをmanifestへ登録する方式を基本にする。
 - GodSandbox本体は、API key入力UI、従量課金の画像生成API、外部AIへの自動送信を必須にしない。
 - Codexやローカルscriptは、採用前画像の検査、切り出し確認、manifest登録補助に使ってよい。ただし、未検査画像を本物のsprite sheetとして扱わない。
-- 住民sprite sheetのGit管理されるdefault manifestは `src/persistence/defaultResidentSpriteManifest.ts` とし、`assets/residents/<id>/sprites/` のsource pathと、ブラウザ配信用の `publicPath` を分けて持つ。
+- 住民sprite sheetの正本manifestは `src/persistence/defaultCharacterAssetManifest.ts` とし、motion sheet と extended sheet を別assetとして持つ。
+- `src/persistence/defaultResidentSpriteManifest.ts` は旧互換の橋渡しであり、2-sheet ready 判定の正本にしない。
 - ローカル作業用の `manifests/residents.json` は Git 管理外のplaceholderであり、正本manifestとしてcommitしない。
-- resident sprite manifest のstatusは `ready | placeholder | rejected | missing` とする。
-- `ready` は、公式採用assetとして検査済みで、`publicPath` から読めるsprite sheetだけに使う。
+- `ready` は、motion sheet と extended sheet の両方が検査済みで、`publicPath` から読める時だけに使う。
 - `incoming`、`tmp`、`rejected`、`user-uploads` を含むpathは、manifestに載っていてもready assetとして扱わない。
 - manifestが存在しない、または該当residentのentryがない場合でも、既存のdefault asset manifestから `portrait` または `icon` fallbackで起動できる状態を保つ。
 - `expressions` の正本キーは `neutral | happy | angry | sad | surprised` に統一する。
@@ -93,11 +101,12 @@ type ResidentSpriteMotionKey =
 
 ## Resident sprite manifest
 
-Resident sprite manifest は、住民sprite sheetの採用状態を表すmanifestである。
+Resident sprite manifest は、旧運用の motion-sheet 情報を asset manifest へ橋渡しするための互換レイヤーである。
 
-このmanifestは画像生成の実行命令ではない。GodSandbox本体は、このmanifestとread modelだけを読み、画像生成APIやCodex petを直接呼ばない。
+このmanifestを 2-sheet ready 判定の正本として使わない。
+GodSandbox本体が参照する採用状態は、`src/persistence/defaultCharacterAssetManifest.ts` と
+`src/application/characterAssetBundles.ts` の read model 側でそろえる。
 
-Git管理するdefault manifestは `src/persistence/defaultResidentSpriteManifest.ts` に置く。
 `manifests/residents.json` はローカル作業用placeholderであり、`.gitignore` 対象としてGit管理しない。
 
 schemaの要点:

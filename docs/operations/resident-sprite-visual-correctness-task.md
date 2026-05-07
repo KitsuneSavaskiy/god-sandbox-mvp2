@@ -60,8 +60,8 @@ Do not assume that a technically valid `1536x1872` PNG is game-ready. It is only
 
 ```txt
 row 0: idle
-row 1: run-right
-row 2: run-left
+row 1: walk-right
+row 2: walk-left
 row 3: waving
 row 4: jumping
 row 5: failed
@@ -181,6 +181,7 @@ Existing checks are still required:
 New required gate:
 
 4. visual frame audit
+5. two-sheet ready gate
 
 The visual frame audit must produce a human-readable contact sheet with:
 
@@ -203,16 +204,14 @@ The audit does not need to be perfect. Its purpose is to force visual review bef
 
 ## Ready promotion rules
 
-A resident sprite sheet may become `ready` only after all of these are true:
+A resident animation bundle may become `ready` only after all of these are true:
 
-- PNG size is `1536x1872`.
-- Grid is `8 columns x 9 rows`.
-- Frame size is `192x208`.
-- Alpha check passes with transparent pixels.
-- Validator passes.
-- Processor passes.
-- Visual frame audit produces a contact sheet.
-- Human reviewer confirms the contact sheet.
+- Sheet 1 exists as `resident-sprite-sheet.png`.
+- Sheet 2 exists as `resident-sprite-sheet-extended.png`.
+- `npm run sprite:check -- <slug>` passes.
+- Both sheets match the `8 columns x 9 rows`, `192x208`, `1536x1872` contract.
+- Visual frame audit produces contact sheets for both sheets.
+- Human reviewer confirms the contact sheets.
 - PO confirms the sandbox display.
 
 If visual correctness fails, do one of the following:
@@ -250,9 +249,9 @@ If a correct asset still looks wrong, investigate:
 Run at minimum:
 
 ```bash
-node tools/asset-pipeline/check-resident-sprite-alpha.mjs eve
-node tools/asset-pipeline/validate-resident-sprite-sheet.mjs eve
-node tools/asset-pipeline/process-resident-sprite-sheet.mjs eve
+npm run sprite:check -- eve motion
+npm run sprite:check -- eve extended
+npm run sprite:check -- eve
 npm run typecheck
 npm run test:domain
 npm run build

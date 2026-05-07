@@ -7,7 +7,7 @@
  * The Codex sidekick (separate process) executes all remaining steps autonomously,
  * including sprite sheet generation via Codex pet.
  *
- * Usage:
+ * Operator usage:
  *   npm run sidekick:intake -- --slug ryo --name "Ryo" --personality "明るい" --tone "タメ口" --age 17 --portrait <path>
  *   node tools/sidekick/sidekick-intake.mjs --slug ryo --name "Ryo" ...
  */
@@ -25,28 +25,27 @@ const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
 function printHelp() {
   console.log(`Sidekick Player Asset Intake — Layer 1 + 2
 
-Non-technical user inputs (from character creation screen):
+This command is for the sidekick / watcher flow.
+The player-facing character form collects only these 5 inputs:
   --name         Display name  (例: "Ryo")
   --personality  Personality   (例: "明るい")
   --tone         Speech tone   (例: "タメ口")
   --age          Age (integer) (例: 17)
   --portrait     Portrait PNG path
 
-Technical inputs (derived automatically or provided by game pipeline):
-  --slug         Character slug — lowercase, alphanumeric, hyphen, underscore
-                 MVP: provided explicitly; future: auto-derived from display name
+Internal operator input:
+  --slug         Internal asset key — lowercase, alphanumeric, hyphen, underscore
+                 Manual CLI only. Game request JSON / watcher flow derives this automatically.
 
-Usage:
+Operator usage:
   npm run sidekick:intake -- --slug ryo --name "Ryo" --personality "明るい" --tone "タメ口" --age 17 --portrait <path>
 
 What this tool does:
   1. Validates all inputs
-  2. Auto-generates characterId, assetBundleId, jobId, createdAt
-  3. Writes job JSON (including characterProfile) to .godsandbox/jobs/<jobId>.json
-  4. Creates assets/generated/residents/<slug>/incoming/ folder
-  5. Copies portrait to a gitignored reference location
-  6. Auto-generates .prompts/resident-sprites/<slug>.md from _template.md if absent
-  7. Outputs generation input for Codex pet
+  2. Prepares local folders and portrait reference
+  3. Auto-generates internal IDs and job record
+  4. Auto-generates prompt files for the 2 sprite sheets if absent
+  5. Outputs the next automated generation / validation steps
 
 The non-technical user provides only the 5 character creation inputs via the game UI.
 The Codex sidekick executes all remaining steps autonomously.
@@ -142,7 +141,7 @@ function composeJob(slug, jobId, profile) {
     jobType: "character-asset-bundle",
     createdAt: new Date().toISOString(),
     characterId: `chr_${slug}`,
-    assetBundleId: `${slug}-default-resident-v1`,
+    assetBundleId: slug,
     worldDirectoryName: "default",
     characterProfile: profile,
     requestedOutputs: {
@@ -209,14 +208,11 @@ function main() {
     const jobRelPath = path.relative(repoRoot, jobFilePath);
 
     console.log(`\nSidekick intake complete.`);
-    console.log(`  characterId:    chr_${slug}`);
     console.log(`  displayName:    ${profile.displayName}`);
     console.log(`  personality:    ${profile.personality}`);
     console.log(`  tone:           ${profile.tone}`);
     console.log(`  age:            ${profile.age}`);
-    console.log(`  assetBundleId:  ${slug}-default-resident-v1`);
-    console.log(`  jobId:          ${jobId}`);
-    console.log(`  job:            ${jobRelPath}`);
+    console.log(`  job record:     ${jobRelPath}`);
     console.log(`  portrait ref:   ${refRelPath}`);
     console.log(`  incoming:       ${incomingRelDir}/`);
     console.log(`  prompt (Sheet 1): ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);

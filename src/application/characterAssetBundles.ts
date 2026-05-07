@@ -8,14 +8,13 @@ import type { RuntimeWorldState } from "../state/runtimeState.js";
 import {
   DEFAULT_CHARACTER_ASSET_MANIFEST,
 } from "../persistence/defaultCharacterAssetManifest.js";
-import { DEFAULT_RESIDENT_SPRITE_MANIFEST } from "../persistence/defaultResidentSpriteManifest.js";
 import type {
   AssetManifest,
   AssetMissingReason,
   AssetReadinessStatus,
   SpriteSheetMetadata,
 } from "../persistence/assetManifest.js";
-import { createAssetManifestWithResidentSprites } from "../persistence/residentSpriteManifest.js";
+import { assertRequiredSpriteSheetMotions } from "../persistence/assetManifest.js";
 
 const expressionIds = [
   "neutral",
@@ -26,10 +25,7 @@ const expressionIds = [
 ] as const satisfies readonly CharacterExpressionId[];
 
 export const DEFAULT_CHARACTER_ASSET_READ_MODEL_MANIFEST =
-  createAssetManifestWithResidentSprites(
-    DEFAULT_CHARACTER_ASSET_MANIFEST,
-    DEFAULT_RESIDENT_SPRITE_MANIFEST,
-  );
+  DEFAULT_CHARACTER_ASSET_MANIFEST;
 
 export type ResolvedCharacterAssetRef = {
   assetId: AssetId | null;
@@ -280,6 +276,26 @@ function resolveSpriteSheetRef(
     ? `/${entry.plannedRelativePath.replace(/^\/+/, "")}`
     : null;
   const isPlaceholder = Boolean(entry.isPlaceholder || !entry.relativePath);
+  let metadata: SpriteSheetMetadata | null = null;
+
+  try {
+    metadata = entry.spriteSheet
+      ? assertRequiredSpriteSheetMotions(entry.spriteSheet, assetId)
+      : null;
+  } catch {
+    return {
+      assetId,
+      path: null,
+      plannedPath,
+      ready: false,
+      fallbackAssetId: entry.fallbackAssetId ?? fallback.assetId ?? undefined,
+      fallbackPath: fallback.path,
+      status: "rejected",
+      isPlaceholder: true,
+      missingReason: "invalid-metadata",
+      metadata: null,
+    };
+  }
 
   return {
     assetId,
@@ -293,8 +309,14 @@ function resolveSpriteSheetRef(
     missingReason: isPlaceholder
       ? entry.missingReason ?? "not-generated-yet"
       : undefined,
-    metadata: entry.spriteSheet ?? null,
+    metadata,
   };
+}
+
+export function isCharacterAnimationReady(
+  readModel: Pick<CharacterAssetBundleReadModel, "spriteSheet" | "extendedSheet">,
+): boolean {
+  return readModel.spriteSheet.ready && readModel.extendedSheet.ready;
 }
 
 function resolveExpressionSlot(

@@ -316,9 +316,14 @@ function createAssetReferences(
       note: createAssetNote(assetReadModel.icon, "未登録なら名前の頭文字placeholderを使います。"),
     },
     {
-      label: "箱庭アニメ素材",
+      label: "箱庭アニメ素材 (Sheet 1)",
       value: formatAssetValue(assetReadModel.spriteSheet),
-      note: createAssetNote(assetReadModel.spriteSheet, "今Sprintは参照枠と代用表示までに留めます。"),
+      note: createAssetNote(assetReadModel.spriteSheet, "motion sheet の参照状態です。"),
+    },
+    {
+      label: "箱庭アニメ拡張素材 (Sheet 2)",
+      value: formatAssetValue(assetReadModel.extendedSheet),
+      note: createAssetNote(assetReadModel.extendedSheet, "extended sheet の参照状態です。"),
     },
     {
       label: "表情差分",

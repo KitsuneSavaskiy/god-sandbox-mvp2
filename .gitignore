@@ -19,6 +19,7 @@ playwright-profile*/
 # Local generated asset staging
 .godsandbox/jobs/
 .godsandbox/portraits/
+.hatch-pet-runs/
 .asset-pipeline/
 assets/generated/
 assets/residents/

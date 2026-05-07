@@ -35,6 +35,7 @@ function printHelp() {
   - 画像サイズが ${expected.width}x${expected.height}px であること
   - alpha channelを持つPNGであること
   - 透明ピクセルが1件以上あること
+  - これは single-sheet の技術確認だけです。2-sheet ready 判定には \`npm run sprite:check -- <slug>\` を使ってください。
   - この確認では画像を変更しません。`);
 }
 
@@ -410,6 +411,7 @@ function main() {
   }
 
   console.log(`確認結果: ${checkedCount}件すべてOKです。`);
+  console.log("これは single-sheet の alpha 確認だけです。ready 判定には sprite:check を使ってください。");
   return 0;
 }
 

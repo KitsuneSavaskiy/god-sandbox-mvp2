@@ -2,6 +2,12 @@ import type { AssetId, CharacterId } from "../domain/models.js";
 
 export type SpriteSheetMotionName =
   | "idle"
+  | "waving"
+  | "jumping"
+  | "failed"
+  | "waiting"
+  | "running"
+  | "review"
   | "walk-up"
   | "walk-down"
   | "walk-left"
@@ -29,13 +35,37 @@ export type SpriteSheetMetadata = {
   motions: Partial<Record<SpriteSheetMotionName, SpriteSheetMotionSlot>>;
 };
 
+export const REQUIRED_MOTION_SHEET_MOTIONS = [
+  "idle",
+  "walk-right",
+  "walk-left",
+  "waving",
+  "jumping",
+  "failed",
+  "waiting",
+  "running",
+  "review",
+] as const satisfies readonly SpriteSheetMotionName[];
+
+export const REQUIRED_EXTENDED_SHEET_MOTIONS = [
+  "walk-up",
+  "walk-down",
+  "walk-forward",
+  "walk-back",
+  "emote-happy",
+  "emote-angry",
+  "emote-sad",
+  "emote-surprised",
+] as const satisfies readonly SpriteSheetMotionName[];
+
 export type AssetReadinessStatus = "ready" | "placeholder" | "rejected" | "missing";
 
 export type AssetMissingReason =
   | "not-generated-yet"
   | "asset-not-registered"
   | "source-not-adopted"
-  | "rejected";
+  | "rejected"
+  | "invalid-metadata";
 
 export type AssetManifestEntry = {
   id: AssetId;
@@ -65,6 +95,29 @@ export type AssetManifest = {
   updatedAt: string;
   entries: AssetManifestEntry[];
 };
+
+export function getRequiredSpriteSheetMotions(
+  kind: SpriteSheetKind,
+): readonly SpriteSheetMotionName[] {
+  return kind === "motion"
+    ? REQUIRED_MOTION_SHEET_MOTIONS
+    : REQUIRED_EXTENDED_SHEET_MOTIONS;
+}
+
+export function assertRequiredSpriteSheetMotions(
+  metadata: SpriteSheetMetadata,
+  assetId = "sprite-sheet",
+): SpriteSheetMetadata {
+  const missing = getRequiredSpriteSheetMotions(metadata.kind).filter(
+    (motion) => metadata.motions[motion] === undefined,
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Sprite sheet metadata is missing required ${metadata.kind} rows for ${assetId}: ${missing.join(", ")}`,
+    );
+  }
+  return metadata;
+}
 
 export function resolveAssetRelativePath(
   manifest: AssetManifest,

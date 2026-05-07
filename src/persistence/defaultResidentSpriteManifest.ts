@@ -8,7 +8,6 @@ const updatedAt = "2026-05-05T00:00:00.000Z";
 function createDefaultResidentSpriteManifestEntry(
   residentId: string,
   bundleId: string,
-  status: "ready" | "placeholder" = "placeholder",
 ) {
   const publicPath = `/art/characters/defaults/${bundleId}/sprites/resident-sprite-sheet.png`;
 
@@ -16,11 +15,8 @@ function createDefaultResidentSpriteManifestEntry(
     residentId,
     spriteSheet: {
       assetId: `${bundleId}-sprite-sheet`,
-      status,
-      sourcePath:
-        status === "ready"
-          ? `public${publicPath}`
-          : `assets/residents/${bundleId}/sprites/resident-sprite-sheet.png`,
+      status: "placeholder" as const,
+      sourcePath: `assets/residents/${bundleId}/sprites/resident-sprite-sheet.png`,
       publicPath,
       frameSize: {
         width: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.frameWidth,
@@ -29,7 +25,7 @@ function createDefaultResidentSpriteManifestEntry(
       columns: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.columns,
       rows: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.rows,
       fallbackAssetId: `${bundleId}-portrait-neutral`,
-      missingReason: status === "ready" ? undefined : "not-generated-yet" as const,
+      missingReason: "not-generated-yet" as const,
       motions: DEFAULT_RESIDENT_SPRITE_SHEET_METADATA.motions,
     },
   };
@@ -39,8 +35,8 @@ export const DEFAULT_RESIDENT_SPRITE_MANIFEST: ResidentSpriteManifest = {
   schemaVersion: "resident-sprite-manifest-v1",
   updatedAt,
   residents: [
-    createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
-    createDefaultResidentSpriteManifestEntry("chr_garan", "garan", "ready"),
+    createDefaultResidentSpriteManifestEntry("chr_eve", "eve"),
+    createDefaultResidentSpriteManifestEntry("chr_garan", "garan"),
     createDefaultResidentSpriteManifestEntry("chr_ryo", "ryo"),
     createDefaultResidentSpriteManifestEntry("chr_suzu", "suzu"),
   ],

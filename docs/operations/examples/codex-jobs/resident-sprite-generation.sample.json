@@ -1,47 +1,24 @@
 {
-  "schemaVersion": "godsandbox-codex-job/v0",
-  "jobId": "sample-resident-sprite-eve-001",
-  "jobType": "resident-sprite-generation",
-  "status": "pending",
+  "jobVersion": "godsandbox-sidekick-job/v0",
+  "jobId": "eve-sprite-20260507093000",
+  "jobType": "character-asset-bundle",
+  "createdAt": "2026-05-07T09:30:00.000Z",
   "characterId": "chr_eve",
   "assetBundleId": "eve",
-  "input": {
-    "sourceKind": "default-reference",
-    "sourceImageRef": "project-default-character-reference",
-    "promptRef": ".prompts/resident-sprites/eve.md"
+  "worldDirectoryName": "default",
+  "characterProfile": {
+    "displayName": "Eve",
+    "personality": "穏やか",
+    "tone": "丁寧",
+    "age": 20,
+    "portraitRef": "assets/generated/residents/eve/reference/eve-portrait-reference-20260507093000.png"
   },
   "requestedOutputs": {
-    "spriteSheet": {
-      "frameSize": {
-        "width": 96,
-        "height": 96
-      },
-      "columns": 6,
-      "rows": [
-        "idle",
-        "walk-up",
-        "walk-down",
-        "walk-left",
-        "walk-right",
-        "walk-forward",
-        "walk-back",
-        "emote-happy",
-        "emote-angry",
-        "emote-sad",
-        "emote-surprised"
-      ],
-      "background": "transparent-alpha"
-    }
-  },
-  "outputPolicy": {
-    "incomingDirectory": "assets/generated/residents/eve/incoming/sprites/",
-    "draftDirectory": "assets/residents/eve/sprites/",
-    "adoptedDirectory": "public/art/characters/defaults/eve/sprites/",
-    "readyPromotion": "human-review-and-po-visual-ok-required"
+    "residentSpriteSheet": true
   },
   "notes": [
     "This is a documentation sample, not a real job.",
-    "Do not put personal paths, API keys, tokens, or secrets in job files.",
-    "Real .godsandbox/jobs/** files are local-only and are not committed."
+    "The game request writer derives slug automatically from displayName before this job exists.",
+    "Real .godsandbox/jobs/** files and portrait references are local-only and are not committed."
   ]
 }

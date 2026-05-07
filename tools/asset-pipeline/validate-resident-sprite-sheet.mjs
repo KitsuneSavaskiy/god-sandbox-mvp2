@@ -36,6 +36,7 @@ function printHelp() {
 確認すること:
   - PNGファイルであること
   - 画像サイズが ${expected.width}x${expected.height}px であること
+  - これは single-sheet の寸法確認だけです。2-sheet ready 判定には \`npm run sprite:check -- <slug>\` を使ってください。
   - これは採用前の検査だけです。採用済みassetへコピーしません。
   - manifestを書き換えません。`);
 }
@@ -241,6 +242,7 @@ function main() {
   }
 
   console.log(`検査結果: ${checkedCount}件すべてOKです。`);
+  console.log("これは single-sheet の寸法確認だけです。ready 判定には sprite:check を使ってください。");
   return 0;
 }
 

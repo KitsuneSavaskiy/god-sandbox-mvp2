@@ -59,6 +59,7 @@ Git 管理してよいものは、次に限定します。
 - `user-uploads`: プレイヤーが自分の箱庭へ追加した素材
 - `assets/generated/**`: ローカル生成作業用の素材置き場
 - `assets/residents/**`: ローカル確認用の住民素材置き場
+- `.hatch-pet-runs/**`: hatch-pet のローカル実行出力
 - `manifests/residents.json`: ローカル作業用 placeholder manifest
 - `.godsandbox/jobs/**`: ローカル制作依頼の実job
 - `narrative/generated/**`: ローカル生成作業用の物語候補置き場
@@ -76,6 +77,7 @@ asset-pipeline/rejected/
 asset-pipeline/user-uploads/
 assets/generated/
 assets/residents/
+.hatch-pet-runs/
 manifests/residents.json
 .godsandbox/jobs/
 narrative/generated/

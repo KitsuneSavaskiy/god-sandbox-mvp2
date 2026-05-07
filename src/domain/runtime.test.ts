@@ -53,6 +53,7 @@ import {
   recoverRuntimeGodPointsByElapsedMinutes,
   selectGrowthCycleProgress,
 } from "../application/growthBalanceService.js";
+import { resolveCharacterAnimationAssetStatus } from "../features/residents/characterAssetStatus.js";
 
 type TestAssert = {
   deepEqual(actual: unknown, expected: unknown): void;
@@ -582,6 +583,8 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 9);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 8);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.waving?.row, 3);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.review?.row, 8);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"]?.row, 2);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"]?.row, 1);
   // Extended sheet (Sheet 2): 2.5D directions + emotes
@@ -599,20 +602,13 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[2]?.spriteSheet.assetId, "ryo-sprite-sheet");
   assert.equal(activeAssetBundles[3]?.spriteSheet.assetId, "suzu-sprite-sheet");
   assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.metadata !== null), true);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.ready, true);
-  assert.equal(
-    activeAssetBundles[0]?.spriteSheet.path,
-    "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
-  );
-  assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, undefined);
-  assert.equal(activeAssetBundles[1]?.spriteSheet.ready, true);
-  assert.equal(
-    activeAssetBundles[1]?.spriteSheet.path,
-    "/art/characters/defaults/garan/sprites/resident-sprite-sheet.png",
-  );
-  assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, undefined);
-  assert.equal(activeAssetBundles.slice(2).every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.ready === false), true);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.path, null);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, "not-generated-yet");
+  assert.equal(activeAssetBundles[1]?.spriteSheet.path, null);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.metadata !== null), true);
+  assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.ready === false), true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
@@ -706,6 +702,57 @@ function testCharacterAssetReadModelSeparatesIntroductionSources(): void {
   assert.equal(generatedRecognitionReadModel.basicSettings.introduction.needsUserConfirmation, true);
 }
 
+function testInvalidSpriteMetadataFallsBackToReviewing(): void {
+  const baseCharacter = character("chr_test", "Test");
+  baseCharacter.profile.appearance.assetBundle = {
+    portraitAssetId: "test-portrait-neutral",
+    iconAssetId: null,
+    spriteSheetAssetId: "test-sprite-sheet",
+    expressions: {
+      neutral: "test-portrait-neutral",
+      happy: null,
+      angry: null,
+      sad: null,
+      surprised: null,
+    },
+  };
+
+  const readModel = resolveCharacterAssetBundleReadModel(baseCharacter, {
+    saveVersion: CURRENT_SAVE_VERSION,
+    updatedAt: now,
+    entries: [
+      {
+        id: "test-portrait-neutral",
+        ownerCharacterId: "chr_test",
+        kind: "appearance-source",
+        relativePath: "art/characters/defaults/test/portrait.png",
+      },
+      {
+        id: "test-sprite-sheet",
+        ownerCharacterId: "chr_test",
+        kind: "sprite-sheet",
+        relativePath: "art/characters/defaults/test/sprites/resident-sprite-sheet.png",
+        spriteSheet: {
+          kind: "motion",
+          frameWidth: 192,
+          frameHeight: 208,
+          columns: 8,
+          rows: 9,
+          motions: {
+            idle: { row: 0, frames: 8 },
+          },
+        },
+      },
+    ],
+  });
+  const status = resolveCharacterAnimationAssetStatus(readModel);
+
+  assert.equal(readModel.spriteSheet.ready, false);
+  assert.equal(readModel.spriteSheet.missingReason, "invalid-metadata");
+  assert.equal(status.tone, "reviewing");
+  assert.equal(status.label, "確認が必要");
+}
+
 function testResidentSpriteManifestReadModel(): void {
   const residentSpriteManifest: ResidentSpriteManifest = {
     schemaVersion: "resident-sprite-manifest-v1",
@@ -777,6 +824,7 @@ function testResidentSpriteManifestReadModel(): void {
     "chr_eve",
     defaultResidentSpriteManifest,
   );
+  const partialStatus = resolveCharacterAnimationAssetStatus(ryoAssetBundle);
 
   assert.equal(ryoAssetBundle.spriteSheet.status, "ready");
   assert.equal(ryoAssetBundle.spriteSheet.ready, true);
@@ -797,13 +845,12 @@ function testResidentSpriteManifestReadModel(): void {
   assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
   assert.equal(suzuAssetBundle.spriteSheet.ready, false);
   assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.status, "ready");
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.ready, true);
-  assert.equal(
-    defaultManifestEveAssetBundle.spriteSheet.path,
-    "/art/characters/defaults/eve/sprites/resident-sprite-sheet.png",
-  );
-  assert.equal(defaultManifestEveAssetBundle.spriteSheet.missingReason, undefined);
+  assert.equal(partialStatus.tone, "reviewing");
+  assert.equal(partialStatus.label, "確認が必要");
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.status, "placeholder");
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.ready, false);
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.path, null);
+  assert.equal(defaultManifestEveAssetBundle.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.status, "placeholder");
   assert.equal(defaultManifestSuzuAssetBundle.spriteSheet.plannedPath, "/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png");
 }
@@ -820,6 +867,7 @@ const tests: Array<[string, () => void]> = [
   ["persistence foundations", testPersistenceFoundations],
   ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
   ["asset read model separates introduction sources", testCharacterAssetReadModelSeparatesIntroductionSources],
+  ["invalid sprite metadata falls back to reviewing", testInvalidSpriteMetadataFallsBackToReviewing],
   ["resident sprite manifest read model", testResidentSpriteManifestReadModel],
 ];
 

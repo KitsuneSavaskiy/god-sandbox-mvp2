@@ -194,6 +194,15 @@ function validateCharacterAssetBoundary(
       message: "assetBundleId must be an asset key, not a character id.",
     });
   }
+
+  const expectedAssetBundleId = input.characterId.replace(/^chr_/, "");
+  if (expectedAssetBundleId && input.assetBundleId !== expectedAssetBundleId) {
+    issues.push({
+      code: "invalid-field",
+      path: "assetBundleId",
+      message: "assetBundleId must match the characterId slug in MVP jobs.",
+    });
+  }
 }
 
 function validateCharacterProfile(input: JsonRecord, issues: SidekickJobValidationIssue[]): void {

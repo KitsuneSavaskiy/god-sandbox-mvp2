@@ -1,10 +1,15 @@
 import { CURRENT_SAVE_VERSION } from "./migrations.js";
-import type { AssetManifest, AssetManifestEntry, SpriteSheetMetadata } from "./assetManifest.js";
+import {
+  assertRequiredSpriteSheetMotions,
+  type AssetManifest,
+  type AssetManifestEntry,
+  type SpriteSheetMetadata,
+} from "./assetManifest.js";
 
 const updatedAt = "2026-05-07T00:00:00.000Z";
 
 // Sheet 1: hatch-pet native format (8 columns × 9 rows, 192×208 px per frame)
-// Rows: idle / run-right / run-left / waving / jumping / failed / waiting / running / review
+// Rows: idle / walk-right / walk-left / waving / jumping / failed / waiting / running / review
 export const DEFAULT_MOTION_SHEET_METADATA: SpriteSheetMetadata = {
   kind: "motion",
   frameWidth: 192,
@@ -15,6 +20,12 @@ export const DEFAULT_MOTION_SHEET_METADATA: SpriteSheetMetadata = {
     idle: { row: 0, frames: 8 },
     "walk-right": { row: 1, frames: 8 },
     "walk-left": { row: 2, frames: 8 },
+    waving: { row: 3, frames: 8 },
+    jumping: { row: 4, frames: 8 },
+    failed: { row: 5, frames: 8 },
+    waiting: { row: 6, frames: 8 },
+    running: { row: 7, frames: 8 },
+    review: { row: 8, frames: 8 },
     // Fallback approximations for Sheet 2 motions when extended sheet is absent
     "walk-up": { row: 0, frames: 8 },
     "walk-down": { row: 0, frames: 8 },
@@ -46,6 +57,9 @@ export const DEFAULT_EXTENDED_SHEET_METADATA: SpriteSheetMetadata = {
     "emote-surprised": { row: 7, frames: 8 },
   },
 };
+
+assertRequiredSpriteSheetMotions(DEFAULT_MOTION_SHEET_METADATA, "default-motion-sheet");
+assertRequiredSpriteSheetMotions(DEFAULT_EXTENDED_SHEET_METADATA, "default-extended-sheet");
 
 // Keep legacy export alias so runtime.test.ts can update incrementally
 export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA = DEFAULT_MOTION_SHEET_METADATA;
