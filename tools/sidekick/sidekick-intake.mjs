@@ -218,16 +218,13 @@ function main() {
     console.log(`  prompt (Sheet 1): ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
     console.log(`  prompt (Sheet 2): ${extendedPrompt.path}${extendedPrompt.generated ? "  (auto-generated)" : ""}`);
 
-    console.log(`\nGeneration input for Codex pet — Sheet 1 (motion):`);
-    console.log(`  portrait ref: ${refRelPath}`);
-    console.log(`  prompt:       ${prompt.path}`);
-    console.log(`  save PNG to:  ${incomingRelDir}/  (filename: resident-sprite-sheet.png)`);
-    console.log(`\nGeneration input for Codex pet — Sheet 2 (extended):`);
-    console.log(`  portrait ref: ${refRelPath}`);
-    console.log(`  prompt:       ${extendedPrompt.path}`);
-    console.log(`  save PNG to:  ${incomingRelDir}/  (filename: resident-sprite-sheet-extended.png)`);
+    console.log(`\nGeneration gate — Sheet 1 (motion):`);
+    console.log(`  npm run sidekick:resident:hatch-pet -- --slug ${slug} --sheet motion --portrait ${refRelPath} --prompt ${prompt.path}`);
+    console.log(`\nGeneration gate — Sheet 2 (extended):`);
+    console.log(`  npm run sidekick:resident:hatch-pet -- --slug ${slug} --sheet extended --portrait ${refRelPath} --prompt ${extendedPrompt.path}`);
     console.log(`\nValidation:`);
-    console.log(`  npm run sprite:check -- ${slug}`);
+    console.log(`  The wrapper copies only validated hatch-pet final output into ${incomingRelDir}/`);
+    console.log(`  It runs sprite:check after both motion and extended sheets are present.`);
     console.log(``);
   } catch (error) {
     console.error(`\nError: ${error instanceof Error ? error.message : String(error)}`);

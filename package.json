@@ -12,6 +12,7 @@
     "sprint9:dispatch": "node tools/sprint9-dispatch/dispatch.mjs",
     "sprite:check": "node tools/asset-pipeline/check-sprite-suite.mjs",
     "sidekick:intake": "node tools/sidekick/sidekick-intake.mjs",
+    "sidekick:resident:hatch-pet": "node tools/sidekick/resident-hatch-pet-wrapper.mjs",
     "sidekick:watch": "node tools/sidekick/job-watcher.mjs"
   },
   "dependencies": {

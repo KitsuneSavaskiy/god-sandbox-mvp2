@@ -1,5 +1,10 @@
 # 作業名: 全キャラクター resident sprite 生成スプリント（2-sheet 対応）
 
+> P0 superseded: この手順は現在そのまま実行しない。
+> 直接 hatch-pet helper を呼ぶ旧手順を含むため、
+> `docs/operations/codex-4chars-animation-fullrun.md` と
+> `docs/operations/resident-hatch-pet-wrapper.md` の wrapper 手順を正本にする。
+
 対象キャラクター: **Eve / Garan / Ryo / Suzu**（4キャラ同時進行）  
 担当: Codex サイドキック（hatch-pet スキル使用）
 

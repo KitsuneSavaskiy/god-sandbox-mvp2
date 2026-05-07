@@ -1,5 +1,10 @@
 # Codex 指示書: 4キャラクター並列スプライト生成エージェント
 
+> P0 superseded: この手順は現在そのまま実行しない。
+> 直接 `prepare_pet_run.py` / `record_imagegen_result.py` / `finalize_pet_run.py` を呼ぶ旧手順を含むため、
+> `docs/operations/codex-4chars-animation-fullrun.md` と
+> `docs/operations/resident-hatch-pet-wrapper.md` の wrapper 手順を正本にする。
+
 ## この指示書の使い方
 
 Codex スレッドで以下を先頭に置いて実行する。
