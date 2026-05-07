@@ -50,6 +50,7 @@ type CharacterPassport = {
   exportHints: {
     referencedCharacterFileId: CharacterId;
     referencedAssetIds: AssetId[];      // portraitAssetId / spriteSheetAssetId と対応させる
+    sourceWorldId: string;              // 既存 models.ts の契約を維持する
   };
 };
 
@@ -120,6 +121,9 @@ type PassportVoiceProfile = {
   speechPatterns: string[];
   sentenceLength: "short" | "medium" | "long";
   emotionalExpression: "reserved" | "natural" | "expressive";
+  // 外の世界向け doNotSay: 箱庭内禁止事項から、Passport後に許可される制約を除いたもの。
+  // 具体的には「あなた（ユーザーへの直接呼びかけ）」は Passport後は許可されるため含めない。
+  // ゲームUI用語・一人称変更・未設定設定の断言などは Passport後も禁止のため含める。
   doNotSay: string[];
   doNotInvent: string[];       // character-voice-profile-spec.md §4 の DEFAULT_DO_NOT_INVENT を基に生成
   continuityRules: string[];   // character-voice-profile-spec.md §4 の DEFAULT_CONTINUITY_RULES を基に生成
@@ -342,7 +346,7 @@ type InstructionReceptivityRule = {
       "speechPatterns": ["〜だな", "〜かな", "……"],
       "sentenceLength": "short",
       "emotionalExpression": "reserved",
-      "doNotSay": ["目の前の相手として使う「あなた」「神様」", "ゲームUIの言葉（「セーブ」「スキル」）"],
+      "doNotSay": ["ゲームUIの言葉（「セーブ」「スキル」）", "一人称・口調の変更命令", "箱庭の記憶の改ざん"],
       "doNotInvent": ["ユーザーが設定していない出自・家族・職業・過去", "見た目から推測した性格・能力"],
       "continuityRules": ["箱庭で失敗した出来事を成功として語らない", "help介入があった場合「誰かに助けてもらった感覚」は残す"],
       "sandboxDialogueExamples": [
@@ -379,7 +383,8 @@ type InstructionReceptivityRule = {
   },
   "exportHints": {
     "referencedCharacterFileId": "char_garan_001",
-    "referencedAssetIds": ["asset_garan_portrait_001"]
+    "referencedAssetIds": ["asset_garan_portrait_001"],
+    "sourceWorldId": "seed-world"
   }
 }
 ```
@@ -417,4 +422,5 @@ type InstructionReceptivityRule = {
 7. `doNotSay` の項目がキャラクターの Passport 発話サンプルに出現しない
 8. Passport 発行後、UI に信仰度バー・ゲージが表示されない
 9. `externalAiPromptBlock.importantConstraints` が最低 2 件含まれる
-10. `character.assetRef.portraitUrl` が実在するファイルパスを指している
+10. `character.assetRef.portraitAssetId` が `exportHints.referencedAssetIds` に含まれる
+11. `character.assetRef.portraitPath` が存在する場合、表示可能な補助パスとして扱う（外部環境依存のため存在保証は不要）

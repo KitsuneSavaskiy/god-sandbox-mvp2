@@ -170,10 +170,17 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - 表示上限: 40 文字（`validateDialogue` で検証）
 
 **発話トリガー確率（`resolveDialogueTriggerRate` が返す値）:**
-- `event_started` / `event_resolved` / `intervention_applied`: 高（0.8 以上）
-- `proximity_enter`: 中（0.4）
-- `idle_timer`: 低（0.2）
-- `intervention_applied` 後の god_indirect_reaction: 0.5
+
+「任意発話発生率」（何らかの発話が起きる確率）：
+- `event_started` / `event_resolved` / `intervention_applied`: 0.8 以上
+- `proximity_enter`: 0.4
+- `idle_timer`: 0.2
+
+「Type C（god_indirect_reaction）発話率」（Type C が選ばれる追加確率）：
+- `event_resolved` / `intervention_applied` トリガー時: 0.5
+- それ以外のトリガー: 0（Type C は発生しない）
+
+**両者は独立した確率**。例: `intervention_applied` 時は、まず 0.8 の確率で何らかの発話が起きる。その後、 0.5 の確率で Type C（god_indirect_reaction）が選ばれる。
 
 **触らない範囲:**
 - AI 生成連携（Level 2 は後回し）
