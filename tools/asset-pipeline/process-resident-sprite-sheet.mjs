@@ -12,27 +12,27 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runVisualFrameAudit } from "./audit-resident-sprite-visuals.mjs";
 
+// Sheet 1 (motion-sheet) spec — hatch-pet native format
 const expected = {
-  frameWidth: 96,
-  frameHeight: 96,
-  columns: 6,
-  rows: 11,
-  width: 576,
-  height: 1056,
+  frameWidth: 192,
+  frameHeight: 208,
+  columns: 8,
+  rows: 9,
+  width: 1536,
+  height: 1872,
 };
 
+// Sheet 1 motion rows
 const motionRows = [
   "idle",
-  "walk-up",
-  "walk-down",
-  "walk-left",
-  "walk-right",
-  "walk-forward",
-  "walk-back",
-  "emote-happy",
-  "emote-angry",
-  "emote-sad",
-  "emote-surprised",
+  "run-right",
+  "run-left",
+  "waving",
+  "jumping",
+  "failed",
+  "waiting",
+  "running",
+  "review",
 ];
 
 const pngSignature = Buffer.from([
@@ -160,7 +160,7 @@ function validateInput(filePath) {
   if (failures.length > 0) {
     throw new Error([
       ...failures,
-      `期待値: 96x96 frame、6列、11行、画像全体 ${expected.width}x${expected.height}px。`,
+      `期待値: 192x208 frame、8列、9行、画像全体 ${expected.width}x${expected.height}px。`,
       "この画像は採用候補へ進めず、incoming または tmp で直してください。",
     ].join("\n"));
   }
@@ -265,7 +265,7 @@ function processResidentSpriteSheet(residentId, inputArg) {
   copyFileSync(sourcePath, spriteSheetPath);
   writeJson(frameMapPath, {
     schemaVersion: "resident-sprite-frame-map-v1",
-    note: "これは96x96セルで切り出せることを示すローカル作業用frame mapです。画像の採用を意味しません。",
+    note: "これは192x208セルで切り出せることを示すローカル作業用frame mapです（Sheet 1 / motion-sheet）。画像の採用を意味しません。",
     residentId: normalizedId,
     spriteSheet: toRepoRelative(spriteSheetPath),
     frameSize: {

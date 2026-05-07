@@ -20,7 +20,7 @@ When a resident sprite sheet is marked `ready`, the player sees a single, cohere
 
 The character must:
 
-- fit inside one `96x96` frame,
+- fit inside one `192x208` frame,
 - keep head, body, and feet inside the same frame,
 - keep transparent background,
 - remain readable at the actual sandbox display size,
@@ -41,38 +41,52 @@ This task is a blocker. Do not continue to Codex Sidekick, GM subagent, or App S
 The sandbox renderer currently treats a ready resident sprite as one frame with this display contract:
 
 ```txt
-frame width: 96px
-frame height: 96px
-sheet columns: 6
-sheet rows: 11
-sheet size: 576x1056
+frame width:   192px
+frame height:  208px
+sheet columns: 8
+sheet rows:    9 (per sheet)
+sheet size:    1536x1872
 ```
+
+Each resident uses two sheets. Both share the same canvas and frame dimensions.
 
 The asset pipeline must generate and validate assets for this display contract.
 
-Do not assume that a technically valid `576x1056` PNG is game-ready. It is only game-ready if every frame works at the sandbox display size.
+Do not assume that a technically valid `1536x1872` PNG is game-ready. It is only game-ready if every frame works at the sandbox display size.
 
 ## Required sprite sheet layout
 
-The sprite sheet must use this row order:
+### Sheet 1 — motion-sheet (`resident-sprite-sheet.png`)
 
 ```txt
 row 0: idle
-row 1: walk-up
-row 2: walk-down
-row 3: walk-left
-row 4: walk-right
-row 5: walk-forward
-row 6: walk-back
-row 7: emote-happy
-row 8: emote-angry
-row 9: emote-sad
-row 10: emote-surprised
+row 1: run-right
+row 2: run-left
+row 3: waving
+row 4: jumping
+row 5: failed
+row 6: waiting
+row 7: running
+row 8: review
 ```
 
-Each row has 6 frames.
+### Sheet 2 — extended-sheet (`resident-sprite-sheet-extended.png`)
 
-Each frame is an independent `96x96` character image. A frame may not depend on pixels from the frame above, below, left, or right.
+```txt
+row 0: walk-up
+row 1: walk-down
+row 2: walk-forward
+row 3: walk-back
+row 4: emote-happy
+row 5: emote-angry
+row 6: emote-sad
+row 7: emote-surprised
+row 8: (spare)
+```
+
+Each row has 8 frames.
+
+Each frame is an independent `192x208` character image. A frame may not depend on pixels from the frame above, below, left, or right.
 
 ## Frame composition requirements
 
@@ -80,7 +94,7 @@ Every frame must satisfy the following visual rules.
 
 ### Character body
 
-- Head, torso, and feet must be in the same `96x96` cell.
+- Head, torso, and feet must be in the same `192x208` cell.
 - The body may not be split into separate large parts.
 - The feet may not be cropped.
 - The head may not appear in a different row from the body.
@@ -89,7 +103,7 @@ Every frame must satisfy the following visual rules.
 
 ### Safe area
 
-Target safe area inside each `96x96` frame:
+Target safe area inside each `192x208` frame:
 
 ```txt
 left margin: at least 6px
@@ -135,7 +149,7 @@ Generation must aim for:
 - small pixel-art-like sandbox resident,
 - same visual identity as the source portrait,
 - 2.5D papercraft sandbox readability,
-- complete body within each `96x96` frame,
+- complete body within each `192x208` frame,
 - consistent scale across all rows,
 - no row-spanning body parts,
 - no cropped feet,
@@ -191,9 +205,9 @@ The audit does not need to be perfect. Its purpose is to force visual review bef
 
 A resident sprite sheet may become `ready` only after all of these are true:
 
-- PNG size is `576x1056`.
-- Grid is `6 columns x 11 rows`.
-- Frame size is `96x96`.
+- PNG size is `1536x1872`.
+- Grid is `8 columns x 9 rows`.
+- Frame size is `192x208`.
 - Alpha check passes with transparent pixels.
 - Validator passes.
 - Processor passes.
@@ -214,9 +228,9 @@ The renderer must not compensate for a broken asset by reading half rows or mixi
 
 Renderer rules:
 
-- Use `96x96` as the source frame.
-- Use `rowIndex * 96px` for Y position.
-- Use `columnIndex * 96px` for X position.
+- Use `192x208` as the source frame.
+- Use `rowIndex * 208px` for Y position.
+- Use `columnIndex * 192px` for X position.
 - Use wrapper scale for display size adjustments.
 - Do not offset walk rows by half a frame.
 - Do not crop the character to hide invalid pixels.

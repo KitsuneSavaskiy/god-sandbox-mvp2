@@ -205,7 +205,7 @@ export function CharacterDetailPanel({ character, onClose }: CharacterDetailPane
             <summary>素材を作る手順を見る</summary>
             <ol>
               <li>別ブラウザの生成画面で、住民の小さな箱庭用アニメ画像を作ります。</li>
-              <li>透明背景、96px枠、余白、文字混入がないかを確認します。</li>
+              <li>透明背景、192×208px枠、余白、文字混入がないかを確認します。</li>
               <li>採用できる画像だけを開発側で登録します。この画面から外部サービスや課金設定は扱いません。</li>
             </ol>
           </details>

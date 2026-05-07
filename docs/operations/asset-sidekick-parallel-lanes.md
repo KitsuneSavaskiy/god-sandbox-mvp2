@@ -52,7 +52,7 @@ Asset Sidekickは、次の3 laneを持つ。
 
 | lane | 目的 | 入力 | 出力候補 |
 | --- | --- | --- | --- |
-| `resident-sprite-sheet` | 箱庭で動かす住民sprite sheet候補を作る | source portrait、character settings、prompt | 96x96 frame / 6列 / 11行のsprite sheet候補 |
+| `resident-sprite-sheet` | 箱庭で動かす住民sprite sheet候補を作る | source portrait、character settings、prompt | 192x208 frame / 8列 / 9行のsprite sheet候補 |
 | `portrait-expressions` | 立ち絵の表情差分候補を作る | source portrait、character settings、prompt | neutral / happy / angry / sad / surprised など |
 | `derived-icon` | sprite sheetの正面frameからicon候補を切り出す | sprite sheet候補、front-facing frame情報 | icon候補 |
 
