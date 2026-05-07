@@ -40,20 +40,30 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - `src/domain/models.ts` — CharacterStatusBlock に faith 追加
 - `src/domain/character.ts` — DEFAULT_CHARACTER_STATUS に faith: 30 追加
 - `src/application/runtimeBootstrap.ts` — Eve/Garan/Ryo/Suzu の seed に faith: 30 追加
-- `src/persistence/migrations.ts` — 旧データ補完 migration（faith undefined → 30）
 - `src/domain/runtime.test.ts` — 境界値 unit テスト追加
 
 **触らない範囲:**
+- `src/persistence/migrations.ts`（後述の注意を参照）
 - UI コンポーネント（faith を表示しない）
 - Passport 生成（PBI 5）
 - 他 status フィールドの変化ロジック
+
+> **注意：migrations.ts は使わない**
+> 現行 `src/persistence/migrations.ts` の `MigrationContext` は `{ worldId: string }` のみを持つ。
+> migration 関数は `(context: MigrationContext) => MigrationContext` のシグネチャで、
+> character status データにはアクセスできない。
+> そのため、`faith` フィールドの後方互換補完は **persistence ロードまたは bootstrap 側** で行う。
+>
+> **実装方針（案B）：** persistence ロード時に読み込んだキャラクターの status を
+> `normalizeCharacterStatus(status)` で正規化し、`faith` が `undefined` の場合は `30` を補完する。
+> この関数は `src/domain/character.ts` に追加する。
 
 **実装手順:**
 1. `src/domain/models.ts` の `CharacterStatusBlock` に `faith: number` を追加
 2. `FaithBand` 型と `resolveFaithBand(faith: number): FaithBand` 関数を追加
 3. `src/domain/character.ts` の `DEFAULT_CHARACTER_STATUS` に `faith: 30` を追加
-4. `src/application/runtimeBootstrap.ts` の `seedCharacter()` に `faith: 30` を追加
-5. `src/persistence/migrations.ts` に migration エントリを追加（`status.faith ?? 30` で補完）
+4. `src/domain/character.ts` に `normalizeCharacterStatus(raw: Partial<CharacterStatusBlock>): CharacterStatusBlock` を追加（`faith: raw.faith ?? 30`）
+5. persistence ロード処理（または `runtimeBootstrap.ts` の seed 読み込み）で `normalizeCharacterStatus` を呼ぶ
 6. `src/domain/runtime.test.ts` に境界値テストを追加
 
 **整数丸めルール:** `Math.trunc`（本 PBI では適用なし、PBI 2 から適用）
