@@ -93,10 +93,13 @@ function resolveFaithBand(faith: number): FaithBand {
 
 ### playerMemo 補正
 
-介入時に `playerMemo` または `playerReason` が設定されており、かつその内容が前回介入と方向性が一貫している場合：
+介入時に `playerMemo` または `playerReason` が設定されており、かつその内容が前回介入と方向性が一貫している場合、補正を適用する。
 
-- 変化幅に +1 の補正（プラス方向への一貫性）
-- 変化幅に -1 の補正（矛盾する意図が続く場合）
+**補正方向（常に「信仰度をより上向きに」）：**
+- 正の delta のとき：delta に +1 する（例: +4 → +5）
+- 負の delta のとき：delta に +1 する（減少を和らげる。例: -4 → -3）
+
+矛盾するメモが続く場合は -1 補正（例: +4 → +3、-4 → -5）。
 
 補正は 2 回目以降の介入から適用する（1 回目は比較対象がないため補正なし）。
 
@@ -134,7 +137,8 @@ function applyFaithChange(currentFaith: number, trigger: FaithChangeTrigger): nu
 function applyFaithChangeWithPersonality(
   character: Character,
   trigger: FaithChangeTrigger,
-  previousMemoGroup?: string | null  // 前回 playerMemo のキーワードグループ（補正判定用）
+  currentMemoGroup?: string | null,   // 今回 playerMemo のキーワードグループ
+  previousMemoGroup?: string | null   // 前回 playerMemo のキーワードグループ（補正判定用）
 ): number;
 ```
 

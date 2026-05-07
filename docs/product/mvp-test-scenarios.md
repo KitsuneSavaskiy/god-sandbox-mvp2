@@ -80,12 +80,12 @@ describe("faith system", () => {
     it("sensitivity ≥ 70 + watch_success: ×1.5", () => {
       const char = buildCharacter({ personality: { sensitivity: 75 }, faith: 30 });
       const result = applyFaithChangeWithPersonality(char, "watch_success");
-      expect(result).toBe(33); // 30 + floor(2 * 1.5) = 33
+      expect(result).toBe(33); // 30 + Math.trunc(2 * 1.5) = 33
     });
     it("boldness ≥ 70 + trial_failure: ×0.5", () => {
       const char = buildCharacter({ personality: { boldness: 80 }, faith: 30 });
       const result = applyFaithChangeWithPersonality(char, "trial_failure");
-      expect(result).toBe(28); // 30 - floor(4 * 0.5) = 28
+      expect(result).toBe(28); // 30 - Math.trunc(4 * 0.5) = 28
     });
     it("curiosity ≥ 70 + help_failure: 減少 ×0.7", () => {
       const char = buildCharacter({ personality: { curiosity: 75 }, faith: 30 });
@@ -96,7 +96,7 @@ describe("faith system", () => {
     it("discipline ≥ 70 + trial_success: ×1.5", () => {
       const char = buildCharacter({ personality: { discipline: 80 }, faith: 30 });
       const result = applyFaithChangeWithPersonality(char, "trial_success");
-      // trial_success base delta = +5。5 * 1.5 = 7.5 → floor = 7
+      // trial_success base delta = +5。5 * 1.5 = 7.5 → Math.trunc = 7
       expect(result).toBe(37); // 30 + 7 = 37
     });
     it("sensitivity < 70 では watch_success に modifier がかからない", () => {
@@ -172,14 +172,15 @@ describe("world principle engine", () => {
         principleProfile: { dominantPhase: "metal", polarity: "yang", principleRole: "reveal" },
       });
       // nourish 関係のテンプレートが neutral より高い重みを持つ
-      expect(calcEventWeight(fireTemplate, [woodChar]))
-        .toBeGreaterThan(calcEventWeight(neutralTemplate, [woodChar]));
+      const ctx = { primaryCharacter: woodChar, participantCharacters: [] };
+      expect(calcEventWeight(fireTemplate, ctx))
+        .toBeGreaterThan(calcEventWeight(neutralTemplate, ctx));
     });
 
     it("principleProfile なしのテンプレートは weight = 1.0 を返す", () => {
       const anyChar = buildCharacter({ status: buildStatus({}) });
       const templateWithoutProfile = buildTemplate({ principleProfile: undefined });
-      expect(calcEventWeight(templateWithoutProfile, [anyChar])).toBe(1.0);
+      expect(calcEventWeight(templateWithoutProfile, { primaryCharacter: anyChar, participantCharacters: [] })).toBe(1.0);
     });
   });
 });
@@ -274,10 +275,10 @@ describe("intervention → faith → dialogue chain", () => {
     const result = await applyIntervention(char, event, "success");
 
     // faith が上昇
-    expect(result.character.status.faith).toBe(42); // +4 → senses_presence 境界越え
+    expect(result.character.state.status.faith).toBe(42); // +4 → senses_presence 境界越え
 
     // 信仰度バンドが変わった
-    expect(resolveFaithBand(result.character.status.faith)).toBe("senses_presence");
+    expect(resolveFaithBand(result.character.state.status.faith)).toBe("senses_presence");
 
     // 発話が senses_presence に対応している
     const dialogue = await generateGodIndirectDialogue(result.character);
@@ -290,8 +291,8 @@ describe("intervention → faith → dialogue chain", () => {
     const event = createEvent({ type: "trial" });
     const result = await applyIntervention(char, event, "failure");
 
-    expect(result.character.status.faith).toBe(18); // -4 → disbelieves
-    expect(resolveFaithBand(result.character.status.faith)).toBe("disbelieves");
+    expect(result.character.state.status.faith).toBe(18); // -4 → disbelieves
+    expect(resolveFaithBand(result.character.state.status.faith)).toBe("disbelieves");
   });
 
   it("連続 watch 成功 → playerMemo 補正 +1 が適用される（2回目から）", async () => {
@@ -302,11 +303,11 @@ describe("intervention → faith → dialogue chain", () => {
 
     // r1: 1回目。前回メモなし → 補正なし。30 + 2 = 32
     const r1 = await applyIntervention(char, createEvent({ type: "watch" }), "success", memo1);
-    expect(r1.character.status.faith).toBe(32);
+    expect(r1.character.state.status.faith).toBe(32);
 
     // r2: 2回目。memo2 は memo1 と同グループ（「見守る」）→ 一貫性補正 +1。32 + 2 + 1 = 35
     const r2 = await applyIntervention(r1.character, createEvent({ type: "watch" }), "success", memo2);
-    expect(r2.character.status.faith).toBe(35);
+    expect(r2.character.state.status.faith).toBe(35);
   });
 });
 ```
@@ -367,7 +368,7 @@ describe("passport generation", () => {
 ```
 Step 1: キャラクター作成
   Input:  name="Garan", personality="落ち着いた", tone="標準語", age=22
-  Assert: character.status.faith === 30
+  Assert: character.state.status.faith === 30
   Assert: character.voiceProfile.firstPerson === "私"
 
 Step 2: 箱庭観察（10分シミュレーション）
@@ -395,7 +396,7 @@ Step 5: イベント発生 + 介入（trial 成功）
 Step 6: snapshot 記録
   Input:  [スナップショット] ボタンタップ
   Assert: snapshot が LocalStorage に保存される
-  Assert: snapshot.character.status.faith === 41
+  Assert: snapshot.character.state.status.faith === 41
 
 Step 7: Passport 発行
   Input:  [Passport を発行] ボタンタップ → 確認画面 → [確認して続ける]
@@ -568,6 +569,8 @@ MVP 完了の最低条件（`docs/product/core-experience-spec.md` §8 より）
 ```bash
 npm run typecheck        # 型エラーゼロ
 npm run test:domain      # Unit + Integration テスト全通過
-npm run test:ui          # UI スナップショット全通過
+npm run test:ui          # UI スナップショット全通過（未実装の場合はスキップ）
 npm run build            # ビルド成功
 ```
+
+※ `npm run test:ui` は MVP 段階では未整備の場合がある。スナップショットテストのみ `src/__tests__/snapshots/` に個別実行すること。

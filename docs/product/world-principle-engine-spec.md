@@ -214,13 +214,14 @@ const DEFAULT_STATUS: CharacterStatusBlock = {
 
 function calcEventWeight(
   template: { principleProfile?: EventTemplatePrincipleProfile },
-  characters: Character[]
+  context: { primaryCharacter: Character; participantCharacters: Character[] }
 ): number {
   // principleProfile がないテンプレートは中立（weight = 1.0）として扱う
   if (!template.principleProfile) return 1.0;
 
-  const phases = characters.map(c => resolveImplicitPhase(c.status));
-  const polarity = resolvePolarity(characters[0]?.status ?? DEFAULT_STATUS);
+  const allCharacters = [context.primaryCharacter, ...context.participantCharacters];
+  const phases = allCharacters.map(c => resolveImplicitPhase(c.state.status));
+  const polarity = resolvePolarity(context.primaryCharacter.state.status);
   const profile = template.principleProfile;
 
   let weight = 1.0;
