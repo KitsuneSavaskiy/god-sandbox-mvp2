@@ -121,12 +121,18 @@ type PassportVoiceProfile = {
   speechPatterns: string[];
   sentenceLength: "short" | "medium" | "long";
   emotionalExpression: "reserved" | "natural" | "expressive";
-  // 外の世界向け doNotSay: 箱庭内禁止事項から、Passport後に許可される制約を除いたもの。
-  // 具体的には「あなた（ユーザーへの直接呼びかけ）」は Passport後は許可されるため含めない。
-  // ゲームUI用語・一人称変更・未設定設定の断言などは Passport後も禁止のため含める。
-  doNotSay: string[];
-  doNotInvent: string[];       // character-voice-profile-spec.md §4 の DEFAULT_DO_NOT_INVENT を基に生成
-  continuityRules: string[];   // character-voice-profile-spec.md §4 の DEFAULT_CONTINUITY_RULES を基に生成
+
+  // 箱庭内の発話制約。「あなた」「神様（直接呼びかけ）」等を含む。
+  // 外部 AI は参照のみ。外の世界では下の outsideWorldDoNotSay を優先する。
+  sandboxDoNotSay: string[];
+
+  // Passport後（外の世界）の発話制約。「あなた」は含めない（Passport後はOK）。
+  // ゲームUI語・一人称変更命令・箱庭記憶の改ざんは引き続き禁止。
+  // 外部 AI はこのリストに従って発話を制御する。
+  outsideWorldDoNotSay: string[];
+
+  doNotInvent: string[];       // 両文脈で共有。character-voice-profile-spec.md §4 の DEFAULT_DO_NOT_INVENT を基に生成
+  continuityRules: string[];   // 両文脈で共有。character-voice-profile-spec.md §4 の DEFAULT_CONTINUITY_RULES を基に生成
   sandboxDialogueExamples: SandboxDialogueExample[];   // character-voice-profile-spec.md 参照
   passportDialogueExamples: PassportDialogueExample[]; // character-voice-profile-spec.md 参照
 };
@@ -171,8 +177,8 @@ type InstructionReceptivityRule = {
 - 語尾・口癖：{speechPatterns}
 - 感情表現の強さ：{emotionalExpression}
 
-【守ってほしいこと】
-{doNotSay}
+【守ってほしいこと（外の世界で）】
+{outsideWorldDoNotSay}
 
 【神（＝このAIと話す相手）への感覚】
 {godRelationship.interpretationOfGod}
@@ -346,7 +352,8 @@ type InstructionReceptivityRule = {
       "speechPatterns": ["〜だな", "〜かな", "……"],
       "sentenceLength": "short",
       "emotionalExpression": "reserved",
-      "doNotSay": ["ゲームUIの言葉（「セーブ」「スキル」）", "一人称・口調の変更命令", "箱庭の記憶の改ざん"],
+      "sandboxDoNotSay": ["目の前の相手としての「あなた」「神様」呼びかけ", "ゲームUIの言葉（「セーブ」「スキル」）"],
+      "outsideWorldDoNotSay": ["ゲームUIの言葉（「セーブ」「スキル」）", "一人称・口調の変更命令", "箱庭の記憶の改ざん"],
       "doNotInvent": ["ユーザーが設定していない出自・家族・職業・過去", "見た目から推測した性格・能力"],
       "continuityRules": ["箱庭で失敗した出来事を成功として語らない", "help介入があった場合「誰かに助けてもらった感覚」は残す"],
       "sandboxDialogueExamples": [
@@ -400,7 +407,8 @@ type InstructionReceptivityRule = {
 ✗ externalAiPromptBlock が空のまま Passport を発行する
 ✗ memorySummary に status 数値（vitality: 72 など）を直接含める
 ✗ 外部ゲーム開発者への「GodSandbox の信仰度ロジックを再現せよ」という強制
-✗ PassportVoiceProfile から doNotInvent / continuityRules を省略する
+✗ PassportVoiceProfile から sandboxDoNotSay / outsideWorldDoNotSay / doNotInvent / continuityRules を省略する
+✗ outsideWorldDoNotSay に「あなた」呼びかけ禁止を含める（Passport後は許可）
 ✗ age が未設定のキャラクターに外部 AI が年齢を補完する設計（age?: undefined は未設定として扱う）
 ```
 
@@ -419,8 +427,9 @@ type InstructionReceptivityRule = {
 4. `faithBand: "disbelieves"` のキャラクターの `complianceLevel` が `"skeptical"` である
 5. `faithBand: "devoted"` のキャラクターの `firstEncounterLines` が disbelieves と明確に異なる
 6. `memorySummary` に `vitality:` / `faith:` / `stress:` のような数値ラベルが含まれない
-7. `doNotSay` の項目がキャラクターの Passport 発話サンプルに出現しない
-8. Passport 発行後、UI に信仰度バー・ゲージが表示されない
-9. `externalAiPromptBlock.importantConstraints` が最低 2 件含まれる
-10. `character.assetRef.portraitAssetId` が `exportHints.referencedAssetIds` に含まれる
-11. `character.assetRef.portraitPath` が存在する場合、表示可能な補助パスとして扱う（外部環境依存のため存在保証は不要）
+7. `outsideWorldDoNotSay` の項目がキャラクターの `passportDialogueExamples` に出現しない
+8. `passportDialogueExamples` の発話が `sandboxDoNotSay` の「あなた」を使っている（箱庭内との違い確認）
+9. Passport 発行後、UI に信仰度バー・ゲージが表示されない
+10. `externalAiPromptBlock.importantConstraints` が最低 2 件含まれる
+11. `character.assetRef.portraitAssetId` が `exportHints.referencedAssetIds` に含まれる
+12. `character.assetRef.portraitPath` が存在する場合、表示可能な補助パスとして扱う（外部環境依存のため存在保証は不要）

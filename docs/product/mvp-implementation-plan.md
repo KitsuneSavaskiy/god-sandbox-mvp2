@@ -213,7 +213,7 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - `PassportCharacterProfile`（name, personalitySummary, age?, speechStyle）
 - `PassportLifeMemory`（memorySummary, keyEvents, relationshipSummary）
 - `PassportGodRelationship`（faithBand, currentFaith, faithVisibility, faithChangeSummary, interpretationOfGod, firstEncounterOutsideWorld）
-- `PassportVoiceProfile`（firstPerson, speechPatterns, doNotSay, doNotInvent, continuityRules, sandboxDialogueExamples, passportDialogueExamples）
+- `PassportVoiceProfile`（firstPerson, speechPatterns, sandboxDoNotSay, outsideWorldDoNotSay, doNotInvent, continuityRules, sandboxDialogueExamples, passportDialogueExamples）
 - `ExternalAiPromptBlock`（systemPrompt, firstEncounterLines, importantConstraints）
 - `PassportCharacterAssetRef`（portraitAssetId, portraitPath?, spriteSheetAssetId?, spriteSheetPath?）
 
