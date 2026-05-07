@@ -30,6 +30,7 @@
 | **MVP テストシナリオ** | `docs/product/mvp-test-scenarios.md` |
 | **仕様統合マトリクス** | `docs/product/spec-integration-matrix.md` |
 | **MVP 実装計画書** | `docs/product/mvp-implementation-plan.md` |
+| **Codex 実行エントリーポイント** | `docs/product/codex-execution-entrypoint.md` |
 
 ---
 
