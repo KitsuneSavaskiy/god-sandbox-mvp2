@@ -143,6 +143,16 @@ const DEFAULT_CONTINUITY_RULES = [
 ];
 ```
 
+### 内部 VoiceProfile.doNotSay と Passport 出力の対応
+
+内部 `VoiceProfile.doNotSay` は **箱庭内文脈の禁止リスト**として単一 `string[]` で保持する。
+`PassportVoiceProfile` 出力時に以下の規則で 2 系列へ分岐する：
+
+- `sandboxDoNotSay` ← 内部 `doNotSay` をそのまま複製する。
+- `outsideWorldDoNotSay` ← 内部 `doNotSay` から「ユーザーへの直接呼びかけ禁止項目（`あなた` / `プレイヤー` を含む項目）」を除外した上で、外の世界固有の禁止項目（一人称・口調変更命令、箱庭記憶の改ざん、ゲームUI語）を追加して生成する。
+
+内部 `VoiceProfile` に `outsideWorldDoNotSay` フィールドを持たない。Passport 発行時に純関数として派生させる（詳細は `passport-outside-world-spec.md §2 PassportVoiceProfile の派生ルール` を参照）。
+
 ---
 
 ## 5. 口調が変わってはならないケース
@@ -170,6 +180,12 @@ const DEFAULT_CONTINUITY_RULES = [
 | 口調が一貫する | 「〜だよ」の子は常に「〜だよ」 | 場面によって「〜です」に変わる |
 | 過去と矛盾しない | trial 後「あれ、きつかったな」 | trial 失敗後「全然平気だった」 |
 | 信仰度相応の神への言及 | senses_presence: 「なんか、見られてる気がした」 | disbelieves: 「神様が助けてくれた」 |
+
+### faithBandContext の生成・出力ルール
+
+シード／生成段階：`passportDialogueExamples` は `type: "first_encounter"` について **5 つの faithBand すべて**（`disbelieves` / `uncertain` / `senses_presence` / `believes` / `devoted`）の例を最低 1 件ずつ持たせる。`memory_reference` / `general` は任意（現在の faithBand 1 件以上あれば足りる）。
+
+Passport 出力時：`passportDialogueExamples` は **全 5 バンド分の `first_encounter` 例を全件出力する**（現在の faithBand でフィルタしない）。外部 AI が `godRelationship.faithBand` を見て発話例を選択する。これにより Passport 再発行なしに信仰度変化後も適切な発話を選べる。
 
 ---
 

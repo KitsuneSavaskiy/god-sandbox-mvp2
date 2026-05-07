@@ -194,6 +194,9 @@ type FaithChangeRecord = {
 同じ介入でも、personality vector によって解釈が変わる。
 以下のケースでは変化幅を 50% 増減する（乗算後に整数丸め）：
 
+※ personality 軸の参照パスは `character.profile.personality.<軸名>`（例: `character.profile.personality.discipline`）。
+   テスト用の `buildCharacter({ personality: {...} })` は内部で `profile.personality` に格納する糖衣であり、型上は同じパスを指す（以下の修正表を参照）。
+
 | personality 軸 | 条件 | 修正 |
 |---|---|---|
 | `sensitivity` ≥ 70 | watch success | faith 変化 ×1.5（気配に敏感）|

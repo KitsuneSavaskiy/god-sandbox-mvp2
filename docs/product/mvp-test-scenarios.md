@@ -326,9 +326,18 @@ describe("passport generation", () => {
       ],
     });
     const snapshot = createSnapshot(char);
-    const passport = issueCharacterPassport(snapshot);
+    // issueCharacterPassport は IssueCharacterPassportInput を受け取る。テスト用ヘルパーで組み立てる。
+    const passportInput = (s: CharacterSnapshot) => ({
+      id: "passport-test",
+      snapshot: s,
+      schemaVersion: 1,
+      fileNameToken: "test-token",
+      now: "2026-01-01T00:00:00Z",
+    });
+    const passport = issueCharacterPassport(passportInput(snapshot));
 
     expect(passport).not.toBeNull();
+    // TODO: 以下の display フィールドは PBI 5 で PassportOutsideWorldPayload に更新後に有効化
     expect(passport.display.godRelationship.faithBand).toBe("senses_presence");
     expect(passport.display.externalAiPromptBlock.systemPrompt.length).toBeGreaterThan(50);
     expect(passport.display.lifeMemory.keyEvents.length).toBeGreaterThanOrEqual(1);
@@ -336,7 +345,7 @@ describe("passport generation", () => {
 
   it("Passport JSON に五行フィールドが存在しない", async () => {
     const char = createCharacter({ faith: 50 });
-    const passport = issueCharacterPassport(createSnapshot(char));
+    const passport = issueCharacterPassport(passportInput(createSnapshot(char)));
     const json = JSON.stringify(passport);
 
     expect(json).not.toMatch(/"wood":/);
@@ -348,8 +357,9 @@ describe("passport generation", () => {
 
   it("Passport JSON の memorySummary に status 数値が含まれない", async () => {
     const char = createCharacter({ faith: 50 });
-    const passport = issueCharacterPassport(createSnapshot(char));
+    const passport = issueCharacterPassport(passportInput(createSnapshot(char)));
 
+    // TODO: 以下の display フィールドは PBI 5 で PassportOutsideWorldPayload に更新後に有効化
     expect(passport.display.lifeMemory.memorySummary).not.toMatch(/vitality:\s*\d+/);
     expect(passport.display.lifeMemory.memorySummary).not.toMatch(/faith:\s*\d+/);
     expect(passport.display.lifeMemory.memorySummary).not.toMatch(/stress:\s*\d+/);
@@ -493,7 +503,7 @@ describe("five phase passport prohibition", () => {
   const PHASE_FIELDS = ["wood", "fire", "earth", "metal", "water"];
 
   it("Passport JSON のすべてのネストレベルに五行フィールドがない", async () => {
-    const passport = issueCharacterPassport(createSnapshot(testChar));
+    const passport = issueCharacterPassport(passportInput(createSnapshot(testChar)));
     const json = JSON.stringify(passport);
     PHASE_FIELDS.forEach(field => {
       expect(json).not.toMatch(new RegExp(`"${field}":\\s*\\d`));
