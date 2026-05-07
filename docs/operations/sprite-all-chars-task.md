@@ -33,6 +33,84 @@ manifest を ready 化すること
 
 ---
 
+## この指示書の使い方
+
+Codex スレッドで以下を先頭に置いて実行する。
+
+```txt
+Use @hatch-pet.
+Read docs/operations/sprite-all-chars-task.md and execute it exactly.
+Do not create local handmade or synthetic sprite candidates.
+If hatch-pet or image generation is unavailable, stop with `generation step unavailable`.
+```
+
+---
+
+## ステップ 0: hatch-pet スキルを確認する（生成ステップ前に必ず実行）
+
+`Use @hatch-pet` はこのスレッドの先頭で宣言済みであること。
+Skill フォルダの存在を確認してから次へ進む。
+
+```powershell
+Test-Path "$env:USERPROFILE\.codex\skills\hatch-pet\SKILL.md"
+```
+
+`True` が返れば次へ進む。`False` または Skill が存在しない場合は `hatch-pet activation failed` を報告して停止する。
+
+---
+
+## hatch-pet 生成手順（Sheet 生成共通）
+
+各 Sheet の生成は以下の手順で行う。
+
+```powershell
+$SkillDir = "$env:USERPROFILE\.codex\skills\hatch-pet"
+```
+
+**手順 A: run folder 作成**
+
+```powershell
+python "$SkillDir\scripts\prepare_pet_run.py" `
+  --pet-name  "<キャラ名>" `
+  --pet-id    "<slug>-<sheet1|sheet2>" `
+  --display-name "<キャラ名>" `
+  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite." `
+  --reference "<portrait ref パス>" `
+  --output-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
+  --force
+```
+
+**手順 B: prompt を渡す**
+
+`.prompts/resident-sprites/<slug>.md`（Sheet 1）または `<slug>-extended.md`（Sheet 2）の全文を読み込み、hatch-pet に渡す。
+hatch-pet は受け取った prompt を `$imagegen`（Codex の画像生成 Skill）へ委譲して生成する。
+画像生成はローカル Python では行わない。
+
+**手順 C: ジョブ状態確認**
+
+```powershell
+python "$SkillDir\scripts\pet_job_status.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
+```
+
+**手順 D: 生成結果を記録**
+
+```powershell
+python "$SkillDir\scripts\record_imagegen_result.py" `
+  --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
+  --job-id  "<job-id>" `
+  --source  "<生成された ig_*.png>"
+```
+
+**手順 E: run 完了**
+
+```powershell
+python "$SkillDir\scripts\finalize_pet_run.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
+```
+
+生成完了後、PNG を `assets/generated/residents/<slug>/incoming/` へ保存する。
+
+---
+
 ## 各キャラクターの手順
 
 各キャラクターについて以下のステップを独立して実行する。

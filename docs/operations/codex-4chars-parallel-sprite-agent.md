@@ -1,5 +1,83 @@
 # Codex 指示書: 4キャラクター並列スプライト生成エージェント
 
+## この指示書の使い方
+
+Codex スレッドで以下を先頭に置いて実行する。
+
+```txt
+Use @hatch-pet.
+Read docs/operations/codex-4chars-parallel-sprite-agent.md and execute it exactly.
+Do not create local handmade or synthetic sprite candidates.
+If hatch-pet or image generation is unavailable, stop with `generation step unavailable`.
+```
+
+---
+
+## ステップ 0: hatch-pet スキルを確認する（サブエージェント起動前に必ず実行）
+
+`Use @hatch-pet` はこのスレッドの先頭で宣言済みであること。
+Skill フォルダの存在を確認してから次へ進む。
+
+```powershell
+Test-Path "$env:USERPROFILE\.codex\skills\hatch-pet\SKILL.md"
+```
+
+`True` が返れば次へ進む。`False` または Skill が存在しない場合は `hatch-pet activation failed` を報告して停止する。
+
+---
+
+## hatch-pet 生成手順（Sheet 生成共通）
+
+各 Sheet の生成は以下の手順で行う。
+
+```powershell
+$SkillDir = "$env:USERPROFILE\.codex\skills\hatch-pet"
+```
+
+**手順 A: run folder 作成**
+
+```powershell
+python "$SkillDir\scripts\prepare_pet_run.py" `
+  --pet-name  "<キャラ名>" `
+  --pet-id    "<slug>-<sheet1|sheet2>" `
+  --display-name "<キャラ名>" `
+  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite." `
+  --reference "<portrait ref パス>" `
+  --output-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
+  --force
+```
+
+**手順 B: prompt を渡す**
+
+`.prompts/resident-sprites/<slug>.md`（Sheet 1）または `<slug>-extended.md`（Sheet 2）の全文を読み込み、hatch-pet に渡す。
+hatch-pet は受け取った prompt を `$imagegen`（Codex の画像生成 Skill）へ委譲して生成する。
+画像生成はローカル Python では行わない。
+
+**手順 C: ジョブ状態確認**
+
+```powershell
+python "$SkillDir\scripts\pet_job_status.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
+```
+
+**手順 D: 生成結果を記録**
+
+```powershell
+python "$SkillDir\scripts\record_imagegen_result.py" `
+  --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
+  --job-id  "<job-id>" `
+  --source  "<生成された ig_*.png>"
+```
+
+**手順 E: run 完了**
+
+```powershell
+python "$SkillDir\scripts\finalize_pet_run.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
+```
+
+生成完了後、PNG を `assets/generated/residents/<slug>/incoming/` へ保存する。
+
+---
+
 ## あなたの役割
 
 あなたはオーケストレーターです。
@@ -22,7 +100,6 @@ public/art/** へ本採用配置すること（PO 確認前）
 manifest を ready 化すること
 ```
 
-もし hatch-pet が使用できない場合は `generation step unavailable` を報告して停止すること。
 決して代替画像で誤魔化さないこと。
 
 ---
@@ -49,28 +126,27 @@ npm run sidekick:intake -- \
 
 ### ステップ 2: Sheet 1（motion-sheet）を hatch-pet で生成
 
-- portrait: ステップ 1 で記録した `portrait ref` のパス
-- prompt: `.prompts/resident-sprites/eve.md` の全文を読み込んで hatch-pet に渡す
-- 生成仕様（hatch-pet ネイティブ出力そのまま）:
-  - Canvas: **1536 × 1872 px**
-  - frame: **192 × 208 px**
-  - columns: 8 / rows: 9
-  - background: transparent alpha（不可なら `#ff00ff` chroma-key）
-- 生成後、PNG を以下へ保存:
-  ```
-  assets/generated/residents/eve/incoming/resident-sprite-sheet.png
-  ```
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
+
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `eve-sheet1` |
+| `--reference` | ステップ 1 で記録した `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/eve-sheet1` |
+| prompt | `.prompts/resident-sprites/eve.md` の全文 |
+| 保存先 | `assets/generated/residents/eve/incoming/resident-sprite-sheet.png` |
 
 ### ステップ 3: Sheet 2（extended-sheet）を hatch-pet で生成
 
-- portrait: ステップ 1 と同じ `portrait ref` のパス
-- prompt: `.prompts/resident-sprites/eve-extended.md` の全文を読み込んで hatch-pet に渡す
-- Sheet 1 と同一仕様（1536 × 1872, 192 × 208, 8col × 9row）
-- Sheet 1 で使ったキャラクターデザインと一致させること
-- 生成後、PNG を以下へ保存:
-  ```
-  assets/generated/residents/eve/incoming/resident-sprite-sheet-extended.png
-  ```
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
+
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `eve-sheet2` |
+| `--reference` | ステップ 1 と同じ `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/eve-sheet2` |
+| prompt | `.prompts/resident-sprites/eve-extended.md` の全文 |
+| 保存先 | `assets/generated/residents/eve/incoming/resident-sprite-sheet-extended.png` |
 
 ### ステップ 4: sprite:check を実行
 
@@ -116,25 +192,29 @@ npm run sidekick:intake -- \
 - `prompt (Sheet 1):`
 - `prompt (Sheet 2):`
 
-### ステップ 2: Sheet 1 を hatch-pet で生成
+### ステップ 2: Sheet 1（motion-sheet）を hatch-pet で生成
 
-- portrait: 記録した `portrait ref`
-- prompt: `.prompts/resident-sprites/garan.md` の全文
-- 仕様: 1536 × 1872, 192 × 208, 8col × 9row, transparent / `#ff00ff`
-- 保存先:
-  ```
-  assets/generated/residents/garan/incoming/resident-sprite-sheet.png
-  ```
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
 
-### ステップ 3: Sheet 2 を hatch-pet で生成
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `garan-sheet1` |
+| `--reference` | ステップ 1 で記録した `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/garan-sheet1` |
+| prompt | `.prompts/resident-sprites/garan.md` の全文 |
+| 保存先 | `assets/generated/residents/garan/incoming/resident-sprite-sheet.png` |
 
-- portrait: 同上
-- prompt: `.prompts/resident-sprites/garan-extended.md` の全文
-- Sheet 1 と同一仕様、Sheet 1 のデザインと一致させること
-- 保存先:
-  ```
-  assets/generated/residents/garan/incoming/resident-sprite-sheet-extended.png
-  ```
+### ステップ 3: Sheet 2（extended-sheet）を hatch-pet で生成
+
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
+
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `garan-sheet2` |
+| `--reference` | ステップ 1 と同じ `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/garan-sheet2` |
+| prompt | `.prompts/resident-sprites/garan-extended.md` の全文 |
+| 保存先 | `assets/generated/residents/garan/incoming/resident-sprite-sheet-extended.png` |
 
 ### ステップ 4: sprite:check を実行
 
@@ -177,25 +257,29 @@ npm run sidekick:intake -- \
 - `prompt (Sheet 1):`
 - `prompt (Sheet 2):`
 
-### ステップ 2: Sheet 1 を hatch-pet で生成
+### ステップ 2: Sheet 1（motion-sheet）を hatch-pet で生成
 
-- portrait: 記録した `portrait ref`
-- prompt: `.prompts/resident-sprites/ryo.md` の全文
-- 仕様: 1536 × 1872, 192 × 208, 8col × 9row, transparent / `#ff00ff`
-- 保存先:
-  ```
-  assets/generated/residents/ryo/incoming/resident-sprite-sheet.png
-  ```
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
 
-### ステップ 3: Sheet 2 を hatch-pet で生成
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `ryo-sheet1` |
+| `--reference` | ステップ 1 で記録した `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/ryo-sheet1` |
+| prompt | `.prompts/resident-sprites/ryo.md` の全文 |
+| 保存先 | `assets/generated/residents/ryo/incoming/resident-sprite-sheet.png` |
 
-- portrait: 同上
-- prompt: `.prompts/resident-sprites/ryo-extended.md` の全文
-- Sheet 1 と同一仕様、Sheet 1 のデザインと一致させること
-- 保存先:
-  ```
-  assets/generated/residents/ryo/incoming/resident-sprite-sheet-extended.png
-  ```
+### ステップ 3: Sheet 2（extended-sheet）を hatch-pet で生成
+
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
+
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `ryo-sheet2` |
+| `--reference` | ステップ 1 と同じ `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/ryo-sheet2` |
+| prompt | `.prompts/resident-sprites/ryo-extended.md` の全文 |
+| 保存先 | `assets/generated/residents/ryo/incoming/resident-sprite-sheet-extended.png` |
 
 ### ステップ 4: sprite:check を実行
 
@@ -238,25 +322,29 @@ npm run sidekick:intake -- \
 - `prompt (Sheet 1):`
 - `prompt (Sheet 2):`
 
-### ステップ 2: Sheet 1 を hatch-pet で生成
+### ステップ 2: Sheet 1（motion-sheet）を hatch-pet で生成
 
-- portrait: 記録した `portrait ref`
-- prompt: `.prompts/resident-sprites/suzu.md` の全文
-- 仕様: 1536 × 1872, 192 × 208, 8col × 9row, transparent / `#ff00ff`
-- 保存先:
-  ```
-  assets/generated/residents/suzu/incoming/resident-sprite-sheet.png
-  ```
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
 
-### ステップ 3: Sheet 2 を hatch-pet で生成
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `suzu-sheet1` |
+| `--reference` | ステップ 1 で記録した `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/suzu-sheet1` |
+| prompt | `.prompts/resident-sprites/suzu.md` の全文 |
+| 保存先 | `assets/generated/residents/suzu/incoming/resident-sprite-sheet.png` |
 
-- portrait: 同上
-- prompt: `.prompts/resident-sprites/suzu-extended.md` の全文
-- Sheet 1 と同一仕様、Sheet 1 のデザインと一致させること
-- 保存先:
-  ```
-  assets/generated/residents/suzu/incoming/resident-sprite-sheet-extended.png
-  ```
+### ステップ 3: Sheet 2（extended-sheet）を hatch-pet で生成
+
+「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
+
+| パラメーター | 値 |
+|---|---|
+| `--pet-id` | `suzu-sheet2` |
+| `--reference` | ステップ 1 と同じ `portrait ref` |
+| `--output-dir` | `.hatch-pet-runs/suzu-sheet2` |
+| prompt | `.prompts/resident-sprites/suzu-extended.md` の全文 |
+| 保存先 | `assets/generated/residents/suzu/incoming/resident-sprite-sheet-extended.png` |
 
 ### ステップ 4: sprite:check を実行
 
