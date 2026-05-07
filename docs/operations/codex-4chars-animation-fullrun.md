@@ -22,8 +22,18 @@ Raw Image Gen output is evidence only and must not be copied to incoming.
 P0 blocker 対応中は、4 キャラ fullrun を再開しない。
 再開条件は、`resident-hatch-pet-wrapper` が main に入り、Ryo 1 キャラの wrapper proof が pass した後。
 
-再開後は、Ryo proof を基準にして Eve / Garan / Suzu へ展開する。
-4 キャラ展開時のみ、Agent 1〜4 を並列で開始してよい。
+再開後も、4 キャラを同時に開始してはいけない。
+生成対象は常に 1 キャラだけにし、次の順で進める。
+
+```txt
+1. Ryo proof
+2. Eve
+3. Garan
+4. Suzu
+```
+
+各キャラは `sidekick:intake`、motion wrapper、extended wrapper、`sprite:check`、contact sheet確認まで完了してから次のキャラへ進む。
+途中で blocker が出た場合、以降のキャラへ進まず停止する。
 
 ---
 
@@ -75,7 +85,7 @@ Sheet 1 だけでは pass 扱いにしない。
 
 ---
 
-## 共通禁止事項（全エージェントに適用）
+## 共通禁止事項（全ステップに適用）
 
 ```
 portrait をそのまま incoming へコピーして sprite:check を通さないこと
@@ -128,7 +138,7 @@ row 8: (spare — transparent またはrow 7の複製)
 
 ---
 
-## Agent 1: Eve
+## Step 2: Eve
 
 ### E-1: sidekick:intake
 
@@ -168,11 +178,11 @@ npm run sidekick:resident:hatch-pet -- --slug eve --sheet extended --portrait <E
 npm run sprite:check -- eve
 ```
 
-exit code 0（warning のみ含む）→ pass。exit code 1 → **このキャラクターの blocker** として内容を全文報告し、**このエージェントのみを停止する**。他のキャラクターのエージェントは継続する。
+exit code 0（warning のみ含む）→ pass。exit code 1 → **このキャラクターの blocker** として内容を全文報告し、以降のキャラへ進まず停止する。
 
 ---
 
-## Agent 2: Garan
+## Step 3: Garan
 
 ### G-1: sidekick:intake
 
@@ -210,7 +220,7 @@ npm run sprite:check -- garan
 
 ---
 
-## Agent 3: Ryo
+## Step 1: Ryo proof
 
 ### R-1: sidekick:intake
 
@@ -248,7 +258,7 @@ npm run sprite:check -- ryo
 
 ---
 
-## Agent 4: Suzu
+## Step 4: Suzu
 
 ### S-1: sidekick:intake
 
@@ -286,9 +296,9 @@ npm run sprite:check -- suzu
 
 ---
 
-## テストフェーズ（Agent 1〜4 すべて完了後）
+## テストフェーズ（4キャラを順番にすべて完了後）
 
-Agent がすべて exit code 0 で完了してから以下を実行する。
+Ryo → Eve → Garan → Suzu の順に、各キャラが exit code 0 で完了してから以下を実行する。
 
 ### T-1: 型安全性チェック
 
@@ -431,11 +441,11 @@ npm run dev
 
 | 状況 | 対処 |
 |---|---|
-| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して**全エージェント停止** |
-| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して**全エージェント停止** |
-| sprite:check exit code 1（サイズ・アルファ不一致など） | エラー内容を全文報告してそのキャラクターのエージェントのみ停止。**他のキャラクターは継続**する |
+| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して**全作業停止** |
+| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して**全作業停止** |
+| sprite:check exit code 1（サイズ・アルファ不一致など） | エラー内容を全文報告して停止。**以降のキャラクターへ進まない** |
 | 生成サイズが 1536×1872 以外（例: 1136×1385） | raw evidence として記録。wrapper が fail し、incoming へコピーしない |
-| Sheet 2 row manifest が Sheet 1 の標準行になっている | wrapper が生成前または配置前に fail。4キャラ展開は停止 |
+| Sheet 2 row manifest が Sheet 1 の標準行になっている | wrapper が生成前または配置前に fail。以降のキャラへ進まない |
 | typecheck/build エラー | エラー内容を全文報告して停止 |
 | manifest 変更でブラウザエラー | コンソールエラー全文を報告 |
 
