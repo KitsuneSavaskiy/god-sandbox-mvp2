@@ -152,12 +152,14 @@ function resolveImplicitPhase(status: CharacterStatusBlock): FivePhase {
 ## 7. イベントテンプレートへの五行プロフィール付与
 
 `EventTemplate` は `docs/architecture/event-and-intervention-spec.md` の `WorldEvent` テンプレートとして扱う。
-MVP では既存のイベントテンプレートに `principleProfile` フィールドを optional で追加する。
+MVP の `EVENT_TEMPLATES` 定数では各テンプレートが `principleProfile` を必ず持つ（required）。
+`calcEventWeight` は引数 `template` の `principleProfile` を optional として受け取ることで、
+将来の principleProfile なしテンプレートとの後方互換を保証する（関数シグネチャ参照）。
 
 各イベントテンプレートは `principleProfile` を持つ（省略時は weight = 1.0 のフォールバック）。
 
 ```ts
-// WorldEvent を生成するテンプレートの拡張。principleProfile は optional。
+// WorldEvent を生成するテンプレートの拡張。EVENT_TEMPLATES では principleProfile は required。
 type EventTemplatePrincipleProfile = {
   dominantPhase: FivePhase;        // このイベントの主五行
   polarity:      YinYangPolarity;  // 陽的（活性）か陰的（内省）か balanced か

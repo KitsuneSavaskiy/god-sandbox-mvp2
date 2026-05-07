@@ -120,7 +120,7 @@ export function advanceEventLifecycle(input: AdvanceEventLifecycleInput): Advanc
 ## 介入ルール
 
 - 介入 enum の正本は `watch | help | trial` とする。
-- 同じ event に複数回介入できる。
+- MVPでは 1 event = 1 intervention とする。resolve 後は同一 event への再介入を受け付けない（将来拡張で複数回介入を許可する予定）。
 - `watch` の resourceCost は `0` である。
 - `help` と `trial` は有限の god point を消費する。
 - resource 検証は persistence commit 前に application layer で行う。
@@ -218,7 +218,7 @@ interface InterventionRecord {
 | Garan ↔ Suzu  |  +5 | Suzu の穏やかさに Garan は害を感じない。 |
 | Ryo ↔ Suzu    | +10 | 既存実装（runtimeBootstrap.seedRelation）との互換値。 |
 
-seed 直後は誰も `>= 60`（仲良し発話閾値）にも `<= 30`（距離感発話閾値）にも到達しない。Garan↔Ryo の −10 は数イベント後に `<= 30` へ到達できる位置。
+スコア範囲は −100〜+100。seed 直後は誰も `>= 60`（仲良し発話閾値）にも `<= -30`（距離感発話閾値）にも到達しない。Garan↔Ryo の −10 は −10 > −30 のためシード直後は距離感発話を発生させない。数イベント後に `<= -30` へ到達できる位置として設計している。
 
 ### 定数と生成関数（配置先: src/domain/relations.ts）
 

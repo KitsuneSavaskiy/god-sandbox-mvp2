@@ -207,9 +207,10 @@ trigger を `startsWith("watch_")` / `startsWith("help_")` / `startsWith("trial_
 **仕様参照:** `docs/product/observed-dialogue-spec.md`
 
 **変更対象ファイル:**
-- `src/domain/models.ts` — `DialogueTrigger` 型の追加
+- `src/domain/models.ts` — `DialogueTrigger` / `DayPhase` / `DialogueUtterance` / `GodIndirectReflection` 型の追加
 - `src/domain/dialogue.ts`（新規） — `resolveDialogueTriggerRate`, `validateDialogue`, `generateDialogue` 関数
 - `src/application/runtimeCommands.ts` — イベント・介入後に発話生成を呼び出す処理を追加
+- `src/domain/runtime.ts`（または `RuntimeWorldState` の定義ファイル） — `positions` / `proximityState` / `currentDayPhase` フィールドを **`RuntimeWorldState`** に追加（`SandboxSession` には追加しない — セッションセーブ契約に影響させないため）
 - UI コンポーネント — 吹き出し表示（3〜5 秒後フェードアウト、同時最大 2 件）
 - `src/domain/runtime.test.ts` — dialogue unit テスト追加
 
@@ -254,9 +255,9 @@ trigger を `startsWith("watch_")` / `startsWith("help_")` / `startsWith("trial_
 **仕様参照:** `docs/product/passport-outside-world-spec.md §2〜3, §5`
 
 **変更対象ファイル:**
-- `src/domain/models.ts` — `PassportOutsideWorldPayload` 型とその子型を追加
-- `src/domain/snapshots.ts` — `issueCharacterPassport` を拡張して display に payload を詰める
-- `src/domain/passport.ts`（新規） — `generatePassportDisplay(snapshot): PassportOutsideWorldPayload` 関数
+- `src/domain/models.ts` — `PassportOutsideWorldPayload` 型とその子型を追加。`CharacterSnapshot` に `recentGodIndirectReflections: GodIndirectReflection[]`（max 3、FIFO）を追加
+- `src/domain/snapshots.ts` — `issueCharacterPassport` を拡張して display に payload を詰める。`event_resolved` / `intervention_applied` トリガーで生成された Type C 発話を `recentGodIndirectReflections` に追記する処理を追加
+- `src/domain/passport.ts`（新規） — `generatePassportDisplay(snapshot): PassportOutsideWorldPayload` 関数。`buildMemorySummary` は `snapshot.recentGodIndirectReflections[0]` を参照して神への内省を反映させる（存在しない場合は省略）
 - `src/domain/runtime.test.ts` — Passport 生成 integration テスト追加
 
 **生成する型（`passport-outside-world-spec.md §2` に従う）:**
