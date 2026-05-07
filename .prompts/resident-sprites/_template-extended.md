@@ -44,11 +44,16 @@ Visual correctness:
 - Do not include labels, frame numbers, guide lines, or any square background.
 
 Sprite sheet spec (Sheet 2 — extended-sheet):
+
+**REQUIRED canvas size: 1536 × 1872 px (width × height). This is mandatory.**
+**REQUIRED frame size: 192 × 208 px per cell. 8 columns, 9 rows.**
+If your tool generates a different size, the output will fail validation. Generate at exactly 1536 × 1872 px.
+
 - Downloaded PNG must go through: `assets/generated/residents/[CHARACTER]/incoming/`
 - Adopted output: `public/art/characters/defaults/[CHARACTER]/sprites/resident-sprite-sheet-extended.png`
-- PNG with real alpha channel (or `#ff00ff` chroma-key background)
-- Canvas: 1536 × 1872 px
-- frame size: 192 × 208 px (non-square, same as Sheet 1)
+- PNG with real alpha channel (or `#ff00ff` chroma-key background — NOT a white or solid background)
+- Canvas: **1536 × 1872 px** (= 8 columns × 192 px, 9 rows × 208 px)
+- frame size: **192 × 208 px** (non-square, same as Sheet 1)
 - columns: 8
 - rows: 9 (rows 0–7 are used; row 8 may be left empty)
 - each row is one motion, each column is one animation frame

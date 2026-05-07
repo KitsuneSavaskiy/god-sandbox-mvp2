@@ -41,7 +41,7 @@ python "$SkillDir\scripts\prepare_pet_run.py" `
   --pet-name  "<キャラ名>" `
   --pet-id    "<slug>-<sheet1|sheet2>" `
   --display-name "<キャラ名>" `
-  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite." `
+  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite. Canvas MUST be exactly 1536x1872px. Frame 192x208px. 8 columns, 9 rows. Transparent alpha or #ff00ff chroma-key background." `
   --reference "<portrait ref パス>" `
   --output-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
   --force
@@ -155,7 +155,7 @@ npm run sprite:check -- eve
 ```
 
 - exit code 0 かつ warning のみ → pass
-- exit code 1 → blocker、理由を報告して停止
+- exit code 1 → **このキャラクターの blocker** として内容を全文報告し、**このエージェントのみを停止する**。他のキャラクターのエージェントは継続する
 
 ### 完了報告（Eve）
 

@@ -40,10 +40,14 @@ Visual correctness:
 - Do not include labels, frame numbers, guide lines, or any square background.
 
 Sprite sheet spec (Sheet 1 — motion-sheet):
+
+**REQUIRED canvas size: 1536 × 1872 px (width × height). This is mandatory.**
+**REQUIRED frame size: 192 × 208 px per cell. 8 columns, 9 rows.**
+If your tool generates a different size, the output will fail validation. Generate at exactly 1536 × 1872 px.
 - Downloaded PNG must go through: `assets/generated/residents/suzu/incoming/`
 - Adopted output: `public/art/characters/defaults/suzu/sprites/resident-sprite-sheet.png`
-- PNG with real alpha channel (or `#ff00ff` chroma-key background)
-- Canvas: 1536 x 1872 px
+- PNG with real alpha channel (or `#ff00ff` chroma-key background — NOT a white or solid background)
+- Canvas: **1536 × 1872 px** (= 8 columns × 192 px, 9 rows × 208 px) — generate at EXACTLY this size
 - frame size: 192 x 208 px (non-square)
 - columns: 8
 - rows: 9
