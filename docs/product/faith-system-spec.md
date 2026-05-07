@@ -122,6 +122,13 @@ function resolveFaithBand(faith: number): FaithBand {
 異なるグループや真逆の内容（例：前回「見守る」→今回「試練」）は「矛盾」と判定する。
 将来的に AI による意図解析に置き換え可能。
 
+**MemoGroup 型：**
+
+```ts
+// playerMemo の意図方向を表す MVP 用の有限集合
+type MemoGroup = "watch_trust" | "help_rescue" | "trial_growth";
+```
+
 **分類アルゴリズム（`classifyMemoGroup` 擬似コード）：**
 
 キーワード表の上から順に部分文字列マッチを行い、最初にヒットしたグループを返す（first-match-wins）。
@@ -129,6 +136,7 @@ function resolveFaithBand(faith: number): FaithBand {
 どのキーワードにもマッチしなかった場合は `null` を返し、呼び出し側は補正なしとして扱う。
 
 ```ts
+// memo 文字列を上記キーワード表に従って分類する。どのグループにも該当しない場合は null を返す。
 function classifyMemoGroup(memo: string): MemoGroup | null {
   const watchTrust = ["見守", "信頼", "応援", "そばにいる", "待つ"];
   const helpRescue = ["助け", "救", "支え", "守る", "一緒に"];
@@ -146,17 +154,6 @@ function classifyMemoGroup(memo: string): MemoGroup | null {
 - `faith` は 0 以下にならない（下限 0）
 - `faith` は 100 以上にならない（上限 100）
 - 変化は `ChangeSet` として記録する
-
-**MemoGroup 型と分類関数：**
-
-```ts
-// playerMemo の意図方向を表す MVP 用の有限集合
-type MemoGroup = "watch_trust" | "help_rescue" | "trial_growth";
-
-// memo 文字列を上記キーワード表に従って分類する。
-// どのグループにも該当しない場合は null を返す。
-function classifyMemoGroup(memo: string): MemoGroup | null;
-```
 
 **実装関数シグネチャ：**
 

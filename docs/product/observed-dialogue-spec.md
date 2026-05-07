@@ -194,10 +194,13 @@ function generateDialogue(
 5. trigger が "idle_timer" または "phase_change" の場合:
    - Type A (daily) を生成
 
-6. 生成した発話が 40 文字超の場合:
+6. voiceProfile.doNotSay に含まれるキーワードが発話に含まれる場合は発話を破棄して null を返す。
+   （truncation の前に確認すること。truncation で禁止表現を切り落とすことは許可しない）
+
+7. 生成した発話が 40 文字超の場合:
    - 40 文字で切り詰める（MVP）。表示ルールは §4 を参照。
 
-生成後: voiceProfile.doNotSay に含まれるキーワードが発話に含まれる場合は発話を破棄して null を返す。
+random() は `Math.random()` を指す（この確率判定は表示用の多様性確保であり、seeded RNG ではない）。
 ```
 
 ---

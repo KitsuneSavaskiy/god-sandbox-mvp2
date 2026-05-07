@@ -256,6 +256,7 @@ seed は `SandboxSession.id`（= `input.seed`）とイベント生成時の ISO 
 ### 8.1 seed と stableHash の運用
 
 seed 文字列から決定論的な数値を得るために、`src/domain/events.ts` で定義された `stableHash` を用いる。
+**再実装してはならない。必ず `src/domain/events.ts` の export を `import { stableHash }` して再利用すること。**
 
 ```ts
 // src/domain/events.ts
@@ -266,6 +267,7 @@ export function stableHash(value: string): number;
 
 ```ts
 const seed = input.seed; // = SandboxSession.id
+// activeCharacterCount >= 1 は assertSandboxSessionInvariants で保証される
 
 // 1. 主役キャラクター選択（session.id のみで決まる安定的な選択）
 const primaryIndex = stableHash(seed) % activeCharacters.length;
