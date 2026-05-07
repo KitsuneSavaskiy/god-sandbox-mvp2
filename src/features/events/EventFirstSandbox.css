@@ -607,12 +607,6 @@ button.event-first-sandbox__emote:disabled {
   transform-origin: center bottom;
 }
 
-.event-first-sandbox__resident--paused .event-first-sandbox__resident-card,
-.event-first-sandbox__resident--paused .event-first-sandbox__resident-sprite,
-.event-first-sandbox__resident--paused .event-first-sandbox__emote {
-  animation-play-state: paused;
-}
-
 .event-first-sandbox__resident-figure {
   display: grid;
   width: var(--resident-figure-width);
@@ -626,6 +620,7 @@ button.event-first-sandbox__emote:disabled {
   height: var(--resident-frame-height);
   place-items: center;
   overflow: hidden;
+  zoom: calc(var(--resident-figure-width) / 192px);
 }
 
 .event-first-sandbox__resident-figure img {
@@ -666,6 +661,12 @@ button.event-first-sandbox__emote:disabled {
 .event-first-sandbox__resident--motion-emote-sad .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-emote-surprised .event-first-sandbox__resident-sprite {
   animation: event-first-resident-sprite-motion 0.72s steps(var(--resident-sprite-frames)) infinite;
+}
+
+.event-first-sandbox__resident--paused .event-first-sandbox__resident-card,
+.event-first-sandbox__resident--paused .event-first-sandbox__resident-sprite,
+.event-first-sandbox__resident--paused .event-first-sandbox__emote {
+  animation-play-state: paused;
 }
 
 .event-first-sandbox__resident-placeholder {
