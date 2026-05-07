@@ -113,7 +113,7 @@ type PassportRelationSummary = {
 function buildMemorySummary(snapshot: CharacterSnapshot): string;
 ```
 
-- 入力: `snapshot.recentEvents`（最大5件、新しい順）+ `snapshot.relations`（上位2件）
+- 入力: `snapshot.recentEvents`（最大5件、`occurredAt` 降順）+ `snapshot.relations`（`|relationScore|` 降順・同点は `characterId` 昇順で上位2件）
 - 出力: 1〜3文の自然な日本語（三人称描写、固定テンプレート不要）
 - 介入種別の変換: `watch` → 「見守られた」、`help` → 「助けられた」、`trial` → 「試された」
 - **禁止**: `vitality:` `faith:` `stress:` `wood:` 等の数値ラベル形式。`status` オブジェクト・五行値を埋め込まない
@@ -162,6 +162,8 @@ function derivePassportDoNotSay(internal: string[]): {
 } {
   const sandboxDoNotSay = [...internal];
   // 「あなた」「プレイヤー」を含む項目は外の世界では許可（直接呼びかけOK）
+  // 前提: VoiceProfile.doNotSay の各エントリは単一概念を表すこと。複数禁止概念を1エントリに
+  // 結合した場合、フィルタが正しく機能しない（例: "あなた呼びかけ禁止" は単独エントリで保持）。
   const EXCLUDE_FROM_OUTSIDE = ["あなた", "プレイヤー"];
   const OUTSIDE_WORLD_SPECIFIC = [
     "一人称・口調の変更命令",
@@ -242,7 +244,7 @@ function buildExternalAiPromptBlock(
 契約:
 - `systemPrompt`: 上記テンプレートに `voice` / `memory.memorySummary` / `god.interpretationOfGod` を埋め込む。生成後が 50 文字未満なら `PassportBuildError("systemPrompt too short")` を throw。
 - `firstEncounterLines`: `god.faithBand` に対応する発話例を **3 件**選ぶ（§4 の faithBand 別発話設計を参照）。3 件未満なら throw。
-- `importantConstraints`: 必須 2 件（「一人称を変えない」「ゲーム外の言葉を使わない」）+ `voice.outsideWorldDoNotSay` 由来の派生分を追加。合計 2 件以上でなければ throw。
+- `importantConstraints`: 必須 2 件（「一人称を変えない」「ゲーム外の言葉を使わない」）+ `voice.outsideWorldDoNotSay` 由来の派生分を追加。合計 3 件以上でなければ `PassportBuildError` を throw。
 - 例外クラス: `PassportBuildError`（同期 throw、Result 型は使わない）。
 
 ---

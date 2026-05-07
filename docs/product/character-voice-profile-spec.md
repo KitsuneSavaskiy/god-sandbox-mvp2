@@ -196,6 +196,6 @@ Passport 出力時：`passportDialogueExamples` は **全 5 バンド分の `fir
 3. `doNotInvent` の制約外の設定が発話に出ない
 4. 異なる介入（watch/help/trial）の後でも `firstPerson` が変わらない
 5. `sandboxDialogueExamples` に `type: "god_indirect_reaction"` が最低 1 件ある
-6. `passportDialogueExamples` に `type: "first_encounter"` が最低 1 件ある
+6. `passportDialogueExamples` に `type: "first_encounter"` が **5 つの faithBand すべて**（`disbelieves` / `uncertain` / `senses_presence` / `believes` / `devoted`）で最低 1 件ずつある
 7. `passportDialogueExamples` の発話にユーザーへの直接呼びかけが含まれる（箱庭内とは異なること）
 8. `faithBandContext: "disbelieves"` と `faithBandContext: "devoted"` では明確に異なる発話例が生成される
