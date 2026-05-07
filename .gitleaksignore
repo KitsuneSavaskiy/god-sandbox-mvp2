@@ -1,0 +1,4 @@
+# gitleaks false positives
+# "fileNameToken" field in passport-outside-world-spec.md JSON example
+# is a document field name, not a secret key.
+7159ef05dcec85fcb5fa26f79eadeda3cd97ba8e:docs/product/passport-outside-world-spec.md:generic-api-key:299
