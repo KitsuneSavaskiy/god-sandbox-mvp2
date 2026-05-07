@@ -7,6 +7,45 @@ import {
 } from "./assetManifest.js";
 
 const updatedAt = "2026-05-07T00:00:00.000Z";
+const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
+  "art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png";
+
+const EVE_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
+  kind: "motion",
+  frameWidth: 118,
+  frameHeight: 136,
+  columns: 7,
+  rows: 14,
+  motions: {
+    idle: { row: 0, frames: 7 },
+    "walk-right": { row: 1, frames: 7 },
+    "walk-left": { row: 2, frames: 7 },
+    waving: { row: 3, frames: 7 },
+    jumping: { row: 4, frames: 7 },
+    failed: { row: 5, frames: 5 },
+    waiting: { row: 6, frames: 7 },
+    running: { row: 1, frames: 7 },
+    review: { row: 7, frames: 7 },
+  },
+};
+
+const EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
+  kind: "extended",
+  frameWidth: 118,
+  frameHeight: 136,
+  columns: 7,
+  rows: 14,
+  motions: {
+    "walk-up": { row: 8, frames: 7 },
+    "walk-down": { row: 9, frames: 7 },
+    "walk-forward": { row: 9, frames: 7 },
+    "walk-back": { row: 8, frames: 7 },
+    "emote-happy": { row: 10, frames: 7 },
+    "emote-angry": { row: 11, frames: 7 },
+    "emote-sad": { row: 12, frames: 7 },
+    "emote-surprised": { row: 13, frames: 7 },
+  },
+};
 
 // Sheet 1: hatch-pet native format (8 columns × 9 rows, 192×208 px per frame)
 // Rows: idle / walk-right / walk-left / waving / jumping / failed / waiting / running / review
@@ -60,6 +99,14 @@ export const DEFAULT_EXTENDED_SHEET_METADATA: SpriteSheetMetadata = {
 
 assertRequiredSpriteSheetMotions(DEFAULT_MOTION_SHEET_METADATA, "default-motion-sheet");
 assertRequiredSpriteSheetMotions(DEFAULT_EXTENDED_SHEET_METADATA, "default-extended-sheet");
+assertRequiredSpriteSheetMotions(
+  EVE_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  "eve-po-preview-combined-motion-sheet",
+);
+assertRequiredSpriteSheetMotions(
+  EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  "eve-po-preview-combined-extended-sheet",
+);
 
 // Keep legacy export alias so runtime.test.ts can update incrementally
 export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA = DEFAULT_MOTION_SHEET_METADATA;
@@ -105,6 +152,36 @@ function createResidentExtendedSheetPlaceholder(
   };
 }
 
+function createEvePoPreviewCombinedMotionSheet(): AssetManifestEntry {
+  return {
+    id: "eve-sprite-sheet",
+    ownerCharacterId: "chr_eve",
+    kind: "sprite-sheet",
+    status: "ready",
+    sourcePath: "assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${EVE_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: EVE_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "eve-portrait-neutral",
+    generatedFromAssetIds: ["eve-portrait-neutral"],
+    spriteSheet: EVE_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  };
+}
+
+function createEvePoPreviewCombinedExtendedSheet(): AssetManifestEntry {
+  return {
+    id: "eve-sprite-sheet-extended",
+    ownerCharacterId: "chr_eve",
+    kind: "sprite-sheet-extended",
+    status: "ready",
+    sourcePath: "assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${EVE_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: EVE_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "eve-portrait-neutral",
+    generatedFromAssetIds: ["eve-portrait-neutral"],
+    spriteSheet: EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  };
+}
+
 export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
   saveVersion: CURRENT_SAVE_VERSION,
   updatedAt,
@@ -115,8 +192,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/eve/portrait.png",
     },
-    createResidentMotionSheetPlaceholder("eve", "chr_eve"),
-    createResidentExtendedSheetPlaceholder("eve", "chr_eve"),
+    createEvePoPreviewCombinedMotionSheet(),
+    createEvePoPreviewCombinedExtendedSheet(),
     {
       id: "eve-expression-happy",
       ownerCharacterId: "chr_eve",

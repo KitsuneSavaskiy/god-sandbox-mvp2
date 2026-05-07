@@ -18,6 +18,7 @@ export type EmoteKind =
 
 export type ResidentMotionKey =
   | "idle"
+  | "failed"
   | "walk-up"
   | "walk-down"
   | "walk-left"

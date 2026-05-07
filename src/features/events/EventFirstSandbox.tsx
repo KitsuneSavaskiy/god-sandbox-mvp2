@@ -401,7 +401,10 @@ export function EventFirstSandbox({
           y: RESIDENT_DEFAULT_POSITIONS[index]?.y ?? 50,
           direction: null,
         };
-        const motion = resolveResidentMotion(emote, sandboxPaused, movement.direction);
+        const motion =
+          latestOutcome?.interventionType === "trial" && isPrimary
+            ? "failed"
+            : resolveResidentMotion(emote, sandboxPaused, movement.direction);
         const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
           ? resolveResidentSpriteSheetMetadata(
               assetBundle?.spriteSheet.metadata,
@@ -1315,6 +1318,7 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
     "--resident-sprite-sheet": `url("${activeSheetPath}")`,
     "--resident-frame-width": metadata ? `${metadata.frameWidth}px` : undefined,
     "--resident-frame-height": metadata ? `${metadata.frameHeight}px` : undefined,
+    "--resident-frame-max-span": resident.motion === "failed" ? 2 : 1,
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
       : undefined,

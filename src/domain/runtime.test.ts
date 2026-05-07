@@ -602,13 +602,37 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[2]?.spriteSheet.assetId, "ryo-sprite-sheet");
   assert.equal(activeAssetBundles[3]?.spriteSheet.assetId, "suzu-sprite-sheet");
   assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.metadata !== null), true);
-  assert.equal(activeAssetBundles.every((bundle) => bundle.spriteSheet.ready === false), true);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.path, null);
-  assert.equal(activeAssetBundles[0]?.spriteSheet.missingReason, "not-generated-yet");
+  assert.equal(activeAssetBundles[0]?.spriteSheet.ready, true);
+  assert.equal(
+    activeAssetBundles[0]?.spriteSheet.path,
+    "/art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png",
+  );
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.frameHeight, 136);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.columns, 7);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.idle?.frames, 7);
+  assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.failed?.frames, 5);
+  assert.equal(
+    activeAssetBundles.slice(1).every((bundle) => bundle.spriteSheet.ready === false),
+    true,
+  );
   assert.equal(activeAssetBundles[1]?.spriteSheet.path, null);
   assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.metadata !== null), true);
-  assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.ready === false), true);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.ready, true);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.frameHeight, 136);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.columns, 7);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["walk-up"]?.row, 8);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["walk-back"]?.row, 8);
+  assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
+  assert.equal(
+    activeAssetBundles.slice(1).every((bundle) => bundle.extendedSheet.ready === false),
+    true,
+  );
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
