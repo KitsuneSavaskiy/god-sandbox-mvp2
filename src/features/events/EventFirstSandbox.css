@@ -354,6 +354,7 @@
   z-index: 3;
   animation: event-first-resident-idle var(--resident-patrol-duration) ease-in-out infinite;
   transform-origin: center bottom;
+  transition: left 3.2s linear, top 3.2s linear;
 }
 
 .event-first-sandbox__resident--clickable {
@@ -1168,7 +1169,8 @@ button.event-first-sandbox__emote:disabled {
   }
 
   .event-first-sandbox__world-backdrop-layer,
-  .event-first-sandbox__viewport {
+  .event-first-sandbox__viewport,
+  .event-first-sandbox__resident {
     transition-duration: 1ms;
   }
 }

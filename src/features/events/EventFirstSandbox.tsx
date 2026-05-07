@@ -95,6 +95,7 @@ type ResidentViewModel = ActiveResidentPreview & {
   positionClassName: string;
   depthClassName: string;
   motion: ResidentMotionKey;
+  movement: ResidentMovementState;
   visualMode: "sprite" | "portrait" | "icon" | "placeholder";
   portraitPath: string | null;
   iconPath: string | null;
@@ -120,6 +121,12 @@ type ApostleMotionState = {
   targetY: number;
   isMoving: boolean;
   facing: "left" | "right";
+};
+
+type ResidentMovementState = {
+  x: number;
+  y: number;
+  direction: "left" | "right" | "up" | "down" | "forward" | "back" | null;
 };
 
 const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
@@ -211,6 +218,16 @@ const initialApostleMotion: ApostleMotionState = {
 
 const SANDBOX_BACKGROUND_PHASE_INTERVAL_MS = 45_000;
 const DEFAULT_SANDBOX_BACKGROUND_PATH = "/art/world/backgrounds/world_spring_noon.png";
+
+const RESIDENT_BOUNDS = { minX: 10, maxX: 88, minY: 35, maxY: 70 };
+const MOVEMENT_TRANSITION_MS = 3200;
+const MOVEMENT_INTERVAL_MS = 5000;
+const RESIDENT_DEFAULT_POSITIONS: Array<{ x: number; y: number }> = [
+  { x: 21, y: 54 },
+  { x: 58, y: 42 },
+  { x: 37, y: 66 },
+  { x: 72, y: 60 },
+];
 
 const sandboxDayPhaseLabels: Record<SandboxDayPhase, string> = {
   morning: "朝",
@@ -316,6 +333,9 @@ export function EventFirstSandbox({
   const [latestOutcome, setLatestOutcome] = useState<InterventionOutcome | null>(null);
   const [apostleMotion, setApostleMotion] =
     useState<ApostleMotionState>(initialApostleMotion);
+  const [residentMovements, setResidentMovements] = useState<ResidentMovementState[]>(
+    RESIDENT_DEFAULT_POSITIONS.map((pos) => ({ ...pos, direction: null }))
+  );
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
@@ -357,13 +377,13 @@ export function EventFirstSandbox({
             : null;
         const iconPath =
           assetBundle?.icon.ready && assetBundle.icon.path ? assetBundle.icon.path : null;
-        const motion = resolveResidentMotion({
-          residentIndex: index,
-          isPaused: sandboxPaused,
-          isPrimary,
-          isSupporting,
-          latestOutcome,
-        });
+        const emote = resolveResidentEmote({ sandboxStage, isPrimary, isSupporting, latestOutcome });
+        const movement = residentMovements[index] ?? {
+          x: RESIDENT_DEFAULT_POSITIONS[index]?.x ?? 50,
+          y: RESIDENT_DEFAULT_POSITIONS[index]?.y ?? 50,
+          direction: null,
+        };
+        const motion = resolveResidentMotion(emote, sandboxPaused, movement.direction);
         const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
           ? resolveResidentSpriteSheetMetadata(
               assetBundle?.spriteSheet.metadata,
@@ -383,13 +403,9 @@ export function EventFirstSandbox({
           isSupporting,
           positionClassName: decoration.positionClassName,
           depthClassName: decoration.depthClassName,
-          emote: resolveResidentEmote({
-            sandboxStage,
-            isPrimary,
-            isSupporting,
-            latestOutcome,
-          }),
+          emote,
           motion,
+          movement,
           visualMode: spriteSheetPath || extendedSheetPath
             ? "sprite"
             : portraitPath
@@ -413,6 +429,7 @@ export function EventFirstSandbox({
       activeCharacters,
       currentEvent,
       latestOutcome,
+      residentMovements,
       sandboxPaused,
       sandboxStage,
     ],
@@ -572,6 +589,60 @@ export function EventFirstSandbox({
     );
     target?.scrollIntoView({ block: "center", inline: "nearest" });
   }, [tutorialBinding]);
+
+  useEffect(() => {
+    if (sandboxPaused) return;
+
+    type MovDir = "left" | "right" | "up" | "down" | "forward" | "back";
+    const DIRECTIONS: MovDir[] = ["left", "right", "up", "down", "forward", "back"];
+    const STEP: Record<MovDir, [number, number]> = {
+      left: [-14, 0], right: [14, 0],
+      up: [0, -10], down: [0, 10],
+      forward: [0, 8], back: [0, -8],
+    };
+
+    let cancelled = false;
+    const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
+
+    function scheduleMove(index: number, delayMs: number): void {
+      const id = setTimeout(() => {
+        pendingTimers.delete(id);
+        if (cancelled) return;
+        setResidentMovements((prev) => {
+          const current = prev[index];
+          if (!current) return prev;
+          const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
+          const [dx, dy] = STEP[dir];
+          const newX = Math.min(RESIDENT_BOUNDS.maxX, Math.max(RESIDENT_BOUNDS.minX, current.x + dx));
+          const newY = Math.min(RESIDENT_BOUNDS.maxY, Math.max(RESIDENT_BOUNDS.minY, current.y + dy));
+          const next = [...prev] as ResidentMovementState[];
+          next[index] = { x: newX, y: newY, direction: dir };
+          return next;
+        });
+        const resetId = setTimeout(() => {
+          pendingTimers.delete(resetId);
+          if (cancelled) return;
+          setResidentMovements((prev) => {
+            const next = [...prev] as ResidentMovementState[];
+            if (next[index]) next[index] = { ...next[index], direction: null };
+            return next;
+          });
+        }, MOVEMENT_TRANSITION_MS);
+        pendingTimers.add(resetId);
+        scheduleMove(index, MOVEMENT_INTERVAL_MS + Math.random() * 2000);
+      }, delayMs);
+      pendingTimers.add(id);
+    }
+
+    for (let i = 0; i < activeCharacters.length; i++) {
+      scheduleMove(i, i * 1200 + Math.random() * 1000);
+    }
+
+    return () => {
+      cancelled = true;
+      pendingTimers.forEach(clearTimeout);
+    };
+  }, [activeCharacters.length, sandboxPaused]);
 
   function handleTutorialContinue() {
     setTutorialState((current) => advanceTutorialStep(current, "continue"));
@@ -759,7 +830,7 @@ export function EventFirstSandbox({
             )}
             data-resident-motion={resident.motion}
             data-resident-visual={resident.visualMode}
-            style={createResidentStyle(resident)}
+            style={{ ...createResidentStyle(resident), left: `${resident.movement.x}%`, top: `${resident.movement.y}%` }}
           >
             {resident.emote === "event-alert" ? (
               <button
@@ -1150,44 +1221,40 @@ function resolveResidentEmote(input: {
   return input.isPrimary ? "talk-request" : "joy";
 }
 
-function resolveResidentMotion(input: {
-  residentIndex: number;
-  isPaused: boolean;
-  isPrimary: boolean;
-  isSupporting: boolean;
-  latestOutcome: InterventionOutcome | null;
-}): ResidentViewModel["motion"] {
-  if (input.isPaused) {
-    return "idle";
+function emoteKindToMotion(emote: EmoteKind): ResidentMotionKey | null {
+  switch (emote) {
+    case "joy":          return null;
+    case "anger":        return "emote-angry";
+    case "sadness":      return "emote-sad";
+    case "surprise":     return "emote-surprised";
+    case "talk-request": return "walk-forward";
+    case "event-alert":  return "walk-forward";
   }
+}
 
-  if (input.latestOutcome?.interventionType === "help") {
-    return input.isPrimary ? "emote-happy" : "walk-forward";
+function directionToMotion(
+  dir: ResidentMovementState["direction"],
+): ResidentMotionKey {
+  switch (dir) {
+    case "left":    return "walk-left";
+    case "right":   return "walk-right";
+    case "up":      return "walk-up";
+    case "down":    return "walk-down";
+    case "forward": return "walk-forward";
+    case "back":    return "walk-back";
+    default:        return "idle";
   }
+}
 
-  if (input.latestOutcome?.interventionType === "trial") {
-    return input.isPrimary ? "emote-angry" : "walk-back";
-  }
-
-  if (input.latestOutcome?.interventionType === "watch") {
-    return input.isPrimary ? "emote-surprised" : "idle";
-  }
-
-  if (input.isPrimary) {
-    return "walk-forward";
-  }
-
-  if (input.isSupporting) {
-    return input.residentIndex % 2 === 0 ? "walk-left" : "walk-right";
-  }
-
-  const patrolMotions = [
-    "walk-right",
-    "walk-left",
-    "walk-down",
-    "walk-up",
-  ] as const satisfies readonly ResidentMotionKey[];
-  return patrolMotions[input.residentIndex % patrolMotions.length];
+function resolveResidentMotion(
+  emote: EmoteKind,
+  isPaused: boolean,
+  movementDirection: ResidentMovementState["direction"],
+): ResidentMotionKey {
+  if (isPaused) return "idle";
+  const emoteMotion = emoteKindToMotion(emote);
+  if (emoteMotion !== null) return emoteMotion;
+  return directionToMotion(movementDirection);
 }
 
 function resolveResidentSpriteSheetMetadata(
