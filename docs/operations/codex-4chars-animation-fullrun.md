@@ -50,7 +50,7 @@ python "$SkillDir\scripts\prepare_pet_run.py" `
   --pet-name  "<キャラ名>" `
   --pet-id    "<slug>-<sheet1|sheet2>" `
   --display-name "<キャラ名>" `
-  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite." `
+  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite. Canvas MUST be exactly 1536x1872px. Frame 192x208px. 8 columns, 9 rows. Transparent alpha or #ff00ff chroma-key background." `
   --reference "<portrait ref パス>" `
   --output-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
   --force
@@ -84,6 +84,17 @@ python "$SkillDir\scripts\finalize_pet_run.py" --run-dir ".hatch-pet-runs/<slug>
 ```
 
 生成完了後、PNG を `assets/generated/residents/<slug>/incoming/` へ保存する。
+
+**手順 F: アルファチャンネル正規化（`#ff00ff` chroma-key の場合のみ）**
+
+生成 PNG が `#ff00ff` chroma-key 背景の場合（実アルファなし）、以下で正規化する。
+
+```bash
+node tools/asset-pipeline/normalize-resident-sprite-alpha.mjs <slug>
+```
+
+normalize は 1536×1872 PNG のみ対応。**サイズが 1536×1872 でない場合は normalize をスキップし、そのまま sprite:check へ進む（サイズエラーとして記録される）。**
+normalize の出力は `assets/generated/residents/<slug>/tmp/` に保存される。目視確認後、良ければ `incoming/` の元ファイルを置き換えてから sprite:check へ進む。
 
 ---
 
@@ -187,7 +198,7 @@ npm run sidekick:intake -- \
 npm run sprite:check -- eve
 ```
 
-exit code 0（warning のみ含む）→ pass。exit code 1 → blocker として報告し停止。
+exit code 0（warning のみ含む）→ pass。exit code 1 → **このキャラクターの blocker** として内容を全文報告し、**このエージェントのみを停止する**。他のキャラクターのエージェントは継続する。
 
 ---
 
@@ -486,9 +497,10 @@ npm run dev
 
 | 状況 | 対処 |
 |---|---|
-| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して全エージェント停止 |
-| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して停止 |
-| sprite:check exit code 1 | エラー内容を全文報告して停止。再生成が必要 |
+| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して**全エージェント停止** |
+| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して**全エージェント停止** |
+| sprite:check exit code 1（サイズ・アルファ不一致など） | エラー内容を全文報告してそのキャラクターのエージェントのみ停止。**他のキャラクターは継続**する |
+| 生成サイズが 1536×1872 以外（例: 1136×1385） | そのキャラクターの blocker として記録。normalize はスキップして sprite:check エラーとして報告 |
 | typecheck/build エラー | エラー内容を全文報告して停止 |
 | manifest 変更でブラウザエラー | コンソールエラー全文を報告 |
 
