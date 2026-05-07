@@ -9,6 +9,8 @@ Use @hatch-pet.
 Read docs/operations/codex-4chars-animation-fullrun.md and execute it exactly.
 Do not create local handmade or synthetic sprite candidates.
 If hatch-pet or image generation is unavailable, stop with `generation step unavailable`.
+Do not call hatch-pet helper scripts directly. Use `npm run sidekick:resident:hatch-pet`.
+Raw Image Gen output is evidence only and must not be copied to incoming.
 ```
 
 ---
@@ -17,8 +19,22 @@ If hatch-pet or image generation is unavailable, stop with `generation step unav
 
 4 キャラクター（Eve / Garan / Ryo / Suzu）について、1 枚絵から箱庭アニメーションまでを実装してテストする。
 
-このスレッド内に **Agent 1〜4 を同時に定義し、すべてを並列で開始** する。
-1 キャラクターが終わるのを待たずに 4 つすべてを起動すること。
+P0 blocker 対応中は、4 キャラ fullrun を再開しない。
+PR #249 merge後は、まずRyo proofのみ再開可。
+Eve / Garan / Suzu は、Ryo proof が pass するまで開始禁止。
+
+再開後も、4 キャラを同時に開始してはいけない。
+生成対象は常に 1 キャラだけにし、次の順で進める。
+
+```txt
+1. Ryo proof
+2. Eve
+3. Garan
+4. Suzu
+```
+
+各キャラは `sidekick:intake`、motion wrapper、extended wrapper、`sprite:check`、contact sheet確認まで完了してから次のキャラへ進む。
+途中で blocker が出た場合、以降のキャラへ進まず停止する。
 
 ---
 
@@ -35,75 +51,51 @@ Test-Path "$env:USERPROFILE\.codex\skills\hatch-pet\SKILL.md"
 
 ---
 
-## hatch-pet 生成手順（Sheet 生成共通）
+## resident hatch-pet wrapper 手順（Sheet 生成共通）
 
-各 Sheet の生成は以下の手順で行う。`$SkillDir` はすべての PowerShell ブロックで共通。
+各 Sheet は必ず wrapper 経由で扱う。
+各 Agent が `prepare_pet_run.py`、`record_imagegen_result.py`、`finalize_pet_run.py` を直接呼んではいけない。
 
-```powershell
-$SkillDir = "$env:USERPROFILE\.codex\skills\hatch-pet"
-```
-
-**手順 A: run folder 作成**
-
-```powershell
-python "$SkillDir\scripts\prepare_pet_run.py" `
-  --pet-name  "<キャラ名>" `
-  --pet-id    "<slug>-<sheet1|sheet2>" `
-  --display-name "<キャラ名>" `
-  --description  "<キャラ> <Sheet 1|Sheet 2> resident sprite. Canvas MUST be exactly 1536x1872px. Frame 192x208px. 8 columns, 9 rows. Transparent alpha or #ff00ff chroma-key background." `
-  --reference "<portrait ref パス>" `
-  --output-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
-  --force
-```
-
-**手順 B: prompt を渡す**
-
-`.prompts/resident-sprites/<slug>.md`（Sheet 1）または `<slug>-extended.md`（Sheet 2）の全文を読み込み、hatch-pet に渡す。
-hatch-pet は受け取った prompt を `$imagegen`（Codex の画像生成 Skill）へ委譲して生成する。
-画像生成はローカル Python では行わない。
-
-**手順 C: ジョブ状態確認**
-
-```powershell
-python "$SkillDir\scripts\pet_job_status.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
-```
-
-**手順 D: 生成結果を記録**
-
-```powershell
-python "$SkillDir\scripts\record_imagegen_result.py" `
-  --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>" `
-  --job-id  "<job-id>" `
-  --source  "<生成された ig_*.png>"
-```
-
-**手順 E: run 完了**
-
-```powershell
-python "$SkillDir\scripts\finalize_pet_run.py" --run-dir ".hatch-pet-runs/<slug>-<sheet1|sheet2>"
-```
-
-生成完了後、PNG を `assets/generated/residents/<slug>/incoming/` へ保存する。
-
-**手順 F: アルファチャンネル正規化（`#ff00ff` chroma-key の場合のみ）**
-
-生成 PNG が `#ff00ff` chroma-key 背景の場合（実アルファなし）、以下で正規化する。
+**手順 A: dry-run で row manifest を確認**
 
 ```bash
-node tools/asset-pipeline/normalize-resident-sprite-alpha.mjs <slug>
+npm run sidekick:resident:hatch-pet -- --slug <slug> --sheet motion --portrait <portrait ref パス> --prompt .prompts/resident-sprites/<slug>.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug <slug> --sheet extended --portrait <portrait ref パス> --prompt .prompts/resident-sprites/<slug>-extended.md --dry-run
 ```
 
-normalize は 1536×1872 PNG のみ対応。**サイズが 1536×1872 でない場合は normalize をスキップし、そのまま sprite:check へ進む（サイズエラーとして記録される）。**
-normalize の出力は `assets/generated/residents/<slug>/tmp/` に保存される。目視確認後、良ければ `incoming/` の元ファイルを置き換えてから sprite:check へ進む。
+**手順 B: Codex pet で生成する**
+
+Codex pet が画像生成を行う。GodSandbox アプリやローカル Python から画像生成 API を呼ばない。
+raw Image Gen output は evidence として run folder に残すだけで、candidate ではない。
+
+**手順 C: hatch-pet final output を wrapper に検査させる**
+
+wrapper は `.hatch-pet-runs/<slug>-<motion|extended>/final/spritesheet.png` だけを final として見る。
+non-dry-runでは `.hatch-pet-runs/<slug>-<motion|extended>/pet_request.json` が必須。
+final が `1536x1872` でない、Sheet 2 row manifest が違う、alpha または `#ff00ff` chroma-key がない場合は fail し、incoming へコピーしない。
+`#ff00ff` の場合は wrapper が透明 alpha へ変換してから incoming へ置く。
+
+```bash
+npm run sidekick:resident:hatch-pet -- --slug <slug> --sheet motion --portrait <portrait ref パス> --prompt .prompts/resident-sprites/<slug>.md
+npm run sidekick:resident:hatch-pet -- --slug <slug> --sheet extended --portrait <portrait ref パス> --prompt .prompts/resident-sprites/<slug>-extended.md
+```
+
+**手順 D: 両 Sheet が揃った場合だけ sprite:check**
+
+wrapper は motion / extended の両方が incoming に揃ったときだけ `npm run sprite:check -- <slug>` を実行する。
+Sheet 1 だけでは pass 扱いにしない。
 
 ---
 
-## 共通禁止事項（全エージェントに適用）
+## 共通禁止事項（全ステップに適用）
 
 ```
 portrait をそのまま incoming へコピーして sprite:check を通さないこと
 ローカルで手製・合成・プレースホルダー PNG を sprite sheet 候補として使わないこと
 hatch-pet を使わずに sprite sheet を作らないこと
+prepare_pet_run.py / record_imagegen_result.py / finalize_pet_run.py を直接呼ばないこと
+raw Image Gen output を incoming へ置かないこと
+1536x1872 以外の PNG を incoming へ置かないこと
 assets/generated/** / assets/residents/** / .hatch-pet-runs/** を git commit しないこと
 PO visual OK 前に manifest を ready 化しないこと
 public/art/** へ配置したファイルを PO visual OK 前に git commit しないこと
@@ -148,7 +140,45 @@ row 8: (spare — transparent またはrow 7の複製)
 
 ---
 
-## Agent 1: Eve
+## Step 1: Ryo proof
+
+### R-1: sidekick:intake
+
+```bash
+npm run sidekick:intake -- \
+  --slug ryo \
+  --name "Ryo" \
+  --personality "明るい" \
+  --tone "タメ口" \
+  --age 17 \
+  --portrait public/art/characters/defaults/ryo/portrait.png
+```
+
+記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
+
+### R-2: Sheet 1 を wrapper で検査・配置
+
+```bash
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md
+```
+
+### R-3: Sheet 2 を wrapper で検査・配置
+
+```bash
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md
+```
+
+### R-4: sprite:check
+
+```bash
+npm run sprite:check -- ryo
+```
+
+---
+
+## Step 2: Eve
 
 ### E-1: sidekick:intake
 
@@ -168,29 +198,19 @@ npm run sidekick:intake -- \
 - `prompt (Sheet 1):` のパス（例: `.prompts/resident-sprites/eve.md`）
 - `prompt (Sheet 2):` のパス（例: `.prompts/resident-sprites/eve-extended.md`）
 
-### E-2: Sheet 1 を hatch-pet で生成
+### E-2: Sheet 1 を wrapper で検査・配置
 
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
+```bash
+npm run sidekick:resident:hatch-pet -- --slug eve --sheet motion --portrait <E-1 の portrait ref> --prompt .prompts/resident-sprites/eve.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug eve --sheet motion --portrait <E-1 の portrait ref> --prompt .prompts/resident-sprites/eve.md
+```
 
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `eve-sheet1` |
-| `--reference` | E-1 で記録した `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/eve-sheet1` |
-| prompt | `.prompts/resident-sprites/eve.md` の全文 |
-| 保存先 | `assets/generated/residents/eve/incoming/resident-sprite-sheet.png` |
+### E-3: Sheet 2 を wrapper で検査・配置
 
-### E-3: Sheet 2 を hatch-pet で生成
-
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
-
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `eve-sheet2` |
-| `--reference` | E-1 と同じ `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/eve-sheet2` |
-| prompt | `.prompts/resident-sprites/eve-extended.md` の全文 |
-| 保存先 | `assets/generated/residents/eve/incoming/resident-sprite-sheet-extended.png` |
+```bash
+npm run sidekick:resident:hatch-pet -- --slug eve --sheet extended --portrait <E-1 の portrait ref> --prompt .prompts/resident-sprites/eve-extended.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug eve --sheet extended --portrait <E-1 の portrait ref> --prompt .prompts/resident-sprites/eve-extended.md
+```
 
 ### E-4: sprite:check
 
@@ -198,11 +218,11 @@ npm run sidekick:intake -- \
 npm run sprite:check -- eve
 ```
 
-exit code 0（warning のみ含む）→ pass。exit code 1 → **このキャラクターの blocker** として内容を全文報告し、**このエージェントのみを停止する**。他のキャラクターのエージェントは継続する。
+exit code 0（warning のみ含む）→ pass。exit code 1 → **このキャラクターの blocker** として内容を全文報告し、以降のキャラへ進まず停止する。
 
 ---
 
-## Agent 2: Garan
+## Step 3: Garan
 
 ### G-1: sidekick:intake
 
@@ -218,29 +238,19 @@ npm run sidekick:intake -- \
 
 記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
 
-### G-2: Sheet 1 を hatch-pet で生成
+### G-2: Sheet 1 を wrapper で検査・配置
 
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
+```bash
+npm run sidekick:resident:hatch-pet -- --slug garan --sheet motion --portrait <G-1 の portrait ref> --prompt .prompts/resident-sprites/garan.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug garan --sheet motion --portrait <G-1 の portrait ref> --prompt .prompts/resident-sprites/garan.md
+```
 
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `garan-sheet1` |
-| `--reference` | G-1 で記録した `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/garan-sheet1` |
-| prompt | `.prompts/resident-sprites/garan.md` の全文 |
-| 保存先 | `assets/generated/residents/garan/incoming/resident-sprite-sheet.png` |
+### G-3: Sheet 2 を wrapper で検査・配置
 
-### G-3: Sheet 2 を hatch-pet で生成
-
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
-
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `garan-sheet2` |
-| `--reference` | G-1 と同じ `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/garan-sheet2` |
-| prompt | `.prompts/resident-sprites/garan-extended.md` の全文 |
-| 保存先 | `assets/generated/residents/garan/incoming/resident-sprite-sheet-extended.png` |
+```bash
+npm run sidekick:resident:hatch-pet -- --slug garan --sheet extended --portrait <G-1 の portrait ref> --prompt .prompts/resident-sprites/garan-extended.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug garan --sheet extended --portrait <G-1 の portrait ref> --prompt .prompts/resident-sprites/garan-extended.md
+```
 
 ### G-4: sprite:check
 
@@ -250,55 +260,7 @@ npm run sprite:check -- garan
 
 ---
 
-## Agent 3: Ryo
-
-### R-1: sidekick:intake
-
-```bash
-npm run sidekick:intake -- \
-  --slug ryo \
-  --name "Ryo" \
-  --personality "明るい" \
-  --tone "タメ口" \
-  --age 17 \
-  --portrait public/art/characters/defaults/ryo/portrait.png
-```
-
-記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
-
-### R-2: Sheet 1 を hatch-pet で生成
-
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
-
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `ryo-sheet1` |
-| `--reference` | R-1 で記録した `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/ryo-sheet1` |
-| prompt | `.prompts/resident-sprites/ryo.md` の全文 |
-| 保存先 | `assets/generated/residents/ryo/incoming/resident-sprite-sheet.png` |
-
-### R-3: Sheet 2 を hatch-pet で生成
-
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
-
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `ryo-sheet2` |
-| `--reference` | R-1 と同じ `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/ryo-sheet2` |
-| prompt | `.prompts/resident-sprites/ryo-extended.md` の全文 |
-| 保存先 | `assets/generated/residents/ryo/incoming/resident-sprite-sheet-extended.png` |
-
-### R-4: sprite:check
-
-```bash
-npm run sprite:check -- ryo
-```
-
----
-
-## Agent 4: Suzu
+## Step 4: Suzu
 
 ### S-1: sidekick:intake
 
@@ -314,29 +276,19 @@ npm run sidekick:intake -- \
 
 記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
 
-### S-2: Sheet 1 を hatch-pet で生成
+### S-2: Sheet 1 を wrapper で検査・配置
 
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。
+```bash
+npm run sidekick:resident:hatch-pet -- --slug suzu --sheet motion --portrait <S-1 の portrait ref> --prompt .prompts/resident-sprites/suzu.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug suzu --sheet motion --portrait <S-1 の portrait ref> --prompt .prompts/resident-sprites/suzu.md
+```
 
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `suzu-sheet1` |
-| `--reference` | S-1 で記録した `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/suzu-sheet1` |
-| prompt | `.prompts/resident-sprites/suzu.md` の全文 |
-| 保存先 | `assets/generated/residents/suzu/incoming/resident-sprite-sheet.png` |
+### S-3: Sheet 2 を wrapper で検査・配置
 
-### S-3: Sheet 2 を hatch-pet で生成
-
-「hatch-pet 生成手順（Sheet 生成共通）」に従い以下のパラメーターで実行する。Sheet 1 のデザインと一致させること。
-
-| パラメーター | 値 |
-|---|---|
-| `--pet-id` | `suzu-sheet2` |
-| `--reference` | S-1 と同じ `portrait ref` |
-| `--output-dir` | `.hatch-pet-runs/suzu-sheet2` |
-| prompt | `.prompts/resident-sprites/suzu-extended.md` の全文 |
-| 保存先 | `assets/generated/residents/suzu/incoming/resident-sprite-sheet-extended.png` |
+```bash
+npm run sidekick:resident:hatch-pet -- --slug suzu --sheet extended --portrait <S-1 の portrait ref> --prompt .prompts/resident-sprites/suzu-extended.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug suzu --sheet extended --portrait <S-1 の portrait ref> --prompt .prompts/resident-sprites/suzu-extended.md
+```
 
 ### S-4: sprite:check
 
@@ -346,9 +298,9 @@ npm run sprite:check -- suzu
 
 ---
 
-## テストフェーズ（Agent 1〜4 すべて完了後）
+## テストフェーズ（4キャラを順番にすべて完了後）
 
-Agent がすべて exit code 0 で完了してから以下を実行する。
+Ryo → Eve → Garan → Suzu の順に、各キャラが exit code 0 で完了してから以下を実行する。
 
 ### T-1: 型安全性チェック
 
@@ -491,10 +443,11 @@ npm run dev
 
 | 状況 | 対処 |
 |---|---|
-| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して**全エージェント停止** |
-| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して**全エージェント停止** |
-| sprite:check exit code 1（サイズ・アルファ不一致など） | エラー内容を全文報告してそのキャラクターのエージェントのみ停止。**他のキャラクターは継続**する |
-| 生成サイズが 1536×1872 以外（例: 1136×1385） | そのキャラクターの blocker として記録。normalize はスキップして sprite:check エラーとして報告 |
+| `SKILL.md` が存在しない / hatch-pet Skill が無効 | `hatch-pet activation failed` を報告して**全作業停止** |
+| `$imagegen` が利用不可（画像生成 Skill が無効） | `generation step unavailable` を報告して**全作業停止** |
+| sprite:check exit code 1（サイズ・アルファ不一致など） | エラー内容を全文報告して停止。**以降のキャラクターへ進まない** |
+| 生成サイズが 1536×1872 以外（例: 1136×1385） | raw evidence として記録。wrapper が fail し、incoming へコピーしない |
+| Sheet 2 row manifest が Sheet 1 の標準行になっている | wrapper が生成前または配置前に fail。以降のキャラへ進まない |
 | typecheck/build エラー | エラー内容を全文報告して停止 |
 | manifest 変更でブラウザエラー | コンソールエラー全文を報告 |
 
