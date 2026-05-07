@@ -73,8 +73,10 @@ The wrapper checks these before any candidate placement:
 - The prompt path exists.
 - The local hatch-pet skill folder exists.
 - The prompt contains the required row manifest for the selected sheet.
-- Existing `pet_request.json`, when present in the run folder, contains the
-  required row manifest.
+- In non-dry-run mode, `pet_request.json` exists in the run folder and contains
+  the required row manifest.
+- In dry-run mode, missing `pet_request.json` is allowed because no generation
+  output is adopted. If the file exists, its row manifest is still checked.
 - `extended` fails if the run definition contains standard Sheet 1 rows.
 
 `--dry-run` prints the run definition and row manifest only. It does not write
@@ -94,10 +96,11 @@ The final PNG must:
 
 - Exist under the run folder's `final/` directory.
 - Be exactly `1536 x 1872`.
-- Have an alpha channel with transparent pixels, or contain a `#ff00ff`
-  chroma-key background.
+- Have an inspectable alpha channel with transparent pixels, or contain a
+  `#ff00ff` chroma-key background.
 
 If any check fails, the wrapper copies nothing to `incoming/`.
+If alpha channel pixels cannot be inspected, the wrapper fails closed.
 When the final PNG uses `#ff00ff`, the wrapper converts that exact color to
 transparent alpha before writing the `incoming/` file. Raw chroma-key output is
 not copied as-is.

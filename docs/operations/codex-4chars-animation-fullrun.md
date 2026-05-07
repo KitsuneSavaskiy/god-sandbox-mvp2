@@ -20,7 +20,8 @@ Raw Image Gen output is evidence only and must not be copied to incoming.
 4 キャラクター（Eve / Garan / Ryo / Suzu）について、1 枚絵から箱庭アニメーションまでを実装してテストする。
 
 P0 blocker 対応中は、4 キャラ fullrun を再開しない。
-再開条件は、`resident-hatch-pet-wrapper` が main に入り、Ryo 1 キャラの wrapper proof が pass した後。
+PR #249 merge後は、まずRyo proofのみ再開可。
+Eve / Garan / Suzu は、Ryo proof が pass するまで開始禁止。
 
 再開後も、4 キャラを同時に開始してはいけない。
 生成対象は常に 1 キャラだけにし、次の順で進める。
@@ -70,6 +71,7 @@ raw Image Gen output は evidence として run folder に残すだけで、cand
 **手順 C: hatch-pet final output を wrapper に検査させる**
 
 wrapper は `.hatch-pet-runs/<slug>-<motion|extended>/final/spritesheet.png` だけを final として見る。
+non-dry-runでは `.hatch-pet-runs/<slug>-<motion|extended>/pet_request.json` が必須。
 final が `1536x1872` でない、Sheet 2 row manifest が違う、alpha または `#ff00ff` chroma-key がない場合は fail し、incoming へコピーしない。
 `#ff00ff` の場合は wrapper が透明 alpha へ変換してから incoming へ置く。
 
@@ -134,6 +136,44 @@ row 4: jumping   row 5: failed     row 6: waiting   row 7: running  row 8: revie
 row 0: walk-up   row 1: walk-down   row 2: walk-forward  row 3: walk-back
 row 4: emote-happy  row 5: emote-angry  row 6: emote-sad  row 7: emote-surprised
 row 8: (spare — transparent またはrow 7の複製)
+```
+
+---
+
+## Step 1: Ryo proof
+
+### R-1: sidekick:intake
+
+```bash
+npm run sidekick:intake -- \
+  --slug ryo \
+  --name "Ryo" \
+  --personality "明るい" \
+  --tone "タメ口" \
+  --age 17 \
+  --portrait public/art/characters/defaults/ryo/portrait.png
+```
+
+記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
+
+### R-2: Sheet 1 を wrapper で検査・配置
+
+```bash
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md
+```
+
+### R-3: Sheet 2 を wrapper で検査・配置
+
+```bash
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md --dry-run
+npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md
+```
+
+### R-4: sprite:check
+
+```bash
+npm run sprite:check -- ryo
 ```
 
 ---
@@ -216,44 +256,6 @@ npm run sidekick:resident:hatch-pet -- --slug garan --sheet extended --portrait 
 
 ```bash
 npm run sprite:check -- garan
-```
-
----
-
-## Step 1: Ryo proof
-
-### R-1: sidekick:intake
-
-```bash
-npm run sidekick:intake -- \
-  --slug ryo \
-  --name "Ryo" \
-  --personality "明るい" \
-  --tone "タメ口" \
-  --age 17 \
-  --portrait public/art/characters/defaults/ryo/portrait.png
-```
-
-記録: `portrait ref:` / `incoming:` / `prompt (Sheet 1):` / `prompt (Sheet 2):`
-
-### R-2: Sheet 1 を wrapper で検査・配置
-
-```bash
-npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md --dry-run
-npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo.md
-```
-
-### R-3: Sheet 2 を wrapper で検査・配置
-
-```bash
-npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md --dry-run
-npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <R-1 の portrait ref> --prompt .prompts/resident-sprites/ryo-extended.md
-```
-
-### R-4: sprite:check
-
-```bash
-npm run sprite:check -- ryo
 ```
 
 ---

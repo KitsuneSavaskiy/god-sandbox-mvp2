@@ -3,12 +3,13 @@
 You are creating Sheet 1 (motion sprite sheet) for a GodSandbox resident character.
 
 Workflow note:
-- This prompt is for an external subscription UI such as ChatGPT or Codex pet.
+- This prompt is for Codex hatch-pet generation controlled by the Codex Sidekick.
 - GodSandbox must not call an image generation API from inside the app.
 - Do not include API keys, account details, personal paths, or billing details in the output.
 
 Generation source requirement:
-- Use your own image generation tool (hatch-pet or approved external UI) to generate the sprite sheet.
+- Generate with Codex hatch-pet. Incoming placement is allowed only after `npm run sidekick:resident:hatch-pet` validates hatch-pet final output.
+- Raw Image Gen output is evidence only. Do not copy raw output to incoming.
 - If generation is unavailable, stop and report `generation step unavailable`.
 - Do not create a local handmade, synthetic, placeholder, or validation-only sprite sheet as a substitute.
 - Do not treat a validation-only image as a character candidate.

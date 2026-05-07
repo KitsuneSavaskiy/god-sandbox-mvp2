@@ -146,7 +146,7 @@ Not allowed:
 - The background must be transparent (real alpha channel).
 - No solid color, checkerboard, or square background may remain.
 - No label text, frame number, row marker, guide line, or grid line may be baked into the final asset.
-- If the generation tool cannot produce real alpha, use a flat `#ff00ff` chroma-key background. The local alpha normalizer will remove it.
+- If the generation tool cannot produce real alpha, use a flat `#ff00ff` chroma-key background. The resident hatch-pet wrapper converts exact `#ff00ff` to alpha before `incoming/`.
 
 ## Generation source contract
 
@@ -179,7 +179,7 @@ Everything else is handled autonomously by the Codex sidekick (a separate proces
 2. The automation layer (configured once via game tutorial) detects the new job and triggers the Codex sidekick.
 3. `npm run sidekick:intake` auto-generates characterId, assetBundleId, jobId, sets up folders, copies the portrait reference, and generates **both** prompt files from `_template.md` and `_template-extended.md` if absent.
 4. The Codex sidekick runs `npm run sidekick:resident:hatch-pet` for **Sheet 1**, then **Sheet 2**.
-5. The wrapper verifies the sheet-specific row manifest, hatch-pet final output, exact size, and alpha/chroma-key background. If final output uses exact `#ff00ff`, the wrapper converts it to transparent alpha before `incoming/`.
+5. The wrapper verifies the sheet-specific row manifest from `pet_request.json`, hatch-pet final output, exact size, and alpha/chroma-key background. If final output uses exact `#ff00ff`, the wrapper converts it to transparent alpha before `incoming/`.
 6. Only after the wrapper passes does it copy Sheet 1 to `assets/generated/residents/<slug>/incoming/resident-sprite-sheet.png` and Sheet 2 to `…/resident-sprite-sheet-extended.png`.
 7. The wrapper runs `npm run sprite:check -- <slug>` only after both candidates exist.
 

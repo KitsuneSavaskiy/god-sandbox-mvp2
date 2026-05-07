@@ -165,7 +165,7 @@ function createRunPlan(args) {
     definition.filename,
   );
 
-  validatePetRequestIfPresent(runDir, sheet);
+  validatePetRequest(runDir, sheet, Boolean(args.dryRun));
 
   return {
     dryRun: Boolean(args.dryRun),
@@ -194,6 +194,9 @@ function executeRunPlan(plan) {
 
   if (!metadata.hasAlphaChannel && !metadata.hasMagentaChromaKey) {
     throw new Error("Final PNG must have an alpha channel or a #ff00ff chroma-key background.");
+  }
+  if (metadata.hasAlphaChannel && metadata.transparentPixelCount === null) {
+    throw new Error("Final PNG alpha channel could not be inspected.");
   }
   if (metadata.hasAlphaChannel && metadata.transparentPixelCount === 0) {
     throw new Error("Final PNG has an alpha channel but no transparent pixels.");
@@ -326,10 +329,13 @@ function validatePromptRows(promptText, sheet) {
   }
 }
 
-function validatePetRequestIfPresent(runDir, sheet) {
+function validatePetRequest(runDir, sheet, dryRun) {
   const requestPath = path.join(runDir, "pet_request.json");
   if (!existsSync(requestPath)) {
-    return;
+    if (dryRun) {
+      return;
+    }
+    throw new Error("pet_request.json is required for non-dry-run resident hatch-pet runs.");
   }
 
   let requestText;
