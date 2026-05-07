@@ -29,6 +29,49 @@ sheet size:    1536 × 1872 px
 A PNG of the correct sheet size is not automatically game-ready.
 Every individual 192 × 208 frame must be a usable character image at the sandbox display size.
 
+### Runtime display size
+
+Sprites are rendered in the sandbox at a reduced display size.
+The CSS zoom is applied automatically: `zoom = portrait-figure-width / 192px`.
+
+At typical viewport widths:
+- 760 px wide  → zoom ≈ 0.41 → displayed at ≈ 79 × 85 px
+- 1200 px wide → zoom ≈ 0.50 → displayed at ≈ 96 × 104 px
+
+Generation targets the full 192 × 208 px frame regardless of display zoom.
+The zoom is a display-only concern; the asset pipeline validates the full-size frame.
+
+### Runtime animation behaviour
+
+When a sprite sheet is marked `ready` in the manifest, the sandbox animates the resident:
+
+- Residents patrol randomly in 6 directions (left, right, up, down, forward, back)
+  every 5–7 seconds using `walk-*` motion rows from Sheet 1 or Sheet 2.
+- Emote bubbles drive motion:
+  - `anger` → `emote-angry` (Sheet 2 row 5)
+  - `sadness` → `emote-sad` (Sheet 2 row 6)
+  - `surprise` → `emote-surprised` (Sheet 2 row 7)
+  - `talk-request` / `event-alert` → `walk-forward` (Sheet 2 row 2)
+  - `joy` (ambient default) → follows patrol direction
+- All resident CSS animations pause while the event window is open.
+
+### Manifest activation
+
+To activate a sprite sheet in the sandbox, update `src/persistence/defaultResidentSpriteManifest.ts`:
+
+```typescript
+// Change the third argument from default ("placeholder") to "ready"
+createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
+```
+
+The sprite files must be present at:
+```txt
+public/art/characters/defaults/<bundleId>/sprites/resident-sprite-sheet.png
+public/art/characters/defaults/<bundleId>/sprites/resident-sprite-sheet-extended.png
+```
+
+Do not commit manifest changes or sprite files until PO visual review is complete.
+
 ## Motion row order
 
 ### Sheet 1 — motion-sheet

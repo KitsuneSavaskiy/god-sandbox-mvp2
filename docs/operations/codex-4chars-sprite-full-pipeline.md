@@ -226,6 +226,29 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
 
 ---
 
+## サンドボックス表示仕様
+
+スプライトはサンドボックス内でポートレート図と同じサイズに縮小して表示される。
+生成サイズ（192×208 px / 8col / 9row）は変わらない。縮小は CSS が自動で行う。
+
+```
+生成サイズ: 1536×1872 px（192×208 frame × 8col × 9row）
+表示サイズ: CSS zoom により portrait figure 幅に合わせて自動縮小
+  → clamp(78px, 8vw, 124px) / 192px の比率でズームされる
+  → 1200px 幅では約 0.5× 表示（≈ 96×104 px）
+```
+
+スプライトが表示されると:
+- 住民は 5〜7 秒おきに上下左右・前後へランダム移動する（`walk-*` モーション）
+- emote バブルに応じてスプライトモーションが切り替わる
+  - `anger` → `emote-angry` / `sadness` → `emote-sad` / `surprise` → `emote-surprised`
+  - `talk-request` / `event-alert` → `walk-forward`
+  - `joy`（デフォルト）→ 移動方向のモーションを維持
+- イベント子画面が開いている間は全住民の CSS アニメーションが一時停止する
+- キャラクタークリックでキャラクター詳細画面が開く
+
+---
+
 ## アニメーション動作確認（テスト 1〜4 全 pass 後）
 
 **この手順は PO またはエンジニアが手動で実施する。Codex が単独で完了させることはできない。**
@@ -239,16 +262,14 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
    npm run dev
    ```
 
-2. **ブラウザで以下を確認する**
-   - `http://localhost:5173/` を開く
-   - サンドボックス画面を表示し、コンソールエラーがないことを確認する
-   - この時点では manifest が placeholder のため、プレースホルダースプライトが表示される
-
-3. **スプライトを一時的にプレビューする（コミットしないこと）**
+2. **スプライトをプレビュー位置へコピーする（コミットしないこと）**
 
    各キャラクターについて以下を実行する（Eve の例）:
 
    ```bash
+   # sprites フォルダが存在しない場合は作成する
+   mkdir -p public/art/characters/defaults/eve/sprites
+
    # Sheet 1 をプレビュー位置へコピー（git commit 禁止）
    cp assets/generated/residents/eve/incoming/resident-sprite-sheet.png \
       public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png
@@ -258,31 +279,43 @@ node tools/asset-pipeline/check-resident-sprite-alpha.mjs suzu
       public/art/characters/defaults/eve/sprites/resident-sprite-sheet-extended.png
    ```
 
-   同様に garan / ryo / suzu についても実施する。
+   garan / ryo / suzu も同様に実施する。
 
-4. **manifest を一時的に ready 化する（コミットしないこと）**
+3. **manifest を一時的に ready 化する（コミットしないこと）**
 
-   `src/persistence/defaultCharacterAssetManifest.ts` を開き、
-   対象キャラクターのエントリで `placeholder: true` を `placeholder: false` に変更する。
+   `src/persistence/defaultResidentSpriteManifest.ts` を開き、
+   対象キャラクターのエントリの第 3 引数を `"ready"` に変更する。
 
-5. **ブラウザをリロードしてアニメーションを確認する**
+   例（Eve と Garan を ready 化する場合）:
+   ```typescript
+   // 変更前
+   createDefaultResidentSpriteManifestEntry("chr_eve", "eve"),
+   createDefaultResidentSpriteManifestEntry("chr_garan", "garan"),
 
-   以下のモーションを各キャラクターで目視確認する:
+   // 変更後
+   createDefaultResidentSpriteManifestEntry("chr_eve", "eve", "ready"),
+   createDefaultResidentSpriteManifestEntry("chr_garan", "garan", "ready"),
+   ```
 
-   | Sheet | モーション | 確認観点 |
-   |---|---|---|
-   | Sheet 1 | `idle` | キャラがフレーム内に収まり、呼吸/点滅があること |
-   | Sheet 1 | `run-right` / `run-left` | 左右走行が自然なこと |
-   | Sheet 1 | `waving` | 挨拶ジェスチャーが認識できること |
-   | Sheet 1 | `jumping` | ジャンプサイクルが動いていること |
-   | Sheet 2 | `walk-up` / `walk-down` | 前後移動の 2.5D 方向感があること |
-   | Sheet 2 | `emote-happy` / `emote-angry` | 感情表現が明確なこと |
+4. **ブラウザで `http://localhost:5173/sandbox` を開いてアニメーションを確認する**
 
-6. **確認後、一時ファイルを元に戻す（コミットしないこと）**
+   以下を目視確認する:
+
+   | 確認項目 | 期待する動作 |
+   |---|---|
+   | スプライト表示サイズ | ポートレートと同程度の小さいキャラとして表示される |
+   | idle アニメーション | キャラがフレーム内に収まり idle サイクルが動く |
+   | ランダム移動 | 5〜7 秒おきに上下左右・前後へ移動し walk-* モーションに切り替わる |
+   | emote 同期 | joy バブル=walk、surprise/anger/sadness バブル=対応 emote-* に切り替わる |
+   | イベント窓を開く | 「イベント詳細を見る」クリックで全住民アニメーションが停止する |
+   | イベント窓を閉じる | 「結果を受け取る」後に住民の移動とアニメーションが再開する |
+   | クリック動作 | 住民クリックでキャラクター詳細画面が開く |
+
+5. **確認後、一時ファイルを元に戻す（コミットしないこと）**
 
    ```bash
    git checkout -- public/art/characters/defaults/
-   git checkout -- src/persistence/defaultCharacterAssetManifest.ts
+   git checkout -- src/persistence/defaultResidentSpriteManifest.ts
    ```
 
 ---
