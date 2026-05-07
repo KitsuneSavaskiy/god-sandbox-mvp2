@@ -2,8 +2,13 @@
 
 状態: 管理対象の正本ドキュメント
 
-この文書は GodSandbox のプロダクト体験設計の最上位仕様である。
-実装、テスト、個別仕様がこの文書と矛盾する場合は PO が先にこの文書を更新しない限り、この文書を優先する。
+この文書は GodSandbox のプロダクト体験原則を定義する。
+
+**正本の優先順位：**
+- ユーザー導線の正本は `docs/product/godsandbox-user-flow.md` とする。
+- この文書はプロダクト体験原則の正本とする。
+- この文書と godsandbox-user-flow.md が矛盾する場合、PO は両方を同一 PR で更新しない限りマージしない。
+- 個別実装仕様がこの文書と矛盾する場合は、PO が先にこの文書を更新しない限り、この文書を優先する。
 
 ## 参照ドキュメント体系
 
@@ -22,6 +27,8 @@
 | **パスポート外部世界仕様** | `docs/product/passport-outside-world-spec.md` |
 | **AI リテラシー導線仕様** | `docs/product/ai-literacy-tutorial-spec.md` |
 | **MVP テストシナリオ** | `docs/product/mvp-test-scenarios.md` |
+| **仕様統合マトリクス** | `docs/product/spec-integration-matrix.md` |
+| **MVP 実装計画書** | `docs/product/mvp-implementation-plan.md` |
 
 ---
 
@@ -184,7 +191,22 @@
 
 MVP で検証すべき最小体験：
 
-> 1 人のキャラクターを 5 項目で作り、箱庭でそのキャラクターが他者と生活し、1 回のイベント介入でその子に何らかの変化が生まれ、snapshot を記録して、Passport JSON を発行できる。外部 AI に渡すと、箱庭の記憶を持ったその子らしい返答が返ってくる。
+> 1 名のキャラクターを 5 項目で作り、箱庭でそのキャラクターが他者と生活し、1 回のイベント介入でその子に何らかの変化が生まれ、snapshot を記録して、Passport JSON を発行できる。外部 AI に渡すと、箱庭の記憶を持ったその子らしい返答が返ってくる。
+
+**重要：** `activeSlots` は既存仕様どおり MVP でも常に 4 名で埋まる。ここでいう「1 名」は検証対象として深掘りするキャラクターが 1 名であることを指し、残り 3 名はデフォルト住民（Eve / Garan / Ryo / Suzu）で構わない。
+
+**MVP のキャラクター作成 5 項目（必須入力）：**
+
+| 入力項目 | 用途 |
+|---|---|
+| キャラ名 | Core Profile の識別子 |
+| 性格（自由記述） | VoiceProfile の感情表現・丁寧さの推定材料 |
+| 口調（自由記述 or プリセット） | VoiceProfile の一人称・語尾・文体の材料 |
+| 年齢 | VoiceProfile の丁寧さ傾向の参考 |
+| 1枚絵（画像） | Visual Anchor。VoiceProfile には使わない |
+
+任意入力（後から追加可）：性別・追加設定・doNotSay 追加項目。
+この 5 項目は `docs/product/godsandbox-user-flow.md` の正本と一致させること。両者が異なる場合、同一 PR で両方を更新する。
 
 **MVP 期間中に実装しないもの：**
 

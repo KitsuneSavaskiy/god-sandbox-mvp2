@@ -329,9 +329,9 @@ describe("passport generation", () => {
     const passport = await generatePassport(snapshot);
 
     expect(passport).not.toBeNull();
-    expect(passport.godRelationship.faithBand).toBe("senses_presence");
-    expect(passport.externalAiPromptBlock.systemPrompt.length).toBeGreaterThan(50);
-    expect(passport.lifeMemory.keyEvents.length).toBeGreaterThanOrEqual(1);
+    expect(passport.display.godRelationship.faithBand).toBe("senses_presence");
+    expect(passport.display.externalAiPromptBlock.systemPrompt.length).toBeGreaterThan(50);
+    expect(passport.display.lifeMemory.keyEvents.length).toBeGreaterThanOrEqual(1);
   });
 
   it("Passport JSON に五行フィールドが存在しない", async () => {
@@ -350,9 +350,9 @@ describe("passport generation", () => {
     const char = createCharacter({ faith: 50 });
     const passport = await generatePassport(createSnapshot(char));
 
-    expect(passport.lifeMemory.memorySummary).not.toMatch(/vitality:\s*\d+/);
-    expect(passport.lifeMemory.memorySummary).not.toMatch(/faith:\s*\d+/);
-    expect(passport.lifeMemory.memorySummary).not.toMatch(/stress:\s*\d+/);
+    expect(passport.display.lifeMemory.memorySummary).not.toMatch(/vitality:\s*\d+/);
+    expect(passport.display.lifeMemory.memorySummary).not.toMatch(/faith:\s*\d+/);
+    expect(passport.display.lifeMemory.memorySummary).not.toMatch(/stress:\s*\d+/);
   });
 });
 ```
@@ -380,7 +380,7 @@ Step 2: 箱庭観察（10分シミュレーション）
 Step 3: イベント発生 + 介入（watch）
   Input:  "水汲み場での口論" イベントに watch 介入
   Assert: faith が 32 になる（+2）
-  Assert: 介入後に god_indirect_reaction 発話が 50% 確率でトリガー
+  Assert: resolveDialogueTriggerRate("intervention_applied") === 0.5
   Assert: 発話が信仰度バンド "uncertain" に対応している
 
 Step 4: イベント発生 + 介入（help 成功）
@@ -401,9 +401,9 @@ Step 6: snapshot 記録
 Step 7: Passport 発行
   Input:  [Passport を発行] ボタンタップ → 確認画面 → [確認して続ける]
   Assert: Passport JSON が生成される
-  Assert: passport.godRelationship.faithBand === "senses_presence"
-  Assert: passport.externalAiPromptBlock.systemPrompt に "Garan" が含まれる
-  Assert: passport.externalAiPromptBlock.firstEncounterLines.length >= 3
+  Assert: passport.display.godRelationship.faithBand === "senses_presence"
+  Assert: passport.display.externalAiPromptBlock.systemPrompt に "Garan" が含まれる
+  Assert: passport.display.externalAiPromptBlock.firstEncounterLines.length >= 3
   Assert: Passport JSON に "wood" / "fire" / "earth" / "metal" / "water" フィールドがない
 
 Step 8: JSON ビューア表示
@@ -420,7 +420,7 @@ Step 1: Garan と Ryo が同じ箱庭に存在する
   Assert: relation スコアが存在する（初期値）
 
 Step 2: proximity_enter トリガーが発生
-  Assert: 40% 確率で発話が生成される（10 回試行して 3 回以上）
+  Assert: resolveDialogueTriggerRate("proximity_enter") === 0.4
   Assert: 生成された発話が "relationship" タイプ
   Assert: 発話に relation スコアの数値が含まれない（「好感度 60」などなし）
 
@@ -569,8 +569,30 @@ MVP 完了の最低条件（`docs/product/core-experience-spec.md` §8 より）
 ```bash
 npm run typecheck        # 型エラーゼロ
 npm run test:domain      # Unit + Integration テスト全通過
-npm run test:ui          # UI スナップショット全通過（未実装の場合はスキップ）
 npm run build            # ビルド成功
 ```
 
-※ `npm run test:ui` は MVP 段階では未整備の場合がある。スナップショットテストのみ `src/__tests__/snapshots/` に個別実行すること。
+※ UI スナップショットテスト（`npm run test:ui`）は MVP 段階では未整備。CI 組み込みは将来の PBI で追加する。
+
+**テストフレームワーク注意：** `src/domain/runtime.test.ts` は現在 Jest ではなくカスタム assertions（deepEqual / equal / ok / throws）を使用している。本仕様の `describe` / `it` / `expect` 形式は仕様の意図を示す記述であり、実装時は既存のカスタム形式に合わせるか、または MVP で Jest を導入するかをプロジェクトで決定すること。
+
+---
+
+## 8. 「生きている感」客観受け入れ条件（PO 確認用）
+
+10 分間の箱庭セッションで以下をすべて目視確認すること：
+
+```
+□ activeSlots 4 名が表示され続ける（途中で消えるスロットがない）
+□ 少なくとも 1 回、住民の移動アニメーションが発生する
+□ 少なくとも 1 回、daily 発話（吹き出し）が表示される
+□ 少なくとも 1 回、関係性発話またはすれ違い反応が発生する
+□ イベント発生中は住民移動が pause する
+□ 箱庭内発話に「あなた」「プレイヤー」「助けてくれてありがとう」が一切出ない
+□ AI 接続なし（fallback mode）でも上記 6 条件が成立する
+□ イベント解決後 5 秒以内に何らかの発話または状態変化が画面に出る
+```
+
+自動テストで担保できないもの（観察者による判定）：
+- 発話が「生活音のように自然」と感じられるか
+- キャラクターが「意志を持って動いている」と感じられるか
