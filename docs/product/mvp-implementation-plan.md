@@ -57,6 +57,25 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 > **実装方針（案B）：** persistence ロード時に読み込んだキャラクターの status を
 > `normalizeCharacterStatus(status)` で正規化し、`faith` が `undefined` の場合は `30` を補完する。
 > この関数は `src/domain/character.ts` に追加する。
+>
+> **normalizeCharacterStatus ロードパス（Tier 3 追記）：**
+> この関数は以下の 2 箇所で必ず呼ぶ：
+>
+> 1. 永続化レイヤーの `readCharacter` 実装内
+>    `character.state.status = normalizeCharacterStatus(raw.state?.status)`
+> 2. `runtimeBootstrap.ts` の `seedCharacter` 内
+>    （`DEFAULT_CHARACTER_STATUS` を通すことで seed と load の正規化経路を統一する）
+>
+> **undefined と 0 の区別：** `||` は使わず `??`（nullish coalescing）を使う。
+> `raw.faith ?? 30` は `faith === 0` を正しく保持し、`undefined` / `null` のみ 30 に補完する。
+>
+> **FaithChangeTrigger と FaithChangeRecord の型依存（PBI 1 → PBI 2）：**
+> `FaithChangeTrigger` と `FaithChangeRecord` は PBI 2 の一環で `src/domain/models.ts` に追加する
+>（`faith-system-spec.md §3` の定義に従う）。PBI 1 では型追加は不要。
+>
+> **MemoGroup の型依存（PBI 2）：**
+> `MemoGroup = "watch_trust" | "help_rescue" | "trial_growth"` は `src/domain/models.ts` に追加する
+>（`faith-system-spec.md §3` 参照）。`applyFaithChangeWithPersonality` の引数型として必要。
 
 **実装手順:**
 1. `src/domain/models.ts` の `CharacterStatusBlock` に `faith: number` を追加
@@ -116,6 +135,36 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - [ ] `sensitivity/boldness/curiosity/discipline` personality 修正の各テスト通過
 - [ ] playerMemo 補正の 2 回目以降適用テスト通過
 - [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
+
+---
+
+### FaithChangeRecord の RuntimeWorldState 永続化（PBI 2 補足）
+
+**RuntimeWorldState への追加（PBI 2 で実装）：**
+
+```ts
+// src/state/runtimeState.ts
+faithChangeHistory: Map<CharacterId, FaithChangeRecord[]>;
+// 上限: FAITH_HISTORY_LIMIT = 20 件（キャラクターごと FIFO）
+// MVP ではインメモリのみ。永続化しない。
+```
+
+`createSeedRuntimeWorld` で `faithChangeHistory: new Map()` として初期化する。
+
+PBI 2 の介入適用後に `appendFaithChangeRecord(history, record): Map<CharacterId, FaithChangeRecord[]>` を呼んで追記する（immutable new Map として実装。既存 Map を破壊しない）。
+
+**buildFaithChangeSummary（PBI 5 で実装）：**
+
+```ts
+// src/domain/passport.ts
+function buildFaithChangeSummary(
+  history: FaithChangeRecord[],
+  currentFaith: number,
+): string;
+// 空履歴時フォールバック: "信仰度の変化はまだ記録されていない。"
+```
+
+trigger を `startsWith("watch_")` / `startsWith("help_")` / `startsWith("trial_")` で 3 グループに分類（union 型上でも string の `startsWith` は動作する）。主因グループ（`|delta|` 合計が最大）と直近 3 件の方向性から 1〜2 文の日本語要約を生成する。数値・五行名は出力に含めない。`player_memo_bonus` / `player_memo_penalty` は集計から除外する。
 
 ---
 

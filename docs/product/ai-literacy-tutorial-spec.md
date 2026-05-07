@@ -197,6 +197,45 @@ type AiLiteracyProgress = {
 
 LocalStorage または character の meta に保存。サーバー送信不要。
 
+### 4.1 LocalStorage キー契約（PBI 6 実装契約）
+
+既存の `passportConfirmSeen` / `jsonViewerUsed` を LocalStorage に保存する際に使うキーを以下で固定する（`AiLiteracyProgress` 型は上記のまま維持し、LocalStorage のキーのみを新たに規定する）。
+
+```ts
+// src/features/tutorial/aiLiteracyStorage.ts（新規）
+export const AI_LITERACY_STORAGE_KEYS = {
+  /** Level 1 確認画面を 1 回でも完走したか（passportConfirmSeen） */
+  level1Completed: "godsandbox.tutorial.ai-literacy.level1.v1",
+  /** Level 3 JSON ビューアを 1 回でも開いたか（jsonViewerUsed） */
+  level3Completed: "godsandbox.tutorial.ai-literacy.level3.v1",
+  /** Level 1 を「次回からスキップ」設定 */
+  level1Skip: "godsandbox.tutorial.ai-literacy.level1.skip.v1",
+} as const;
+```
+
+値は文字列 `"done"` を書き込む（既存 `INTRO_KEY` パターンと同じ方式）。
+
+#### 発火条件
+
+| Level | 発火条件 | スキップ条件 |
+|---|---|---|
+| 1 | `/passports` で「Passport を発行する」を初回タップ | `level1Completed === "done"` かつ `level1Skip === "on"` |
+| 3 | `/passports/:passportId` で「JSON の中身を見る」をタップ | スキップなし（任意操作） |
+
+Level 1 を未経験のまま Level 3 を開いた場合は警告ヒントを表示するが、Level 3 自体はブロックしない（Level 0 原則: AI なしでも進める保証）。
+
+#### ルート契約
+
+Level 1 / Level 3 は既存ルートの上に乗るモーダル・ビューアであり、新しいページルートは増やさない。テスト用に以下の補助ルートを `src/routes/routes.ts` の `parseRoute` に追記する：
+
+```
+/tutorial/level/1  → /passports にリダイレクトし、Level 1 モーダルを強制表示
+/tutorial/level/3  → 直近 Passport の /passports/:id にリダイレクトし、JSON ビューアを強制起動
+                     直近 Passport がない場合は /passports に戻す
+```
+
+`AppRouteId` に `"tutorial-level"` を追加し、`parseRoute` に `/tutorial/level/:level(1|3)` のマッチ節を追記する（ナビゲーションバーには露出させない）。
+
 ---
 
 ## 5. テキスト設計（ライティングガイドライン）

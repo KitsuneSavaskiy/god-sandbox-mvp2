@@ -31,6 +31,70 @@
 - current event の status は `pending`、`active`、`resolved`、`expired`、`chained` を取りうる。
 - 1つの event が current focus としての役割を終えるときは、post-event autosave を確定する前に次の current event を割り当てる。
 
+## イベントライフサイクルルール
+
+`WorldEvent.status` は `pending → active → (resolved | expired | chained)` の単方向遷移を取る。一度 terminal（`resolved` / `expired` / `chained`）に入った event は再 `active` 化しない。
+
+```
+pending  →  active     (generator が active slot に commit)
+active   →  resolved   (最初に成功した介入が適用)
+active   →  expired    (TTL 経過: EVENT_TTL_MINUTES = 6 分)
+active   →  chained    (連鎖条件を満たす介入が適用)
+```
+
+### Resolve ルール
+
+`applyIntervention(...)` が成功した瞬間（watch/help/trial 問わず）その event を `"resolved"` に遷移させる。MVP では 1 event = 1 intervention で resolve 確定とする。
+
+### Expiry ルール
+
+TTL = **実時間 6 分**（`export const EVENT_TTL_MINUTES = 6`）。起点は `WorldEvent.createdAt`。
+
+expiry 直後に `primaryCharacterId` に対して `watch_failure` 相当（-1）の faith ChangeSet（kind: `status-delta`）を記録する。`InterventionRecord` は伴わない。
+
+### Chain ルール
+
+以下のいずれかを満たす介入が完了したとき、`resolve` の代わりに `chained` に遷移し、子 event を生成する：
+
+1. `ChangeSet` に `kind === "ongoing-effect-created"` が含まれる
+2. この介入の `relation-delta` の `|delta|` が 10 以上
+
+### advanceEventLifecycle 関数
+
+遷移判定は以下の 1 関数に集約する（優先順位: expired > chained > resolved）：
+
+```ts
+type AdvanceEventLifecycleInput = {
+  event: WorldEvent;
+  now: string; // ISO8601
+  appliedIntervention?: {
+    changeSetKinds: ReadonlyArray<ChangeSetKind>; // src/domain/models.ts で定義済み
+    relationDeltaMaxAbs: number;
+  };
+};
+
+type AdvanceEventLifecycleOutput =
+  | { kind: "no-change"; event: WorldEvent }
+  | { kind: "resolved"; event: WorldEvent }
+  | { kind: "expired"; event: WorldEvent }
+  | { kind: "chained"; event: WorldEvent; childEventSeed: { chainedFromEventId: string } };
+
+export function advanceEventLifecycle(input: AdvanceEventLifecycleInput): AdvanceEventLifecycleOutput;
+```
+
+呼び出しは 2 箇所：
+- **介入完了後（同期）**: `applyIntervention` 直後に `appliedIntervention` を渡して呼ぶ。
+- **時間経過 tick**: 1 分ごとの tick から `appliedIntervention: undefined` で呼ぶ。
+
+`chained` の場合、呼び出し側は `generateWorldEvent({ chainedFromEventId })` を続けて呼び、`session.currentEventId` を子 event に差し替える。
+
+### テスト要件（イベントライフサイクル）
+
+- TTL を 1 ms 超えた瞬間に `"expired"` になる（境界条件）。
+- `relationDeltaMaxAbs === 9` → `"resolved"`、`10` → `"chained"`。
+- `ongoing-effect-created` を含む介入は `relationDeltaMaxAbs === 0` でも `"chained"`。
+- expired 後の primary character の faith が（介入前 faith）-1 以上（下限 0 クランプ）。
+
 ## 参加者モデル
 
 - すべての event は `primaryCharacterId` を1件持つ。
@@ -138,6 +202,43 @@ interface InterventionRecord {
   - intervention history
   - relation 系 `ChangeSet`
 - repair や migration 時には履歴から再計算できるようにする。
+
+## リレーションスコア初期値（全 6 ペア）
+
+デフォルト 4 名の全 6 ペアの relation は sandbox session を seed する瞬間に materialize する（未生成ペアを置かない。Type B 発話が seed 直後から発火するための前提）。
+
+### 初期スコア
+
+| ペア | 初期スコア | 根拠 |
+|---|---:|---|
+| Eve ↔ Garan   | +15 | 穏やかな距離感。互いに摩擦が少ない。 |
+| Eve ↔ Ryo     | +25 | Eve の思慮深さが Ryo の前向きさを受け止める。 |
+| Eve ↔ Suzu    | +20 | 穏やかさの方向性が一致。 |
+| Garan ↔ Ryo   | −10 | Garan の reserved/intense と Ryo のエネルギーが衝突しやすい。 |
+| Garan ↔ Suzu  |  +5 | Suzu の穏やかさに Garan は害を感じない。 |
+| Ryo ↔ Suzu    | +10 | 既存実装（runtimeBootstrap.seedRelation）との互換値。 |
+
+seed 直後は誰も `>= 60`（仲良し発話閾値）にも `<= 30`（距離感発話閾値）にも到達しない。Garan↔Ryo の −10 は数イベント後に `<= 30` へ到達できる位置。
+
+### 定数と生成関数（配置先: src/domain/relations.ts）
+
+```ts
+export const INITIAL_RELATIONS: Record<string, number> = {
+  "chr_eve__chr_garan": 15,
+  "chr_eve__chr_ryo":   25,
+  "chr_eve__chr_suzu":  20,
+  "chr_garan__chr_ryo": -10,
+  "chr_garan__chr_suzu": 5,
+  "chr_ryo__chr_suzu":  10,
+};
+
+// pair key: [charIdA, charIdB].sort().join("__")（lexicographic ソート確定）
+// relation ID: "rel_" + pairKey
+
+export function buildDefaultCharacterRelations(now: string): CharacterRelation[];
+```
+
+`runtimeBootstrap.ts` の既存 `seedRelation`（Ryo↔Suzu のみ）をこの定数から全 6 件に書き換える。
 
 ## 外部 narrative 方針
 

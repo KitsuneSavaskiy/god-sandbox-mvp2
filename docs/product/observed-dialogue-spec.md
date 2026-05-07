@@ -156,6 +156,68 @@ type DialogueTrigger =
   | "phase_change";        // 時間帯・季節変化
 ```
 
+### phase_change / proximity_enter トリガーの発火条件
+
+#### DayPhase 定義
+
+箱庭の 1 育成サイクル（30 分）を 4 等分した時間帯フェーズを使う：
+
+```ts
+type DayPhase = "morning" | "afternoon" | "evening" | "night";
+
+function resolveDayPhase(elapsedMs: number, cycleDurationMs: number): DayPhase {
+  const t = elapsedMs / cycleDurationMs;
+  if (t < 0.25) return "morning";
+  if (t < 0.5)  return "afternoon";
+  if (t < 0.75) return "evening";
+  return "night";
+}
+```
+
+#### SandboxSession への追加フィールド（PBI 4 で追加）
+
+```ts
+currentDayPhase: DayPhase;
+proximityState: Record<string, "near" | "far">;
+// キーは [charIdA, charIdB].sort().join("::") — lexicographic ソート確定（逆順の重複防止）
+positions: Record<CharacterId, { x: number; y: number }>;
+```
+
+#### 発火タイミング
+
+**`phase_change`**
+- 毎 tick の冒頭で `prevDayPhase !== currentDayPhase` を検出したとき、全 active キャラクターに 1 回発火。
+- `resolveDialogueTriggerRate("phase_change")` = 0.1 のため多くの tick は null を返す。
+
+**`proximity_enter`**
+- `PROXIMITY_THRESHOLD = 2.0`（ワールド座標単位）。
+- `prevDist > PROXIMITY_THRESHOLD` かつ `currDist <= PROXIMITY_THRESHOLD` のペアに対して、両者それぞれに発火。
+- 同一ペアが近接状態を維持する間は再発火しない。`currDist > PROXIMITY_THRESHOLD * 1.5` で "far" にリセット。
+
+#### Dialogue Tick Handler
+
+`phase_change` / `proximity_enter` の検出と `generateDialogue` 呼び出しは、イベント生成ループとは独立した **dialogue tick handler** が担う。`SandboxSession.currentEventId` を変更しない。
+
+```ts
+type DialogueUtterance = {
+  characterId: CharacterId;
+  trigger: DialogueTrigger;
+  text: string;
+  nearbyCharacterId?: CharacterId; // proximity_enter の場合のみ
+};
+
+function runDialogueTick(
+  session: SandboxSession,
+  prevSession: SandboxSession,
+  voiceProfiles: Record<CharacterId, VoiceProfile>,
+  emit: (utterance: DialogueUtterance) => void,
+): void;
+```
+
+`runDialogueTick` は sandbox runtime の main tick から呼ぶ（イベント生成・介入適用とは別レーン）。
+
+---
+
 ### 発話生成関数
 
 発話生成は以下のシグネチャで定義する：
@@ -248,6 +310,65 @@ random() は `Math.random()` を指す（この確率判定は表示用の多様
   `characterReflection` の候補文字列として一時保持し、Passport 生成時に利用する。
 - daily / relationship 発話はフェードアウト後に廃棄する（story log も不要）。
 - 将来の PBI で「印象的な発話」を snapshot annotation に昇格させる導線を追加できるが、MVP では実装しない。
+
+---
+
+### Type C 発話の永続化詳細
+
+§5 の「Passport 候補として保持可」を実現するための型と保存フロー。
+
+#### GodIndirectReflection 型
+
+```ts
+type GodIndirectReflection = {
+  utteranceText: string;             // 最大 40 文字（truncation 後）
+  trigger: "event_resolved" | "intervention_applied";
+  faithBandAtUtterance: FaithBand;
+  faithValueAtUtterance: number;     // Passport JSON に数値として出力しない
+  sourceEventId?: string;
+  sourceInterventionId?: string;
+  occurredAt: string;                // ISO8601
+};
+```
+
+#### CharacterSnapshot への追加（PBI 4 / PBI 5 で追加）
+
+```ts
+recentGodIndirectReflections: GodIndirectReflection[];
+// 最大 3 件。occurredAt 降順（最新が先頭）。4 件目以降は最古を破棄（FIFO+cap）。
+```
+
+#### 保存フロー
+
+`generateDialogue` は純関数のまま。保存は dispatch 側で行う：
+
+1. `generateDialogue(...)` が `null` 以外を返したとき、呼び出し側が `trigger` を確認する。
+2. `trigger` が `"event_resolved"` または `"intervention_applied"` の場合のみ、Type C 判定を行う。
+3. `classifyDialogueType` で Type C かどうかを判定する：
+
+```ts
+function classifyDialogueType(
+  text: string,
+  voice: VoiceProfile,
+): "daily" | "relationship" | "god_indirect_reaction" {
+  const godKeywords = ["神", "不思議", "気配", "背中を押", "見られている", "誰か"];
+  if (godKeywords.some(k => text.includes(k))) return "god_indirect_reaction";
+  // マッチなし → 必ず "daily" を返す（"relationship" への誤分類を避けるため保守的に判定）
+  return "daily";
+}
+```
+
+4. Type C と判定された場合のみ `recentGodIndirectReflections` 先頭に prepend し、3 件超は末尾を切り捨てる。
+
+#### Passport ビルダーでの利用
+
+`buildMemorySummary` は `recentGodIndirectReflections[0]` があれば末尾に 1 文追加する：
+```
+「{utteranceText}」と感じていた。
+```
+0 件の場合は既存の event / relation 要約のみで構築する（`passport-outside-world-spec.md §2` 参照）。
+
+`faithValueAtUtterance` は Passport JSON に数値として出力しない（§4 の信仰度数値表示禁止に従う）。
 
 ---
 

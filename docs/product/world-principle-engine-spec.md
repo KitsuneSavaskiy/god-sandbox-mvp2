@@ -201,6 +201,100 @@ const EVENT_TEMPLATES: EventTemplate[] = [
 
 ---
 
+## 7.1 イベントテンプレートレジストリ（MVP 最小セット）
+
+### 前提ファイル（PBI 7 で新規作成）
+
+- `src/domain/worldPrinciple.ts` — `FivePhase`, `YinYangPolarity`, `EventPrincipleRole`, `EventTemplatePrincipleProfile` をエクスポートする（§3〜7 の型定義を集約）。
+- `src/domain/eventTemplates.ts` — `EventTemplate` 型と `EVENT_TEMPLATES` 定数。
+
+### EventTemplate 型
+
+```ts
+// src/domain/eventTemplates.ts
+import type { EventTemplatePrincipleProfile } from "./worldPrinciple.js";
+
+export type EventTemplate = {
+  id: string;                            // "ET_001" 形式の安定 ID
+  name: string;                          // 内部表示名（日本語）
+  principleProfile: EventTemplatePrincipleProfile; // MVP では必須（optional にしない）
+  situationTags: readonly string[];
+  minParticipants: 1 | 2 | 3 | 4;
+  renderSummary: (input: { primaryName: string; participantNames: readonly string[] }) => string;
+};
+// renderSummary は関数フィールドのため JSON シリアライズ不可。
+// WorldEvent には templateId: string のみを保存し、テンプレート自体は定数として保持する。
+```
+
+### MVP 最小セット（6 件）
+
+`EventPrincipleRole` の 6 種すべてを 1 件ずつカバーする：
+
+```ts
+export const EVENT_TEMPLATES: readonly EventTemplate[] = [
+  {
+    id: "ET_001", name: "若芽の発見",
+    principleProfile: { dominantPhase: "wood",  polarity: "yang",     principleRole: "nourish"   },
+    situationTags: ["daily-life", "growth"],   minParticipants: 1,
+    renderSummary: ({ primaryName }) =>
+      `${primaryName}は新しく芽吹いたものに気づき、何かを始めたくなっている。`,
+  },
+  {
+    id: "ET_002", name: "火種のいさかい",
+    principleProfile: { dominantPhase: "fire",  polarity: "yang",     principleRole: "restrain"  },
+    situationTags: ["conflict", "tension"],    minParticipants: 2,
+    renderSummary: ({ primaryName, participantNames }) => {
+      const partner = participantNames.find(n => n !== primaryName) ?? "誰か";
+      return `${primaryName}と${partner}の間に小さな火種が生まれている。`;
+    },
+  },
+  {
+    id: "ET_003", name: "畑仕事の午後",
+    principleProfile: { dominantPhase: "earth", polarity: "balanced", principleRole: "circulate" },
+    situationTags: ["daily-life", "routine"],  minParticipants: 1,
+    renderSummary: ({ primaryName }) =>
+      `${primaryName}はいつもの仕事をいつもの手順でこなしている。`,
+  },
+  {
+    id: "ET_004", name: "鏡に映る真意",
+    principleProfile: { dominantPhase: "metal", polarity: "yin",      principleRole: "reveal"    },
+    situationTags: ["introspection", "insight"], minParticipants: 1,
+    renderSummary: ({ primaryName }) =>
+      `${primaryName}は、自分でも気づかなかった気持ちに静かに気づいた。`,
+  },
+  {
+    id: "ET_005", name: "夜の聞き役",
+    principleProfile: { dominantPhase: "water", polarity: "yin",      principleRole: "bind"      },
+    situationTags: ["bonding", "evening"],      minParticipants: 2,
+    renderSummary: ({ primaryName, participantNames }) => {
+      const partner = participantNames.find(n => n !== primaryName) ?? "誰か";
+      return `${primaryName}は${partner}の話を、ただ静かに聞いている。`;
+    },
+  },
+  {
+    id: "ET_006", name: "別れ道の朝",
+    principleProfile: { dominantPhase: "wood",  polarity: "yin",      principleRole: "separate"  },
+    situationTags: ["parting", "morning"],      minParticipants: 2,
+    renderSummary: ({ primaryName, participantNames }) => {
+      const partner = participantNames.find(n => n !== primaryName) ?? "誰か";
+      return `${primaryName}は${partner}と別の道を行く朝を迎えている。`;
+    },
+  },
+];
+
+export function findEventTemplateById(id: string): EventTemplate | undefined {
+  return EVENT_TEMPLATES.find(t => t.id === id);
+}
+```
+
+### テスト要件（§11 に追加）
+
+10. `EVENT_TEMPLATES.length === 6` であり `EventPrincipleRole` の 6 種すべてが含まれる。
+11. PBI 7 で `src/domain/events.ts` の `templateId: "daily-sandbox-observation"` ハードコードを `EVENT_TEMPLATES` からの加重選択に書き換える。本番経路で生成された `WorldEvent.templateId` は `EVENT_TEMPLATES` のいずれかの `id` と一致すること。
+12. `findEventTemplateById` が未定義 ID に対して `undefined` を返す（クラッシュしない）。
+
+---
+
 ## 8. イベント選択への影響
 
 イベント生成時、候補テンプレートに重み付けを行う。
