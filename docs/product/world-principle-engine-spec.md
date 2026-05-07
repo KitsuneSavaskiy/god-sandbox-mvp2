@@ -250,8 +250,39 @@ function calcEventWeight(
 ```
 
 重み付けは決定論的ではなく、seed を使った擬似乱数でサンプリングする。
-seed は `SandboxSession.id` + イベント生成回数の組み合わせを使う（同一セッション・同一回数で再現可能）。
+seed は `SandboxSession.id`（= `input.seed`）とイベント生成時の ISO タイムスタンプ（`input.now`）を組み合わせる（同一の `(session.id, now)` ペアで結果を再現可能）。
 これにより「同じキャラクターでも毎回同じ展開にならない」が、「そのキャラクターらしいイベントが出やすい」を両立する。
+
+### 8.1 seed と stableHash の運用
+
+seed 文字列から決定論的な数値を得るために、`src/domain/events.ts` で定義された `stableHash` を用いる。
+
+```ts
+// src/domain/events.ts
+export function stableHash(value: string): number;
+```
+
+`input.seed`（= `SandboxSession.id`）をローカル変数 `seed` に束縛し、以下のパターンで使用する：
+
+```ts
+const seed = input.seed; // = SandboxSession.id
+
+// 1. 主役キャラクター選択（session.id のみで決まる安定的な選択）
+const primaryIndex = stableHash(seed) % activeCharacters.length;
+
+// 2. WorldEvent.id 生成（session.id + now + primaryCharacterId）
+const id = `evt_${stableHash(`${seed}:${input.now}:${primaryCharacter.id}`).toString(36)}`;
+
+// 3. 参加キャラクターのソート（session.id ごとに安定したランク付け）
+seededCandidates.sort((left, right) =>
+  stableHash(`${seed}:participant:${left}`) - stableHash(`${seed}:participant:${right}`),
+);
+
+// 4. 参加人数の決定（session.id ごとに安定）
+const participantCount = 1 + (stableHash(`${seed}:participant-count`) % activeCharacterCount);
+```
+
+MVP では `eventGenerationCount` カウンタを `RuntimeWorldState` に持たない。タイムスタンプ（`now`）が呼び出しごとに変化するため再現性と多様性を両立できる。将来リプレイ機能が必要になった場合は `now` をモック化するか、カウンタ方式に移行する。
 
 ---
 

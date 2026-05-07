@@ -122,11 +122,41 @@ function resolveFaithBand(faith: number): FaithBand {
 異なるグループや真逆の内容（例：前回「見守る」→今回「試練」）は「矛盾」と判定する。
 将来的に AI による意図解析に置き換え可能。
 
+**分類アルゴリズム（`classifyMemoGroup` 擬似コード）：**
+
+キーワード表の上から順に部分文字列マッチを行い、最初にヒットしたグループを返す（first-match-wins）。
+評価順は `watch_trust` → `help_rescue` → `trial_growth` で固定する。
+どのキーワードにもマッチしなかった場合は `null` を返し、呼び出し側は補正なしとして扱う。
+
+```ts
+function classifyMemoGroup(memo: string): MemoGroup | null {
+  const watchTrust = ["見守", "信頼", "応援", "そばにいる", "待つ"];
+  const helpRescue = ["助け", "救", "支え", "守る", "一緒に"];
+  const trialGrowth = ["試練", "乗り越え", "成長", "強く", "鍛える"];
+
+  if (watchTrust.some((k) => memo.includes(k))) return "watch_trust";
+  if (helpRescue.some((k) => memo.includes(k))) return "help_rescue";
+  if (trialGrowth.some((k) => memo.includes(k))) return "trial_growth";
+  return null;
+}
+```
+
 ### 変化の適用
 
 - `faith` は 0 以下にならない（下限 0）
 - `faith` は 100 以上にならない（上限 100）
 - 変化は `ChangeSet` として記録する
+
+**MemoGroup 型と分類関数：**
+
+```ts
+// playerMemo の意図方向を表す MVP 用の有限集合
+type MemoGroup = "watch_trust" | "help_rescue" | "trial_growth";
+
+// memo 文字列を上記キーワード表に従って分類する。
+// どのグループにも該当しない場合は null を返す。
+function classifyMemoGroup(memo: string): MemoGroup | null;
+```
 
 **実装関数シグネチャ：**
 
@@ -140,12 +170,13 @@ type FaithChangeTrigger =
 // personality 修正なし、playerMemo 補正なしの基本変化量を返す
 function applyFaithChange(currentFaith: number, trigger: FaithChangeTrigger): number;
 
-// personality 修正と playerMemo 補正を含む実際の適用関数
+// personality 修正と playerMemo 補正を含む実際の適用関数。
+// 戻り値は新しい faith 値（0–100 にクランプ済み）であり、delta ではない。
 function applyFaithChangeWithPersonality(
   character: Character,
   trigger: FaithChangeTrigger,
-  currentMemoGroup?: string | null,   // 今回 playerMemo のキーワードグループ
-  previousMemoGroup?: string | null   // 前回 playerMemo のキーワードグループ（補正判定用）
+  currentMemoGroup?: MemoGroup | null,   // 今回 playerMemo のキーワードグループ
+  previousMemoGroup?: MemoGroup | null   // 前回 playerMemo のキーワードグループ（補正判定用）
 ): number;
 ```
 

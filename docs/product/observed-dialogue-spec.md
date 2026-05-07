@@ -156,6 +156,50 @@ type DialogueTrigger =
   | "phase_change";        // 時間帯・季節変化
 ```
 
+### 発話生成関数
+
+発話生成は以下のシグネチャで定義する：
+
+```ts
+function generateDialogue(
+  character: Character,
+  trigger: DialogueTrigger,
+  faithBand: FaithBand,
+  voiceProfile: VoiceProfile,
+  nearbyCharacters?: Character[]
+): string | null;
+// `null` = 発話なし（確率判定でトリガーが発生しなかった場合）
+```
+
+トリガーごとの Type 選択ロジックは以下の擬似コードに従う（Type A / B / C の定義は §2 を参照）：
+
+```
+1. rate = resolveDialogueTriggerRate(trigger)
+   if random() >= rate → return null
+
+2. trigger が "event_started" または "event_resolved" の場合:
+   - random() < 0.5 → Type C (god_indirect_reaction) を生成（faithBand に応じた内容 — §2 Type C 参照）
+   - random() >= 0.5 → Type B (relationship) を生成（nearbyCharacters がある場合）
+                        nearbyCharacters がなければ Type A にフォールバック
+   ※ event_started / event_resolved での Type C / B 比率は 50/50 を基準とする
+
+3. trigger が "intervention_applied" の場合:
+   - Type C (god_indirect_reaction) を生成（faithBand に応じた内容 — §2 Type C 参照）
+
+4. trigger が "proximity_enter" の場合:
+   - random() < 0.5 → Type B (relationship) を生成（nearbyCharacters がある場合）
+                       nearbyCharacters がなければ Type A にフォールバック
+   - random() >= 0.5 → Type A (daily) を生成
+
+5. trigger が "idle_timer" または "phase_change" の場合:
+   - Type A (daily) を生成
+
+6. 生成した発話が 40 文字超の場合:
+   - 40 文字で切り詰める（MVP）。表示ルールは §4 を参照。
+
+生成後: voiceProfile.doNotSay に含まれるキーワードが発話に含まれる場合は発話を破棄して null を返す。
+```
+
 ---
 
 ## 4. 発話の表示ルール
