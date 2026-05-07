@@ -96,7 +96,7 @@ job JSONでは、実行時の住民IDとasset用のキーを混ぜない。
 | Field | 意味 | 例 |
 | --- | --- | --- |
 | `characterId` | domain / runtime / roster / activeSlots で使う正本の住民ID。 | `chr_eve` |
-| `assetBundleId` | asset bundle、prompt、ローカル作業フォルダ、asset id prefixで使う安全なキー。 | `eve` |
+| `assetBundleId` | asset bundle を識別する安全なキー。MVP では `slug` と同じ値を使う。 | `eve` |
 
 `characterId` は表示名やfolder keyの代わりに使わない。
 `assetBundleId` はdomain上の住民IDではないため、runtime read modelやevent participant idとして使わない。
@@ -106,15 +106,13 @@ job JSONでは、実行時の住民IDとasset用のキーを混ぜない。
 ローカル作業では、次の置き場を使う。
 
 ```txt
-assets/generated/residents/<assetBundleId>/source/
-assets/generated/residents/<assetBundleId>/incoming/expressions/
-assets/generated/residents/<assetBundleId>/incoming/sprites/
-assets/generated/residents/<assetBundleId>/tmp/
-assets/generated/residents/<assetBundleId>/rejected/
+assets/generated/residents/<slug>/reference/
+assets/generated/residents/<slug>/incoming/resident-sprite-sheet.png
+assets/generated/residents/<slug>/incoming/resident-sprite-sheet-extended.png
+assets/generated/residents/<slug>/tmp/
+assets/generated/residents/<slug>/rejected/
 
-assets/residents/<assetBundleId>/expressions/
-assets/residents/<assetBundleId>/sprites/
-assets/residents/<assetBundleId>/icons/
+assets/residents/<slug>/sprites/
 
 narrative/generated/residents/<characterId>/
 narrative/generated/events/

@@ -12,6 +12,16 @@ const forbiddenRules = [
     match: (path) => path.startsWith(".godsandbox/jobs/"),
   },
   {
+    id: "sidekick-portraits",
+    label: ".godsandbox/portraits/**",
+    match: (path) => path.startsWith(".godsandbox/portraits/"),
+  },
+  {
+    id: "hatch-pet-runs",
+    label: ".hatch-pet-runs/**",
+    match: (path) => path.startsWith(".hatch-pet-runs/"),
+  },
+  {
     id: "generated-assets",
     label: "assets/generated/**",
     match: (path) => path.startsWith("assets/generated/"),
@@ -55,6 +65,24 @@ const forbiddenRules = [
     id: "dist",
     label: "dist/**",
     match: (path) => path.startsWith("dist/"),
+  },
+  {
+    id: "local-state",
+    label: ".local/**",
+    match: (path) => path.startsWith(".local/"),
+  },
+  {
+    id: "tmp-root",
+    label: "tmp-*",
+    match: (path) => path.startsWith("tmp-"),
+  },
+  {
+    id: "browser-profiles",
+    label: "browser profiles",
+    match: (path) =>
+      path.startsWith("chrome-profile") ||
+      path.startsWith("browser-profile") ||
+      path.startsWith("playwright-profile"),
   },
   {
     id: "local-logs",

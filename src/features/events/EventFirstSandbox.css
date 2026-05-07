@@ -379,6 +379,7 @@
   --resident-motion-note-opacity: 0.92;
 
   animation-play-state: paused;
+  transition-property: none;
 }
 
 .event-first-sandbox__resident--one {

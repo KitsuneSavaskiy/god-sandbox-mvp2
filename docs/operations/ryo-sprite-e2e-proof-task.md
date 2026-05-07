@@ -6,7 +6,7 @@
 ## Codex の役割
 
 Codex は GodSandbox ゲームアプリとは別プロセスで動作するサイドキックである。
-非技術者が Codex に slug と portrait を渡すと、Codex がゲームのディレクトリ内の資源を
+非技術者はキャラクリエイト画面で 5 項目だけを渡し、Codex がゲームのディレクトリ内の資源を
 自律的に生成・配置する。GodSandbox アプリ本体は画像生成 API を呼ばない。
 
 ## 非技術者がキャラクリエイト画面に入力するもの（これだけ）
@@ -62,11 +62,12 @@ manifest を ready 化すること
 ## ステップ 1: 既存チェック
 
 ```bash
-npm run sprite:check -- public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png
+npm run sprite:check -- public/art/characters/defaults/eve/sprites/resident-sprite-sheet.png --kind motion
+npm run sprite:check -- public/art/characters/defaults/eve/sprites/resident-sprite-sheet-extended.png --kind extended
 ```
 
-Eve が exit code 1（fail）の場合: 停止し、spec または check tool の問題として報告する。  
-Eve が exit code 0（pass）の場合: 次へ進む。
+どちらかが exit code 1（fail）の場合: 停止し、spec または check tool の問題として報告する。
+両方が exit code 0（pass）の場合: 次へ進む。
 
 **visual audit の warning（`PARTSxN` など）は exit code 0 = pass である。blocker ではない。**
 
@@ -107,7 +108,7 @@ intake が出力した portrait ref と prompt を使い、Codex pet で sprite 
 生成 PNG の仕様（`docs/operations/resident-sprite-spec.md` 参照）。
 
 ```txt
-canvas: 576×1056 px
+canvas: 1536×1872 px
 frame:  192×208 px
 columns: 8 / rows: 9
 background: transparent alpha

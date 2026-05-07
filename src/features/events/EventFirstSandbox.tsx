@@ -6,7 +6,10 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from "react";
-import { selectActiveCharacterAssetBundleReadModels } from "../../application/characterAssetBundles.js";
+import {
+  isCharacterAnimationReady,
+  selectActiveCharacterAssetBundleReadModels,
+} from "../../application/characterAssetBundles.js";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
   selectActiveCharacters,
@@ -27,16 +30,17 @@ import {
   type SandboxExperienceStage,
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
+import {
+  createNextAmbientResidentEmote,
+  resolveDisplayedResidentEmote,
+  resolveResidentEmote,
+  resolveResidentMotion,
+  type AmbientResidentEmote,
+  type EmoteKind,
+  type ResidentMotionKey,
+} from "./EventFirstSandboxEmotes.js";
 import { createTimestamp } from "./EventFirstSandboxTimestamp.js";
 import "./EventFirstSandbox.css";
-
-type EmoteKind =
-  | "joy"
-  | "anger"
-  | "sadness"
-  | "surprise"
-  | "talk-request"
-  | "event-alert";
 
 type ResidentDecoration = {
   zoneLabel: string;
@@ -45,19 +49,6 @@ type ResidentDecoration = {
   positionClassName: string;
   depthClassName: string;
 };
-
-type ResidentMotionKey =
-  | "idle"
-  | "walk-up"
-  | "walk-down"
-  | "walk-left"
-  | "walk-right"
-  | "walk-forward"
-  | "walk-back"
-  | "emote-happy"
-  | "emote-angry"
-  | "emote-sad"
-  | "emote-surprised";
 
 export type ActiveResidentPreview = {
   id: string;
@@ -198,7 +189,7 @@ const residentDecorations: ResidentDecoration[] = [
   },
 ];
 
-const emoteLabels: Record<EmoteKind, string> = {
+const emoteLabels: Record<NonNullable<EmoteKind>, string> = {
   joy: "嬉",
   anger: "怒",
   sadness: "涙",
@@ -336,10 +327,14 @@ export function EventFirstSandbox({
   const [residentMovements, setResidentMovements] = useState<ResidentMovementState[]>(
     RESIDENT_DEFAULT_POSITIONS.map((pos) => ({ ...pos, direction: null }))
   );
+  const [ambientResidentEmote, setAmbientResidentEmote] =
+    useState<AmbientResidentEmote | null>(null);
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
   const apostleMotionRef = useRef(apostleMotion);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const residentNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const previousBackgroundRef = useRef<SandboxBackgroundState | null>(null);
   const backgroundFadeTimeoutRef = useRef<number | null>(null);
   const [previousSandboxBackground, setPreviousSandboxBackground] =
@@ -352,6 +347,17 @@ export function EventFirstSandbox({
     () => selectActiveCharacterAssetBundleReadModels(runtimeState),
     [runtimeState],
   );
+  const activeResidentIdSignature = useMemo(
+    () => activeCharacters.map((character) => character.id).join("|"),
+    [activeCharacters],
+  );
+  const ambientPersonalitySignature = useMemo(
+    () =>
+      activeCharacters
+        .map((character) => JSON.stringify(character.profile.personality ?? {}))
+        .join("|"),
+    [activeCharacters],
+  );
   const sandboxPaused = eventWindowOpen || Boolean(latestOutcome);
 
   const activeResidents = useMemo(
@@ -362,13 +368,19 @@ export function EventFirstSandbox({
         const isPrimary = currentEvent.primaryCharacterId === character.id;
         const isSupporting =
           currentEvent.participantCharacterIds.includes(character.id) && !isPrimary;
+        const animationReady = assetBundle
+          ? isCharacterAnimationReady(assetBundle)
+          : false;
         const spriteSheetPath =
+          animationReady &&
           assetBundle?.spriteSheet.ready &&
           assetBundle.spriteSheet.path
             ? assetBundle.spriteSheet.path
             : null;
         const extendedSheetPath =
-          assetBundle?.extendedSheet?.ready && assetBundle.extendedSheet.path
+          animationReady &&
+          assetBundle?.extendedSheet?.ready &&
+          assetBundle.extendedSheet.path
             ? assetBundle.extendedSheet.path
             : null;
         const portraitPath =
@@ -377,7 +389,13 @@ export function EventFirstSandbox({
             : null;
         const iconPath =
           assetBundle?.icon.ready && assetBundle.icon.path ? assetBundle.icon.path : null;
-        const emote = resolveResidentEmote({ sandboxStage, isPrimary, isSupporting, latestOutcome });
+        const baseEmote = resolveResidentEmote({
+          sandboxStage,
+          isPrimary,
+          isSupporting,
+          latestOutcome,
+        });
+        const emote = resolveDisplayedResidentEmote(baseEmote, index, ambientResidentEmote);
         const movement = residentMovements[index] ?? {
           x: RESIDENT_DEFAULT_POSITIONS[index]?.x ?? 50,
           y: RESIDENT_DEFAULT_POSITIONS[index]?.y ?? 50,
@@ -427,6 +445,7 @@ export function EventFirstSandbox({
     [
       activeAssetBundles,
       activeCharacters,
+      ambientResidentEmote,
       currentEvent,
       latestOutcome,
       residentMovements,
@@ -512,6 +531,38 @@ export function EventFirstSandbox({
   }, [sandboxPaused]);
 
   useEffect(() => {
+    if (!sandboxPaused || !viewportRef.current) {
+      return;
+    }
+
+    const viewportWidth = viewportRef.current.clientWidth;
+    const viewportHeight = viewportRef.current.clientHeight;
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+      return;
+    }
+
+    setResidentMovements((current) =>
+      current.map((movement, index) => {
+        const residentId = activeCharacters[index]?.id;
+        const residentNode = residentId ? residentNodeRefs.current[residentId] : null;
+        if (!residentNode) {
+          return { ...movement, direction: null };
+        }
+
+        const style = window.getComputedStyle(residentNode);
+        const left = Number.parseFloat(style.left);
+        const top = Number.parseFloat(style.top);
+
+        return {
+          x: Number.isFinite(left) ? (left / viewportWidth) * 100 : movement.x,
+          y: Number.isFinite(top) ? (top / viewportHeight) * 100 : movement.y,
+          direction: null,
+        };
+      }),
+    );
+  }, [activeCharacters, activeResidentIdSignature, sandboxPaused]);
+
+  useEffect(() => {
     if (!apostleMotion.isMoving) {
       return;
     }
@@ -589,6 +640,43 @@ export function EventFirstSandbox({
     );
     target?.scrollIntoView({ block: "center", inline: "nearest" });
   }, [tutorialBinding]);
+
+  useEffect(() => {
+    if (sandboxPaused) {
+      setAmbientResidentEmote(null);
+      return;
+    }
+
+    let cancelled = false;
+    let previousResidentIndex = -1;
+
+    const intervalId = window.setInterval(() => {
+      if (cancelled) {
+        return;
+      }
+      setAmbientResidentEmote((current) => {
+        const nextResidentIndex = current?.residentIndex ?? previousResidentIndex;
+        const residentIndex =
+          activeCharacters.length > 0
+            ? (nextResidentIndex + 1 + activeCharacters.length) % activeCharacters.length
+            : -1;
+        const resident = activeCharacters[residentIndex];
+        const next = createNextAmbientResidentEmote(
+          nextResidentIndex,
+          activeCharacters.length,
+          Math.random(),
+          resident?.profile.personality ?? {},
+        );
+        previousResidentIndex = next?.residentIndex ?? -1;
+        return next;
+      });
+    }, MOVEMENT_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [activeCharacters, activeCharacters.length, ambientPersonalitySignature, sandboxPaused]);
 
   useEffect(() => {
     if (sandboxPaused) return;
@@ -758,6 +846,7 @@ export function EventFirstSandbox({
   return (
     <section className="event-first-sandbox">
       <div
+        ref={viewportRef}
         className={`event-first-sandbox__viewport event-first-sandbox__viewport--${sandboxStage} event-first-sandbox__viewport--season-${sandboxBackground.season} event-first-sandbox__viewport--phase-${sandboxBackground.dayPhase}${
           backgroundCyclePaused ? " event-first-sandbox__viewport--background-paused" : ""
         }${sandboxPaused ? " event-first-sandbox__viewport--paused" : ""
@@ -817,6 +906,9 @@ export function EventFirstSandbox({
         {activeResidents.map((resident) => (
           <article
             key={resident.id}
+            ref={(node) => {
+              residentNodeRefs.current[resident.id] = node;
+            }}
             className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
               resident.spriteSheetPath
                 ? "event-first-sandbox__resident--sprite-ready"
@@ -844,13 +936,13 @@ export function EventFirstSandbox({
               >
                 {emoteLabels[resident.emote]}
               </button>
-            ) : (
+            ) : resident.emote ? (
               <span
                 className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
               >
                 {emoteLabels[resident.emote]}
               </span>
-            )}
+            ) : null}
             <button
               type="button"
               className="event-first-sandbox__resident-card"
@@ -1188,73 +1280,6 @@ function createEventHeadline(event: WorldEvent, primaryCharacterName: string): s
   }
 
   return `${primaryCharacterName}のそばで、いま気になる変化が起きています`;
-}
-
-function resolveResidentEmote(input: {
-  sandboxStage: SandboxExperienceStage;
-  isPrimary: boolean;
-  isSupporting: boolean;
-  latestOutcome: InterventionOutcome | null;
-}): EmoteKind {
-  if (input.sandboxStage === "focused-event") {
-    if (input.isPrimary) {
-      return "event-alert";
-    }
-    if (input.isSupporting) {
-      return "talk-request";
-    }
-    return "joy";
-  }
-
-  if (!input.latestOutcome) {
-    return "joy";
-  }
-
-  if (input.latestOutcome.interventionType === "help") {
-    return input.isPrimary ? "joy" : input.isSupporting ? "surprise" : "talk-request";
-  }
-
-  if (input.latestOutcome.interventionType === "trial") {
-    return input.isPrimary ? "anger" : input.isSupporting ? "surprise" : "sadness";
-  }
-
-  return input.isPrimary ? "talk-request" : "joy";
-}
-
-function emoteKindToMotion(emote: EmoteKind): ResidentMotionKey | null {
-  switch (emote) {
-    case "joy":          return null;
-    case "anger":        return "emote-angry";
-    case "sadness":      return "emote-sad";
-    case "surprise":     return "emote-surprised";
-    case "talk-request": return "walk-forward";
-    case "event-alert":  return "walk-forward";
-  }
-}
-
-function directionToMotion(
-  dir: ResidentMovementState["direction"],
-): ResidentMotionKey {
-  switch (dir) {
-    case "left":    return "walk-left";
-    case "right":   return "walk-right";
-    case "up":      return "walk-up";
-    case "down":    return "walk-down";
-    case "forward": return "walk-forward";
-    case "back":    return "walk-back";
-    default:        return "idle";
-  }
-}
-
-function resolveResidentMotion(
-  emote: EmoteKind,
-  isPaused: boolean,
-  movementDirection: ResidentMovementState["direction"],
-): ResidentMotionKey {
-  if (isPaused) return "idle";
-  const emoteMotion = emoteKindToMotion(emote);
-  if (emoteMotion !== null) return emoteMotion;
-  return directionToMotion(movementDirection);
 }
 
 function resolveResidentSpriteSheetMetadata(

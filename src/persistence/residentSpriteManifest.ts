@@ -42,6 +42,10 @@ export type ResidentSpriteManifest = {
   residents: ResidentSpriteManifestEntry[];
 };
 
+// Legacy bridge for older motion-sheet-only data.
+// The 2-sheet ready contract lives in defaultCharacterAssetManifest.ts and
+// characterAssetBundles.ts. Do not use this bridge to promote a resident ready.
+
 const unmanagedAssetPathSegments = new Set([
   "incoming",
   "_incoming",

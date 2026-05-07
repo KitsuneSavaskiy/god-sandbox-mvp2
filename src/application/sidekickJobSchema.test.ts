@@ -28,6 +28,13 @@ const baseJob = {
   characterId: "chr_eve",
   assetBundleId: "eve",
   worldDirectoryName: "spring-village",
+  characterProfile: {
+    displayName: "Eve",
+    personality: "穏やか",
+    tone: "丁寧",
+    age: 20,
+    portraitRef: "assets/generated/residents/eve/reference/eve-portrait-reference-20260506000000.png",
+  },
 };
 
 function validate(input: unknown) {
@@ -125,9 +132,18 @@ function testCharacterIdAndAssetBundleIdConfusionIsRejected(): void {
       residentSpriteSheet: true,
     },
   });
+  const mismatchedAssetBundleId = validate({
+    ...baseJob,
+    assetBundleId: "foo",
+    jobType: "character-asset-bundle",
+    requestedOutputs: {
+      residentSpriteSheet: true,
+    },
+  });
 
   assert.equal(invalidCharacterId.ok, false);
   assert.equal(invalidAssetBundleId.ok, false);
+  assert.equal(mismatchedAssetBundleId.ok, false);
 
   if (!invalidCharacterId.ok) {
     assert.ok(invalidCharacterId.issues.some((issue) => issue.path === "characterId"));
@@ -135,6 +151,10 @@ function testCharacterIdAndAssetBundleIdConfusionIsRejected(): void {
 
   if (!invalidAssetBundleId.ok) {
     assert.ok(invalidAssetBundleId.issues.some((issue) => issue.path === "assetBundleId"));
+  }
+
+  if (!mismatchedAssetBundleId.ok) {
+    assert.ok(mismatchedAssetBundleId.issues.some((issue) => issue.path === "assetBundleId"));
   }
 }
 

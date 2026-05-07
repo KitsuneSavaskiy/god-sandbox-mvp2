@@ -175,6 +175,8 @@ dry-runでも、次をGit管理しない。
 
 ```txt
 .godsandbox/jobs/**
+.godsandbox/portraits/**
+.hatch-pet-runs/**
 assets/generated/**
 assets/residents/**
 narrative/generated/**

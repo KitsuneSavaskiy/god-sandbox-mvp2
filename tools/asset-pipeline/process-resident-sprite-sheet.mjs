@@ -25,8 +25,8 @@ const expected = {
 // Sheet 1 motion rows
 const motionRows = [
   "idle",
-  "run-right",
-  "run-left",
+  "walk-right",
+  "walk-left",
   "waving",
   "jumping",
   "failed",
@@ -44,6 +44,8 @@ const repoRoot = path.resolve(scriptDir, "../..");
 
 function printHelp() {
   console.log(`Resident sprite sheet processor
+
+motion-sheet 専用です。extended-sheet はこのスクリプトに渡さないでください。
 
 使い方:
   node tools/asset-pipeline/process-resident-sprite-sheet.mjs <residentId>
@@ -122,6 +124,13 @@ function collectPngFiles(targetPath) {
   }
 
   return files;
+}
+
+function assertMotionSheetSource(filePath) {
+  const fileName = path.basename(filePath).toLowerCase();
+  if (fileName === "resident-sprite-sheet-extended.png") {
+    throw new Error("extended-sheet は処理できません。motion-sheet だけをこのスクリプトに渡してください。");
+  }
 }
 
 function readPngInfo(filePath) {
@@ -251,8 +260,13 @@ function processResidentSpriteSheet(residentId, inputArg) {
   assertResidentId(residentId);
   const normalizedId = residentId.toLowerCase();
   const targetPath = inputArg ? path.resolve(repoRoot, inputArg) : toIncomingDir(normalizedId);
-  const pngFiles = collectPngFiles(targetPath);
+  const motionInputPath =
+    existsSync(targetPath) && statSync(targetPath).isDirectory()
+      ? path.join(targetPath, "resident-sprite-sheet.png")
+      : targetPath;
+  const pngFiles = collectPngFiles(motionInputPath);
   const sourcePath = pngFiles[0];
+  assertMotionSheetSource(sourcePath);
   const info = validateInput(sourcePath);
 
   const outputDir = toOutputDir(normalizedId);
@@ -281,6 +295,7 @@ function processResidentSpriteSheet(residentId, inputArg) {
     inputPath: spriteSheetPath,
     outputDir,
     sourceLabel: sourcePath,
+    sheetKind: "motion",
   });
   writeJson(
     manifestDraftPath,

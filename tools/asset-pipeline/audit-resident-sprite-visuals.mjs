@@ -31,14 +31,26 @@ const safeArea = {
 // Sheet 1 (motion-sheet) row labels — hatch-pet native format
 const motionRows = [
   "idle",
-  "run-right",
-  "run-left",
+  "walk-right",
+  "walk-left",
   "waving",
   "jumping",
   "failed",
   "waiting",
   "running",
   "review",
+];
+
+const extendedRows = [
+  "walk-up",
+  "walk-down",
+  "walk-forward",
+  "walk-back",
+  "emote-happy",
+  "emote-angry",
+  "emote-sad",
+  "emote-surprised",
+  "spare",
 ];
 
 const pngSignature = Buffer.from([
@@ -52,11 +64,13 @@ function printHelp() {
   console.log(`Resident sprite visual auditor
 
 使い方:
-  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs <residentId>
+  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs <residentId> --kind motion|extended
   node tools/asset-pipeline/audit-resident-sprite-visuals.mjs <png-file-or-folder>
+  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs <png-file> --kind motion|extended
 
 例:
-  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs eve
+  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs eve --kind motion
+  node tools/asset-pipeline/audit-resident-sprite-visuals.mjs public/art/characters/defaults/eve/sprites/resident-sprite-sheet-extended.png --kind extended
 
 入力:
   assets/generated/residents/<residentId>/incoming/
@@ -66,6 +80,7 @@ function printHelp() {
   assets/residents/<residentId>/sprites/<source>.visual-audit.json
 
 この監査は contact sheet を作り、見た目確認を必須にします。
+sheetKind と expectedRows も report に記録します。
 warning が出ても自動ready化はしません。人間レビューが必要です。`);
 }
 
@@ -89,6 +104,46 @@ function toIncomingDir(residentId) {
 
 function toOutputDir(residentId) {
   return path.join(repoRoot, "assets", "residents", residentId, "sprites");
+}
+
+function filenameToKind(filePath) {
+  const fileName = path.basename(filePath).toLowerCase();
+  if (fileName === "resident-sprite-sheet.png") {
+    return "motion";
+  }
+  if (fileName === "resident-sprite-sheet-extended.png") {
+    return "extended";
+  }
+  return null;
+}
+
+function getRowsForKind(kind) {
+  return kind === "extended" ? extendedRows : motionRows;
+}
+
+function getExpectedFileName(kind) {
+  return kind === "extended"
+    ? "resident-sprite-sheet-extended.png"
+    : "resident-sprite-sheet.png";
+}
+
+function resolveSheetKind(filePath, providedKind) {
+  if (providedKind === "motion" || providedKind === "extended") {
+    const inferred = filenameToKind(filePath);
+    if (inferred && inferred !== providedKind) {
+      throw new Error(
+        `sheetKind とファイル名が一致しません。${providedKind} には ${getExpectedFileName(providedKind)} を使ってください。`,
+      );
+    }
+    return providedKind;
+  }
+
+  const inferred = filenameToKind(filePath);
+  if (inferred) {
+    return inferred;
+  }
+
+  throw new Error("sheetKind を判定できません。--kind motion|extended を指定してください。");
 }
 
 function collectPngFiles(targetPath) {
@@ -617,6 +672,7 @@ function buildAuditSvg({
   sourceHash,
   generatedAt,
   pngInfo,
+  sheetKind,
   report,
 }) {
   const sheetX = 164;
@@ -698,15 +754,17 @@ function buildAuditSvg({
   <rect x="16" y="16" width="${width - 32}" height="${height - 32}" rx="24" ry="24" fill="#fffdfa" stroke="#d8d0bd" />
   <text x="24" y="46" font-size="28" font-weight="700" fill="#20311f">Resident Sprite Visual Audit</text>
   <text x="24" y="72" font-size="15" fill="#435243">resident: ${svgEscape(residentId)}</text>
-  <text x="24" y="92" font-size="15" fill="#435243">source: ${svgEscape(sourceFileName)}</text>
-  <text x="24" y="112" font-size="15" fill="#435243">generated: ${svgEscape(generatedAt)} / hash: ${svgEscape(sourceHash)}</text>
+  <text x="24" y="92" font-size="15" fill="#435243">sheetKind: ${svgEscape(sheetKind)}</text>
+  <text x="24" y="112" font-size="15" fill="#435243">source: ${svgEscape(sourceFileName)}</text>
+  <text x="24" y="132" font-size="15" fill="#435243">generated: ${svgEscape(generatedAt)} / hash: ${svgEscape(sourceHash)}</text>
   <rect x="${sheetX + expected.width + 24}" y="28" width="336" height="74" rx="16" ry="16" fill="${statusBackground}" stroke="${statusTone}" />
   <text x="${sheetX + expected.width + 44}" y="54" font-size="18" font-weight="700" fill="${statusTone}">status: ${warningFrames > 0 ? "warning" : "pass"}</text>
   <text x="${sheetX + expected.width + 44}" y="76" font-size="14" fill="#435243">warning frames: ${warningFrames} / ${expected.columns * expected.rows}</text>
   <text x="${sheetX + expected.width + 44}" y="96" font-size="14" fill="#435243">ready promotion requires human review and PO check.</text>
 
   <text x="${sheetX}" y="${sheetY - 48}" font-size="15" fill="#435243">display contract: ${expected.frameWidth}x${expected.frameHeight}, ${expected.columns} columns, ${expected.rows} rows</text>
-  <text x="${sheetX}" y="${sheetY - 28}" font-size="15" fill="#435243">safe area: left/right ${safeArea.left}px, top/bottom ${safeArea.top}px</text>
+  <text x="${sheetX}" y="${sheetY - 28}" font-size="15" fill="#435243">expected rows: ${svgEscape(report.expectedRows.join(", "))}</text>
+  <text x="${sheetX}" y="${sheetY - 8}" font-size="15" fill="#435243">safe area: left/right ${safeArea.left}px, top/bottom ${safeArea.top}px</text>
 
   ${columnMarkup}
   <image href="${embeddedPng}" x="${sheetX}" y="${sheetY}" width="${expected.width}" height="${expected.height}" />
@@ -725,6 +783,8 @@ function buildReport({
   filePath,
   generatedAt,
   sourceHash,
+  sheetKind,
+  expectedRows,
   framesByRow,
   svgPath,
   reportPath,
@@ -746,9 +806,12 @@ function buildReport({
   return {
     schemaVersion: "resident-sprite-visual-audit-v1",
     residentId,
+    sheetKind,
     sourcePath: toRepoRelative(filePath),
+    actualFile: path.basename(filePath),
     generatedAt,
     sourceHash,
+    expectedRows,
     safeArea,
     imageSize: {
       width: expected.width,
@@ -784,12 +847,21 @@ export function runVisualFrameAudit({
   inputPath,
   outputDir,
   sourceLabel,
+  sheetKind,
 }) {
-  const pngFiles = collectPngFiles(inputPath);
+  const normalizedInputPath =
+    sheetKind &&
+    existsSync(inputPath) &&
+    statSync(inputPath).isDirectory()
+      ? path.join(inputPath, getExpectedFileName(sheetKind))
+      : inputPath;
+  const pngFiles = collectPngFiles(normalizedInputPath);
   const filePath = pngFiles[0];
   const normalizedResidentId = (residentId ?? inferResidentId(filePath) ?? "resident").toLowerCase();
   const resolvedOutputDir = outputDir ?? toOutputDir(normalizedResidentId);
   mkdirSync(resolvedOutputDir, { recursive: true });
+  const normalizedSheetKind = resolveSheetKind(filePath, sheetKind);
+  const expectedRows = getRowsForKind(normalizedSheetKind);
 
   const pngInfo = readPngInfo(filePath);
   if (pngInfo.width !== expected.width || pngInfo.height !== expected.height) {
@@ -803,7 +875,7 @@ export function runVisualFrameAudit({
   const sourceHash = createHash("sha256").update(pngInfo.bytes).digest("hex").slice(0, 12);
   const baseName = path.parse(filePath).name;
 
-  const framesByRow = motionRows.map((motion, rowIndex) => ({
+  const framesByRow = expectedRows.map((motion, rowIndex) => ({
     motion,
     rowIndex,
     frames: Array.from({ length: expected.columns }, (_, column) =>
@@ -818,6 +890,8 @@ export function runVisualFrameAudit({
     filePath,
     generatedAt,
     sourceHash,
+    sheetKind: normalizedSheetKind,
+    expectedRows,
     framesByRow,
     svgPath,
     reportPath,
@@ -828,6 +902,7 @@ export function runVisualFrameAudit({
     sourceHash,
     generatedAt,
     pngInfo,
+    sheetKind: normalizedSheetKind,
     report,
   });
 
@@ -839,6 +914,7 @@ export function runVisualFrameAudit({
     filePath,
     generatedAt,
     sourceHash,
+    sheetKind: normalizedSheetKind,
     svgPath,
     reportPath,
     warningFrameCount: report.summary.warningFrameCount,
@@ -854,30 +930,52 @@ function main() {
     return 0;
   }
 
-  const [targetArg] = args;
+  const [targetArg, ...restArgs] = args;
 
   try {
+    let providedKind;
+    for (let index = 0; index < restArgs.length; index += 1) {
+      const arg = restArgs[index];
+      if (arg === "--kind") {
+        const value = restArgs[index + 1];
+        if (!value || (value !== "motion" && value !== "extended")) {
+          throw new Error("--kind には motion または extended を指定してください。");
+        }
+        providedKind = value;
+        index += 1;
+        continue;
+      }
+      throw new Error(`Unknown argument: ${arg}`);
+    }
+
     let residentId = inferResidentId(path.resolve(repoRoot, targetArg));
     let inputPath = path.resolve(repoRoot, targetArg);
     let outputDir;
 
     if (/^[A-Za-z0-9_-]+$/.test(targetArg)) {
+      if (!providedKind) {
+        throw new Error("residentId 直指定では --kind motion|extended が必須です。");
+      }
       residentId = targetArg.toLowerCase();
       assertResidentId(residentId);
       inputPath = toIncomingDir(residentId);
       outputDir = toOutputDir(residentId);
+    } else if (existsSync(inputPath) && statSync(inputPath).isDirectory() && !providedKind) {
+      throw new Error("フォルダ指定では --kind motion|extended が必須です。");
     }
 
     const result = runVisualFrameAudit({
       residentId,
       inputPath,
       outputDir,
+      sheetKind: providedKind,
     });
 
     const hasWarnings = result.warningFrameCount > 0;
 
     console.log("見た目監査が完了しました。");
     console.log(`監査対象: ${toRepoRelative(result.filePath)}`);
+    console.log(`sheet kind: ${result.sheetKind}`);
     console.log(`contact sheet: ${toRepoRelative(result.svgPath)}`);
     console.log(`report: ${toRepoRelative(result.reportPath)}`);
     console.log(`warning frames: ${result.warningFrameCount}`);

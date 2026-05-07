@@ -1,0 +1,188 @@
+import type { PersonalityVector } from "../../domain/models.js";
+import {
+  buildAmbientResidentEmoteWeights,
+  getNextAmbientEmoteResidentIndex,
+  selectWeightedAmbientResidentEmote,
+  type AmbientResidentEmote as WeightedAmbientResidentEmote,
+} from "./ambientResidentEmotes.js";
+import type { SandboxExperienceStage } from "../tutorial/tutorialStateMachine.js";
+
+export type EmoteKind =
+  | "joy"
+  | "anger"
+  | "sadness"
+  | "surprise"
+  | "talk-request"
+  | "event-alert"
+  | null;
+
+export type ResidentMotionKey =
+  | "idle"
+  | "walk-up"
+  | "walk-down"
+  | "walk-left"
+  | "walk-right"
+  | "walk-forward"
+  | "walk-back"
+  | "emote-happy"
+  | "emote-angry"
+  | "emote-sad"
+  | "emote-surprised";
+
+export type ResidentMovementDirection =
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "forward"
+  | "back"
+  | null;
+
+export type InterventionOutcomeLike = {
+  interventionType: "watch" | "help" | "trial";
+};
+
+export type AmbientResidentEmote = {
+  residentIndex: number;
+  emote: NonNullable<Extract<EmoteKind, "joy" | "anger" | "sadness" | "surprise">>;
+};
+
+export function resolveResidentEmote(input: {
+  sandboxStage: SandboxExperienceStage;
+  isPrimary: boolean;
+  isSupporting: boolean;
+  latestOutcome: InterventionOutcomeLike | null;
+}): EmoteKind {
+  if (input.sandboxStage === "focused-event") {
+    if (input.isPrimary) {
+      return "event-alert";
+    }
+    if (input.isSupporting) {
+      return "talk-request";
+    }
+    return null;
+  }
+
+  if (!input.latestOutcome) {
+    return null;
+  }
+
+  if (input.latestOutcome.interventionType === "help") {
+    return input.isPrimary ? "joy" : input.isSupporting ? "surprise" : null;
+  }
+
+  if (input.latestOutcome.interventionType === "trial") {
+    return input.isPrimary ? "anger" : input.isSupporting ? "surprise" : "sadness";
+  }
+
+  return input.isPrimary ? "talk-request" : null;
+}
+
+export function resolveDisplayedResidentEmote(
+  baseEmote: EmoteKind,
+  residentIndex: number,
+  ambientEmote: AmbientResidentEmote | null,
+): EmoteKind {
+  if (baseEmote !== null) {
+    return baseEmote;
+  }
+  if (!ambientEmote || ambientEmote.residentIndex !== residentIndex) {
+    return null;
+  }
+  return ambientEmote.emote;
+}
+
+export function createNextAmbientResidentEmote(
+  previousResidentIndex: number,
+  residentCount: number,
+  randomValue: number,
+  personality: PersonalityVector,
+): AmbientResidentEmote | null {
+  const residentIndex = getNextAmbientEmoteResidentIndex(
+    Number.isInteger(previousResidentIndex) ? previousResidentIndex : null,
+    residentCount,
+  );
+
+  if (residentIndex === null) {
+    return null;
+  }
+
+  return {
+    residentIndex,
+    emote: mapAmbientResidentEmote(
+      selectWeightedAmbientResidentEmote(
+        buildAmbientResidentEmoteWeights(personality),
+        randomValue,
+      ),
+    ),
+  };
+}
+
+export function resolveResidentMotion(
+  emote: EmoteKind,
+  isPaused: boolean,
+  movementDirection: ResidentMovementDirection,
+): ResidentMotionKey {
+  if (isPaused) {
+    return "idle";
+  }
+
+  const emoteMotion = emoteKindToMotion(emote);
+  if (emoteMotion !== null) {
+    return emoteMotion;
+  }
+  return directionToMotion(movementDirection);
+}
+
+function emoteKindToMotion(emote: EmoteKind): ResidentMotionKey | null {
+  switch (emote) {
+    case null:
+      return null;
+    case "joy":
+      return "emote-happy";
+    case "anger":
+      return "emote-angry";
+    case "sadness":
+      return "emote-sad";
+    case "surprise":
+      return "emote-surprised";
+    case "talk-request":
+      return "walk-forward";
+    case "event-alert":
+      return "walk-forward";
+  }
+}
+
+function directionToMotion(dir: ResidentMovementDirection): ResidentMotionKey {
+  switch (dir) {
+    case "left":
+      return "walk-left";
+    case "right":
+      return "walk-right";
+    case "up":
+      return "walk-up";
+    case "down":
+      return "walk-down";
+    case "forward":
+      return "walk-forward";
+    case "back":
+      return "walk-back";
+    default:
+      return "idle";
+  }
+}
+
+function mapAmbientResidentEmote(
+  emote: WeightedAmbientResidentEmote,
+): AmbientResidentEmote["emote"] {
+  switch (emote) {
+    case "happy":
+      return "joy";
+    case "angry":
+      return "anger";
+    case "sad":
+      return "sadness";
+    case "surprised":
+      return "surprise";
+  }
+}
