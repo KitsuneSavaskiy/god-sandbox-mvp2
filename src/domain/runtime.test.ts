@@ -74,7 +74,9 @@ import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js
 import {
   buildDialogueWorldDigest,
   buildDialoguePromptPack,
+  parseDialogueCandidatesFromText,
   validateDialogue,
+  type ParsedCandidateRaw,
 } from "./dialogue.js";
 import type {
   ConversationLogEntry,
@@ -1508,7 +1510,7 @@ function testDialogueAuthoringPreview(): void {
   assert.ok(pack.promptText.length > 0);
   assert.equal(pack.digestId.startsWith(digest.sessionId), true);
 
-  // authored_fixture candidate: source and reviewStatus
+  // authored_fixture candidate: DialogueCandidate source and reviewStatus
   const fixture: DialogueCandidate = {
     id: "fixture-001",
     characterId: "chr_garan",
@@ -1521,9 +1523,26 @@ function testDialogueAuthoringPreview(): void {
   assert.equal(fixture.source, "authored_fixture");
   assert.equal(fixture.reviewStatus, "accepted");
 
-  // external_llm_handoff candidate starts as needs_review
-  const llmCandidate: DialogueCandidate = {
+  // parseDialogueCandidatesFromText: known speaker resolves characterId
+  const nameToIdMap = new Map([["Garan", "chr_garan"], ["Ryo", "chr_ryo"]]);
+  const parseNow = "2026-05-08T00:00:00Z";
+  const knownResult = parseDialogueCandidatesFromText("Garan：今日は風がやわらかいね", nameToIdMap, parseNow);
+  assert.equal(knownResult.length, 1);
+  assert.equal(knownResult[0].characterId, "chr_garan");
+  assert.equal(knownResult[0].rawSpeakerName, "Garan");
+  assert.equal(knownResult[0].source, "external_llm_handoff");
+  assert.equal(knownResult[0].reviewStatus, "needs_review");
+
+  // parseDialogueCandidatesFromText: unknown speaker → characterId is null
+  const unknownResult = parseDialogueCandidatesFromText("Suzu：散歩したい気分", nameToIdMap, parseNow);
+  assert.equal(unknownResult.length, 1);
+  assert.equal(unknownResult[0].characterId, null);
+  assert.equal(unknownResult[0].rawSpeakerName, "Suzu");
+
+  // ParsedCandidateRaw type: llm_handoff starts as needs_review
+  const llmCandidate: ParsedCandidateRaw = {
     id: "llm-001",
+    rawSpeakerName: "Garan",
     characterId: "chr_garan",
     text: "今日は風がやわらかいね",
     type: "daily",
@@ -1554,8 +1573,17 @@ function testDialogueAuthoringPreview(): void {
   const normalText = validateDialogue("今日は風がやわらかいね");
   assert.equal(normalText.ok, true);
 
-  // needs_review candidates are excluded from accepted list
-  const candidates: DialogueCandidate[] = [llmCandidate];
+  // needs_review DialogueCandidate is excluded from accepted filter
+  const needsReviewCandidate: DialogueCandidate = {
+    id: "llm-002",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "external_llm_handoff",
+    reviewStatus: "needs_review",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  const candidates: DialogueCandidate[] = [needsReviewCandidate];
   const accepted = candidates.filter((c) => c.reviewStatus === "accepted");
   assert.equal(accepted.length, 0);
 
@@ -1564,6 +1592,10 @@ function testDialogueAuthoringPreview(): void {
   assert.equal(status, "rejected");
 
   // ConversationLogEntry type check (PBI 4b 前提)
+  // phase_change is a valid DialogueTrigger
+  const phaseTrigger: DialogueTrigger = "phase_change";
+  assert.equal(phaseTrigger, "phase_change");
+
   const trigger: DialogueTrigger = "intervention_applied";
   const logEntry: ConversationLogEntry = {
     id: "log-001",
