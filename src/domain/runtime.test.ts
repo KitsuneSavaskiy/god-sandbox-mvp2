@@ -36,6 +36,12 @@ import {
   normalizeCharacterStatus,
   resolveFaithBand,
 } from "./character.js";
+import {
+  ALLOWED_GOD_INDIRECT_REFERENCES,
+  DEFAULT_DO_NOT_SAY_SANDBOX,
+  getDefaultVoiceProfile,
+  resolveVoiceProfile,
+} from "./voiceProfile.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
@@ -1094,6 +1100,63 @@ function testFaithChangeApplication(): void {
   );
 }
 
+function testVoiceProfileStorageAndResolver(): void {
+  const state = createSeedRuntimeWorld();
+  const expectedSeedProfiles = [
+    ["chr_eve", "eve"],
+    ["chr_garan", "garan"],
+    ["chr_ryo", "ryo"],
+    ["chr_suzu", "suzu"],
+  ] as const;
+
+  for (const [characterId, speechStyleId] of expectedSeedProfiles) {
+    const seedCharacter = state.characters.get(characterId);
+    assert.ok(seedCharacter);
+    assert.equal(seedCharacter.profile.speechStyleId, speechStyleId);
+
+    const resolvedProfile = resolveVoiceProfile(seedCharacter);
+    const doNotSay = resolvedProfile.doNotSay.join("");
+
+    assert.equal(doNotSay.includes("あなた"), true);
+    assert.equal(doNotSay.includes("画面"), true);
+    assert.equal(doNotSay.includes("セーブ"), true);
+    assert.equal(
+      resolvedProfile.sandboxDialogueExamples.some(
+        (example) => example.type === "god_indirect_reaction",
+      ),
+      true,
+    );
+    assert.equal(
+      resolvedProfile.passportDialogueExamples.some(
+        (example) => example.type === "first_encounter",
+      ),
+      true,
+    );
+  }
+
+  const garanProfile = getDefaultVoiceProfile("garan");
+  assert.equal(DEFAULT_DO_NOT_SAY_SANDBOX.join("").includes("ステータス"), true);
+  assert.equal(ALLOWED_GOD_INDIRECT_REFERENCES.length >= 3, true);
+  assert.equal(
+    garanProfile.passportDialogueExamples.some(
+      (example) =>
+        example.type === "first_encounter" &&
+        /あなた|神様|見ていてくれた/.test(example.text),
+    ),
+    true,
+  );
+
+  const fallbackCharacter = character("chr_unknown", "Unknown");
+  const fallbackProfile = resolveVoiceProfile(fallbackCharacter);
+  assert.equal(fallbackProfile.firstPerson, "私");
+  assert.equal(
+    fallbackProfile.sandboxDialogueExamples.some(
+      (example) => example.type === "god_indirect_reaction",
+    ),
+    true,
+  );
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1111,6 +1174,7 @@ const tests: Array<[string, () => void]> = [
   ["intervention result emotes remain visible", testInterventionResultEmotesRemainVisible],
   ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
   ["faith change application", testFaithChangeApplication],
+  ["voice profile storage and resolver", testVoiceProfileStorageAndResolver],
 ];
 
 for (const [name, test] of tests) {
