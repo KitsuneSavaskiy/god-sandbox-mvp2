@@ -152,6 +152,66 @@ export function validateDialogue(text: string): DialogueValidationResult {
   return { ok: true };
 }
 
+export function parseDialogueCandidatesFromText(
+  rawText: string,
+  nameToIdMap: Map<string, string>,
+  now: string,
+): import("./models.js").DialogueCandidate[] {
+  const trimmed = rawText.trim();
+
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed: unknown = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return (parsed as unknown[]).flatMap((item, i) => {
+          if (typeof item !== "object" || item === null) return [];
+          const obj = item as Record<string, unknown>;
+          const name = String(obj["name"] ?? obj["speakerName"] ?? "").trim();
+          const text = String(obj["text"] ?? obj["content"] ?? "").trim();
+          if (!name || !text) return [];
+          const characterId = nameToIdMap.get(name) ?? name;
+          return [
+            {
+              id: `cand_llm_${now}_${i}`,
+              characterId,
+              text,
+              type: "daily" as const,
+              source: "external_llm_handoff" as const,
+              reviewStatus: "needs_review" as const,
+              createdAt: now,
+            },
+          ];
+        });
+      }
+    } catch {
+      // fall through to line parsing
+    }
+  }
+
+  return rawText.split("\n").flatMap((line, i) => {
+    const jpColonIdx = line.indexOf("：");
+    const asciiColonIdx = line.indexOf(":");
+    const splitAt =
+      jpColonIdx >= 0 ? jpColonIdx : asciiColonIdx >= 0 ? asciiColonIdx : -1;
+    if (splitAt < 0) return [];
+    const name = line.slice(0, splitAt).trim();
+    const text = line.slice(splitAt + 1).trim();
+    if (!name || !text) return [];
+    const characterId = nameToIdMap.get(name) ?? name;
+    return [
+      {
+        id: `cand_llm_${now}_${i}`,
+        characterId,
+        text,
+        type: "daily" as const,
+        source: "external_llm_handoff" as const,
+        reviewStatus: "needs_review" as const,
+        createdAt: now,
+      },
+    ];
+  });
+}
+
 function buildVisibleStateSummary(character: Character): string {
   const { vitality, stress, empathy } = character.state.status;
   const traits: string[] = [];
