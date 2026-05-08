@@ -1,5 +1,6 @@
 import { getPromptEntry } from "./registry.js";
 import type { RyoExpression } from "../schemas/ryo_reaction.js";
+import { RYO_REACTION_SCHEMA_FOR_LLM } from "../schemas/ryo_reaction.js";
 
 export type RyoReactionPromptInput = {
   characterName: string;
@@ -32,18 +33,6 @@ export function buildRyoReactionPromptText(input: RyoReactionPromptInput): strin
     .filter((s) => s.length > 0)
     .join("\n");
 
-  const outputExample = JSON.stringify(
-    {
-      expression: input.targetExpression,
-      line: "（台詞テキスト）",
-      intensity: 0.7,
-      tags: ["タグ1", "タグ2"],
-      state_change_request: null,
-    },
-    null,
-    2,
-  );
-
   return [
     "以下のキャラクター状態と神の介入をもとに、キャラクターの短文リアクションを JSON で生成してください。",
     "",
@@ -56,17 +45,16 @@ export function buildRyoReactionPromptText(input: RyoReactionPromptInput): strin
     "## 要求表情",
     input.targetExpression,
     "",
-    "## 出力形式（JSONのみ返すこと）",
+    "## 出力スキーマ（このスキーマに厳密に従うこと）",
     "```json",
-    outputExample,
+    RYO_REACTION_SCHEMA_FOR_LLM,
     "```",
     "",
-    "## 制約",
+    "## 制約（スキーマに加えて）",
     `- line は ${entry.maxOutputCharsJa} 文字以内の日本語`,
     "- 「あなた」「プレイヤー」「神様（直接呼びかけ）」を line に含めない",
     "- 死亡・寿命・勲章に関する内容を含めない",
     "- state_change_request は必ず null（AI はゲーム状態を変更できない）",
-    "- expression は normal / joy / sadness / tense / bless / divine / watch / test のいずれか",
-    "- intensity は 0.0 〜 1.0 の数値",
+    "- JSON のみを返すこと。説明文・前置きは不要",
   ].join("\n");
 }

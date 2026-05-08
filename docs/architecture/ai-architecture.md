@@ -105,6 +105,32 @@ type RyoReactionOutput = {
 };
 ```
 
+### Single Source of Truth 設計
+
+TypeScript ファイル（`ryo_reaction.ts`）が **canonical** であり、
+JSON Schema (`ryo_reaction.schema.json`) の内容を `RYO_REACTION_SCHEMA_FOR_LLM` 定数として export する。
+
+```
+src/ai/schemas/ryo_reaction.ts
+  └─ export RYO_REACTION_SCHEMA_FOR_LLM   ← TypeScript が canonical
+        ↓ import
+src/ai/prompts/ryo_reaction.ts
+  └─ プロンプトテキストにスキーマを内包   ← 外部 LLM がそのまま受け取る
+        ↓ 検証
+src/ai/schemas/ryo_reaction.ts
+  └─ validateRyoReactionOutput()           ← ランタイムが同じルールで検証
+```
+
+**この設計を採用した理由:**
+
+箱庭が生成したプロンプトをユーザーが外部 LLM（ChatGPT / Codex）にコピーするとき、
+スキーマも一緒に届く必要がある。別ファイルをアップロードさせるのは UX 上の摩擦になる。
+プロンプトにスキーマを内包することで、ユーザーはプロンプトテキストだけを貼り付ければよい。
+
+`ryo_reaction.schema.json` は TypeScript の定数から生成される公開アーティファクトであり、
+外部ツール（バリデーター、ドキュメントサイト）向けに提供するが、
+ランタイムの動作は TypeScript の実装に依存する。
+
 ---
 
 ## Layer 4: Narrative Service

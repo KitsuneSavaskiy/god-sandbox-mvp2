@@ -1,6 +1,10 @@
 import { getPromptEntry } from "../prompts/registry.js";
 import type { RyoExpression } from "../schemas/ryo_reaction.js";
-import { validateRyoReactionOutput, RYO_FALLBACK_LINE } from "../schemas/ryo_reaction.js";
+import {
+  validateRyoReactionOutput,
+  RYO_FALLBACK_LINE,
+  RYO_REACTION_SCHEMA_FOR_LLM,
+} from "../schemas/ryo_reaction.js";
 import type { WorldStateSummary } from "./world_state_summary.js";
 
 export type RyoReactionInput = {
@@ -50,27 +54,17 @@ export function buildRyoReactionPrompt(input: RyoReactionInput): RyoReactionProm
     `## 要求表情`,
     input.targetExpression,
     "",
-    "## 出力形式（JSON のみ返すこと）",
+    "## 出力スキーマ（このスキーマに厳密に従うこと）",
     "```json",
-    JSON.stringify(
-      {
-        expression: input.targetExpression,
-        line: "（42文字以内の日本語台詞）",
-        intensity: 0.7,
-        tags: ["（関連タグ）"],
-        state_change_request: null,
-      },
-      null,
-      2,
-    ),
+    RYO_REACTION_SCHEMA_FOR_LLM,
     "```",
     "",
-    "## 制約",
+    "## 制約（スキーマに加えて）",
     `- line は ${entry.maxOutputCharsJa} 文字以内の日本語`,
     "- 「あなた」「プレイヤー」「神様（直接呼びかけ）」を line に含めない",
     "- 死亡・寿命・勲章に関する内容を含めない",
-    "- state_change_request は必ず null にする（AIがゲーム状態を変更することは禁止）",
-    "- expression は以下 8 値のいずれかのみ: normal / joy / sadness / tense / bless / divine / watch / test",
+    "- state_change_request は必ず null（AI はゲーム状態を変更できない）",
+    "- JSON のみを返すこと。説明文・前置きは不要",
   ].join("\n");
 
   return {

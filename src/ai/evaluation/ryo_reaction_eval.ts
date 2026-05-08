@@ -1,4 +1,8 @@
-import { validateRyoReactionOutput, RYO_FALLBACK_LINE } from "../schemas/ryo_reaction.js";
+import {
+  validateRyoReactionOutput,
+  RYO_FALLBACK_LINE,
+  RYO_REACTION_SCHEMA_FOR_LLM,
+} from "../schemas/ryo_reaction.js";
 import { guardRyoReactionLine, guardStateChangeRequest } from "../security/output_guard.js";
 import { buildRyoReactionPromptText } from "../prompts/ryo_reaction.js";
 import {
@@ -232,6 +236,47 @@ function ok(label: string) {
   assert.notOk(summaryJson.includes('"stress":'), "summary must not contain raw stress number");
   assert.notOk(summaryJson.includes('"trustfulness":'), "summary must not contain raw trustfulness number");
   ok("world_state_summary: builds correctly without numeric leakage (faith/stress/trustfulness)");
+}
+
+// --- schema as single source of truth ---
+
+{
+  // RYO_REACTION_SCHEMA_FOR_LLM must be valid JSON
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(RYO_REACTION_SCHEMA_FOR_LLM);
+  } catch {
+    throw new Error("RYO_REACTION_SCHEMA_FOR_LLM is not valid JSON");
+  }
+  const schema = parsed as Record<string, unknown>;
+  assert.equal(schema["$id"], "ryo_reaction_output_v1");
+  assert.equal((schema["properties"] as Record<string, unknown>)["state_change_request"] !== undefined, true);
+
+  // TypeScript schema constant and JSON file must agree on state_change_request type
+  const scr = (schema["properties"] as Record<string, unknown>)["state_change_request"] as Record<string, unknown>;
+  assert.equal(scr["type"], "null", "state_change_request must be typed null in schema");
+
+  // Prompt text must embed the schema
+  const promptText = buildRyoReactionPromptText({
+    characterName: "リョウ",
+    faithBand: "believes",
+    fearBand: "calm",
+    trustBand: "trusting",
+    emotionSummary: "普段どおりの状態",
+    recentActions: [],
+    worldStatusTags: [],
+    divineAction: "神が静かに見守っている",
+    targetExpression: "watch",
+  });
+  assert.ok(
+    promptText.includes(RYO_REACTION_SCHEMA_FOR_LLM),
+    "prompt text must embed RYO_REACTION_SCHEMA_FOR_LLM so external LLMs receive the contract",
+  );
+  assert.ok(
+    promptText.includes('"state_change_request"'),
+    "prompt must include state_change_request field definition",
+  );
+  ok("schema_as_source_of_truth: schema is valid JSON, embedded in prompt, state_change_request is null-typed");
 }
 
 // --- golden scenarios eval ---
