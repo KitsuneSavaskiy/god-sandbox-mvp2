@@ -10,7 +10,9 @@ const updatedAt = "2026-05-07T00:00:00.000Z";
 const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png";
 const RYO_PO_PREVIEW_COMBINED_SHEET_PATH =
-  "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png";
+  "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png";
+const SUZU_PO_PREVIEW_COMBINED_SHEET_PATH =
+  "art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png";
 
 const EVE_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
   kind: "motion",
@@ -51,8 +53,8 @@ const EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
 
 const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
   kind: "motion",
-  frameWidth: 127,
-  frameHeight: 126,
+  frameWidth: 118,
+  frameHeight: 136,
   columns: 7,
   rows: 14,
   motions: {
@@ -70,8 +72,8 @@ const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
 
 const RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
   kind: "extended",
-  frameWidth: 127,
-  frameHeight: 126,
+  frameWidth: 118,
+  frameHeight: 136,
   columns: 7,
   rows: 14,
   motions: {
@@ -83,6 +85,43 @@ const RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
     "emote-angry": { row: 11, frames: 7 },
     "emote-sad": { row: 12, frames: 7 },
     "emote-surprised": { row: 13, frames: 7 },
+  },
+};
+
+const SUZU_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
+  kind: "motion",
+  frameWidth: 148,
+  frameHeight: 144,
+  columns: 6,
+  rows: 14,
+  motions: {
+    idle: { row: 0, frames: 6 },
+    "walk-right": { row: 2, frames: 6 },
+    "walk-left": { row: 1, frames: 6 },
+    waving: { row: 3, frames: 6 },
+    jumping: { row: 4, frames: 6 },
+    failed: { row: 5, frames: 6 },
+    waiting: { row: 6, frames: 6 },
+    running: { row: 1, frames: 6 },
+    review: { row: 7, frames: 6 },
+  },
+};
+
+const SUZU_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
+  kind: "extended",
+  frameWidth: 148,
+  frameHeight: 144,
+  columns: 6,
+  rows: 14,
+  motions: {
+    "walk-up": { row: 8, frames: 6 },
+    "walk-down": { row: 9, frames: 6 },
+    "walk-forward": { row: 9, frames: 6 },
+    "walk-back": { row: 8, frames: 6 },
+    "emote-happy": { row: 10, frames: 6 },
+    "emote-angry": { row: 11, frames: 6 },
+    "emote-sad": { row: 12, frames: 6 },
+    "emote-surprised": { row: 13, frames: 6 },
   },
 };
 
@@ -153,6 +192,14 @@ assertRequiredSpriteSheetMotions(
 assertRequiredSpriteSheetMotions(
   RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
   "ryo-po-preview-combined-extended-sheet",
+);
+assertRequiredSpriteSheetMotions(
+  SUZU_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  "suzu-po-preview-combined-motion-sheet",
+);
+assertRequiredSpriteSheetMotions(
+  SUZU_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  "suzu-po-preview-combined-extended-sheet",
 );
 
 // Keep legacy export alias so runtime.test.ts can update incrementally
@@ -256,6 +303,36 @@ function createRyoPoPreviewCombinedExtendedSheet(): AssetManifestEntry {
     fallbackAssetId: "ryo-portrait-neutral",
     generatedFromAssetIds: ["ryo-portrait-neutral"],
     spriteSheet: RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  };
+}
+
+function createSuzuPoPreviewCombinedMotionSheet(): AssetManifestEntry {
+  return {
+    id: "suzu-sprite-sheet",
+    ownerCharacterId: "chr_suzu",
+    kind: "sprite-sheet",
+    status: "ready",
+    sourcePath: "assets/generated/residents/suzu/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${SUZU_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: SUZU_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "suzu-portrait-neutral",
+    generatedFromAssetIds: ["suzu-portrait-neutral"],
+    spriteSheet: SUZU_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  };
+}
+
+function createSuzuPoPreviewCombinedExtendedSheet(): AssetManifestEntry {
+  return {
+    id: "suzu-sprite-sheet-extended",
+    ownerCharacterId: "chr_suzu",
+    kind: "sprite-sheet-extended",
+    status: "ready",
+    sourcePath: "assets/generated/residents/suzu/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${SUZU_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: SUZU_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "suzu-portrait-neutral",
+    generatedFromAssetIds: ["suzu-portrait-neutral"],
+    spriteSheet: SUZU_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
   };
 }
 
@@ -377,8 +454,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/suzu/portrait.png",
     },
-    createResidentMotionSheetPlaceholder("suzu", "chr_suzu"),
-    createResidentExtendedSheetPlaceholder("suzu", "chr_suzu"),
+    createSuzuPoPreviewCombinedMotionSheet(),
+    createSuzuPoPreviewCombinedExtendedSheet(),
     {
       id: "suzu-expression-happy",
       ownerCharacterId: "chr_suzu",

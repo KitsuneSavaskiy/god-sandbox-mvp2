@@ -576,7 +576,7 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(
     ryoAssetBundle.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
   );
   assert.equal(
     ryoAssetBundle.spriteSheet.plannedPath,
@@ -585,8 +585,8 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
   // Ryo PO preview sheet: one combined Codex pet sheet, 7 cols, 14 rows
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 127);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 126);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 136);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 7);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 14);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
@@ -598,8 +598,8 @@ function testRuntimeSelectorsAndCommands(): void {
   // Extended motions share the same PO preview PNG.
   assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
   assert.equal(ryoAssetBundle.extendedSheet.ready, true);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 127);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 126);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 118);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 136);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-up"]?.row, 8);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-happy"]?.row, 10);
@@ -625,16 +625,27 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.failed?.frames, 5);
   assert.equal(activeAssetBundles[1]?.spriteSheet.ready, false);
   assert.equal(activeAssetBundles[2]?.spriteSheet.ready, true);
-  assert.equal(activeAssetBundles[3]?.spriteSheet.ready, false);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.ready, true);
   assert.equal(activeAssetBundles[1]?.spriteSheet.path, null);
   assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(
     activeAssetBundles[2]?.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
   );
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 127);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 126);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 136);
   assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 5);
+  assert.equal(
+    activeAssetBundles[3]?.spriteSheet.path,
+    "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
+  );
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions["walk-left"]?.row, 1);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions["walk-right"]?.row, 2);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions.failed?.frames, 6);
   assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.metadata !== null), true);
   assert.equal(activeAssetBundles[0]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.frameWidth, 118);
@@ -647,8 +658,12 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
   assert.equal(activeAssetBundles[1]?.extendedSheet.ready, false);
   assert.equal(activeAssetBundles[2]?.extendedSheet.ready, true);
-  assert.equal(activeAssetBundles[3]?.extendedSheet.ready, false);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
@@ -882,8 +897,12 @@ function testResidentSpriteManifestReadModel(): void {
   assert.equal(eveAssetBundle.spriteSheet.missingReason, "source-not-adopted");
   assert.equal(eveAssetBundle.spriteSheet.fallbackAssetId, "eve-portrait-neutral");
 
-  assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
-  assert.equal(suzuAssetBundle.spriteSheet.ready, false);
+  assert.equal(suzuAssetBundle.spriteSheet.status, "ready");
+  assert.equal(suzuAssetBundle.spriteSheet.ready, true);
+  assert.equal(
+    suzuAssetBundle.spriteSheet.path,
+    "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
+  );
   assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
   assert.equal(partialStatus.tone, "ready");
   assert.equal(partialStatus.label, "準備済み");
@@ -921,7 +940,7 @@ function testInterventionResultEmotesRemainVisible(): void {
     latestOutcome: { interventionType: "help" },
   });
 
-  assert.equal(focusedBystanderEmote, null);
+  assert.equal(focusedBystanderEmote, "talk-request");
   assert.equal(primaryHelpEmote, "joy");
   assert.equal(supportingHelpEmote, "surprise");
   assert.equal(bystanderHelpEmote, "joy");
@@ -929,8 +948,9 @@ function testInterventionResultEmotesRemainVisible(): void {
   assert.equal(resolveResidentMotion(primaryHelpEmote, true, null), "idle");
   assert.equal(resolveResidentMotion("event-alert", false, "left"), "walk-left");
   assert.equal(resolveResidentMotion("talk-request", false, null), "idle");
+  assert.equal(resolveResidentMotion("talk-request", false, "right"), "walk-right");
   assert.equal(isResidentMovementBlockingEmote("event-alert"), false);
-  assert.equal(isResidentMovementBlockingEmote("talk-request"), true);
+  assert.equal(isResidentMovementBlockingEmote("talk-request"), false);
 }
 
 const tests: Array<[string, () => void]> = [
