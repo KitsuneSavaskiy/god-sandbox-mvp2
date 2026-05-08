@@ -428,7 +428,7 @@ Step 3: relation スコア ≥ 60 に変化後の発話確認
   Assert: "仲良し発話" が生成される
   Assert: "Ryoと歩くと、なんか楽しくなる" のような表現
 
-Step 4: relation スコア ≤ 30 に変化後の発話確認
+Step 4: relation スコア ≤ -30 に変化後の発話確認
   Assert: "距離感発話" が生成される
   Assert: "まだ少し話しかけづらい" のような表現
 ```
