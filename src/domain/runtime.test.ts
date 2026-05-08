@@ -71,6 +71,7 @@ import {
 } from "../persistence/residentSpriteManifest.js";
 import { promoteAssetToReady } from "../persistence/assetManifest.js";
 import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
+import { generatePassportDisplay, buildMemorySummary, derivePassportDoNotSay } from "./passport.js";
 import {
   buildDialogueWorldDigest,
   buildDialoguePromptPack,
@@ -1610,6 +1611,70 @@ function testDialogueAuthoringPreview(): void {
   assert.equal(logEntry.speakerDisplayName, "Garan");
 }
 
+function testPassportOutsideWorldPayload(): void {
+  // Build a passport via the service pipeline
+  const afterIntervention = applyInterventionService(worldState(), {
+    type: "help",
+    now,
+    idSeed: "pbi5-source",
+  }).state;
+
+  const issuedSnapshot = issueSnapshotService(afterIntervention, {
+    characterId: "chr_a",
+    snapshotId: "snp_pbi5_001",
+    now,
+    annotationTags: ["pbi5-test"],
+  });
+
+  const issuedPassport = issuePassportService(issuedSnapshot.state, {
+    snapshotId: issuedSnapshot.snapshot.id,
+    passportId: "psp_pbi5_001",
+    fileNameToken: "aki--pbi5-001",
+    schemaVersion: 1,
+    now,
+  });
+
+  const display = issuedPassport.passport.display;
+
+  // faithBand resolves to a valid value
+  const validBands = ["disbelieves", "uncertain", "senses_presence", "believes", "devoted"];
+  assert.ok(validBands.includes(display.godRelationship.faithBand));
+
+  // systemPrompt is at least 50 characters
+  assert.ok(display.externalAiPromptBlock.systemPrompt.length > 50);
+
+  // lifeMemory.keyEvents reflects recentEvents
+  assert.ok(Array.isArray(display.lifeMemory.keyEvents));
+
+  // memorySummary contains no raw numeric status values
+  const memorySummaryJson = JSON.stringify(display.lifeMemory.memorySummary);
+  assert.equal(/:\s*\d+/.test(memorySummaryJson), false);
+
+  // display JSON must not contain five-phase internal keys
+  const displayJson = JSON.stringify(display);
+  assert.equal(displayJson.includes('"wood":'), false);
+  assert.equal(displayJson.includes('"fire":'), false);
+  assert.equal(displayJson.includes('"earth":'), false);
+  assert.equal(displayJson.includes('"metal":'), false);
+  assert.equal(displayJson.includes('"water":'), false);
+
+  // generatePassportDisplay directly
+  const directDisplay = generatePassportDisplay(issuedSnapshot.snapshot);
+  assert.equal(directDisplay.character.name, "Aki");
+  assert.ok(directDisplay.voiceProfile.sandboxDoNotSay.length > 0);
+
+  // derivePassportDoNotSay excludes "あなた" entries
+  const sandbox = ["「あなた」への直接呼びかけ", "「神様」への直接呼びかけ", "「画面」認識表現"];
+  const outside = derivePassportDoNotSay(sandbox);
+  assert.equal(outside.length, 1);
+  assert.equal(outside[0], "「画面」認識表現");
+
+  // buildMemorySummary with no events returns fallback text
+  const empty = buildMemorySummary({ events: [], relations: [] });
+  assert.ok(empty.memorySummary.length > 0);
+  assert.equal(empty.keyEvents.length, 0);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1632,6 +1697,7 @@ const tests: Array<[string, () => void]> = [
   ["promoteAssetToReady gate", testPromoteAssetToReadyGate],
   ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
   ["dialogue authoring preview (PBI 4a)", testDialogueAuthoringPreview],
+  ["passport outside world payload (PBI 5)", testPassportOutsideWorldPayload],
 ];
 
 for (const [name, test] of tests) {

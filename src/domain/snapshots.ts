@@ -1,4 +1,5 @@
 import { cloneCharacter } from "./character.js";
+import { generatePassportDisplay } from "./passport.js";
 import type {
   Character,
   CharacterPassport,
@@ -68,12 +69,7 @@ export function issueCharacterPassport(
     schemaVersion: input.schemaVersion,
     createdAt: input.now,
     fileNameToken: input.fileNameToken,
-    display: {
-      displayName: character.profile.displayName,
-      narrativeRole: character.state.narrativeRole,
-      status: character.state.status,
-      annotations: input.snapshot.annotations,
-    },
+    display: generatePassportDisplay(input.snapshot),
     exportHints: {
       referencedCharacterFileId: character.id,
       referencedAssetIds,
