@@ -152,11 +152,22 @@ export function validateDialogue(text: string): DialogueValidationResult {
   return { ok: true };
 }
 
+export type ParsedCandidateRaw = {
+  id: string;
+  rawSpeakerName: string;
+  characterId: string | null;
+  text: string;
+  type: "daily" | "relationship" | "god_indirect_reaction";
+  source: "external_llm_handoff";
+  reviewStatus: "needs_review";
+  createdAt: string;
+};
+
 export function parseDialogueCandidatesFromText(
   rawText: string,
   nameToIdMap: Map<string, string>,
   now: string,
-): import("./models.js").DialogueCandidate[] {
+): ParsedCandidateRaw[] {
   const trimmed = rawText.trim();
 
   if (trimmed.startsWith("[")) {
@@ -166,13 +177,14 @@ export function parseDialogueCandidatesFromText(
         return (parsed as unknown[]).flatMap((item, i) => {
           if (typeof item !== "object" || item === null) return [];
           const obj = item as Record<string, unknown>;
-          const name = String(obj["name"] ?? obj["speakerName"] ?? "").trim();
+          const rawSpeakerName = String(obj["name"] ?? obj["speakerName"] ?? "").trim();
           const text = String(obj["text"] ?? obj["content"] ?? "").trim();
-          if (!name || !text) return [];
-          const characterId = nameToIdMap.get(name) ?? name;
+          if (!rawSpeakerName || !text) return [];
+          const characterId = nameToIdMap.get(rawSpeakerName) ?? null;
           return [
             {
               id: `cand_llm_${now}_${i}`,
+              rawSpeakerName,
               characterId,
               text,
               type: "daily" as const,
@@ -194,13 +206,14 @@ export function parseDialogueCandidatesFromText(
     const splitAt =
       jpColonIdx >= 0 ? jpColonIdx : asciiColonIdx >= 0 ? asciiColonIdx : -1;
     if (splitAt < 0) return [];
-    const name = line.slice(0, splitAt).trim();
+    const rawSpeakerName = line.slice(0, splitAt).trim();
     const text = line.slice(splitAt + 1).trim();
-    if (!name || !text) return [];
-    const characterId = nameToIdMap.get(name) ?? name;
+    if (!rawSpeakerName || !text) return [];
+    const characterId = nameToIdMap.get(rawSpeakerName) ?? null;
     return [
       {
         id: `cand_llm_${now}_${i}`,
+        rawSpeakerName,
         characterId,
         text,
         type: "daily" as const,

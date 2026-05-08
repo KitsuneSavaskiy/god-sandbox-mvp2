@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import type { DialogueCandidate } from "../../domain/models.js";
 import {
   buildDialoguePromptPack,
   buildDialogueWorldDigest,
   parseDialogueCandidatesFromText,
   validateDialogue,
+  type ParsedCandidateRaw,
 } from "../../domain/dialogue.js";
 import type { DialogueValidationResult } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button.js";
 import "./DialoguePreviewSurface.css";
 
-type ParsedCandidate = DialogueCandidate & { validation: DialogueValidationResult };
+type ParsedCandidate = ParsedCandidateRaw & { validation: DialogueValidationResult };
 
 type Props = {
   state: RuntimeWorldState;
@@ -53,10 +53,16 @@ export function DialoguePreviewSurface({ state }: Props) {
 
   function handleParse() {
     const now = new Date().toISOString();
-    const candidates = parseDialogueCandidatesFromText(pasteText, nameToIdMap, now);
-    const withValidation: ParsedCandidate[] = candidates.map((c) => ({
-      ...c,
-      validation: validateDialogue(c.text),
+    const raws = parseDialogueCandidatesFromText(pasteText, nameToIdMap, now);
+    const withValidation: ParsedCandidate[] = raws.map((raw) => ({
+      ...raw,
+      validation:
+        raw.characterId === null
+          ? {
+              ok: false as const,
+              violations: [`不明な話者: 「${raw.rawSpeakerName}」はキャラクターリストに存在しません`],
+            }
+          : validateDialogue(raw.text),
     }));
     setParsedCandidates(withValidation);
     setAcceptedIds(new Set());
@@ -75,10 +81,13 @@ export function DialoguePreviewSurface({ state }: Props) {
     });
   }
 
-  const acceptedCandidates = parsedCandidates.filter((c) => acceptedIds.has(c.id));
+  const acceptedCandidates = parsedCandidates.filter(
+    (c) => acceptedIds.has(c.id) && c.validation.ok && c.characterId !== null,
+  );
 
-  function resolveDisplayName(characterId: string): string {
-    return state.characters.get(characterId)?.profile.displayName ?? characterId;
+  function resolveDisplayName(candidate: ParsedCandidate): string {
+    if (candidate.characterId === null) return candidate.rawSpeakerName;
+    return state.characters.get(candidate.characterId)?.profile.displayName ?? candidate.rawSpeakerName;
   }
 
   return (
@@ -126,11 +135,7 @@ export function DialoguePreviewSurface({ state }: Props) {
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
           />
-          <Button
-            type="button"
-            variant="primary"
-            onClick={handleParse}
-          >
+          <Button type="button" variant="primary" onClick={handleParse}>
             解析して検証
           </Button>
 
@@ -145,7 +150,7 @@ export function DialoguePreviewSurface({ state }: Props) {
                     className={`dialogue-preview__candidate${!isValid ? " dialogue-preview__candidate--invalid" : ""}`}
                   >
                     <p className="dialogue-preview__candidate-speaker">
-                      {resolveDisplayName(candidate.characterId)}
+                      {resolveDisplayName(candidate)}
                     </p>
                     <p className="dialogue-preview__candidate-text">{candidate.text}</p>
                     {!isValid && (
@@ -160,6 +165,7 @@ export function DialoguePreviewSurface({ state }: Props) {
                         <Button
                           type="button"
                           variant={isValid ? "primary" : "secondary"}
+                          disabled={!isValid}
                           onClick={() => handleAccept(candidate.id)}
                         >
                           承認
@@ -190,7 +196,7 @@ export function DialoguePreviewSurface({ state }: Props) {
           <div className="dialogue-preview__log" role="log" aria-live="polite">
             {acceptedCandidates.map((candidate) => (
               <p key={candidate.id} className="dialogue-preview__log-entry">
-                {resolveDisplayName(candidate.characterId)}：{candidate.text}
+                {resolveDisplayName(candidate)}：{candidate.text}
               </p>
             ))}
           </div>

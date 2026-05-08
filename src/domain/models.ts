@@ -331,7 +331,8 @@ export type DialogueTrigger =
   | "event_resolved"
   | "intervention_applied"
   | "proximity_enter"
-  | "idle_timer";
+  | "idle_timer"
+  | "phase_change";
 
 export type DialogueValidationResult =
   | { ok: true }
