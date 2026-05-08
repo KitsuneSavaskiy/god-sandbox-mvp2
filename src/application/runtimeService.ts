@@ -1,5 +1,5 @@
 import { generateWorldEvent } from "../domain/events.js";
-import { applyIntervention } from "../domain/interventions.js";
+import { applyIntervention, resolvePlayerMemoGroup } from "../domain/interventions.js";
 import type {
   CharacterPassport,
   CharacterSnapshot,
@@ -102,6 +102,8 @@ export function applyInterventionService(
     idSeed: command.idSeed,
     playerReason: command.playerReason,
     playerMemo: command.playerMemo,
+    currentMemoGroup: resolvePlayerMemoGroup(command.playerMemo ?? command.playerReason),
+    previousMemoGroup: resolvePreviousInterventionMemoGroup(state),
   });
 
   const resolvedEvent: WorldEvent = {
@@ -144,6 +146,22 @@ export function applyInterventionService(
     state: generated.state,
     nextEvent: generated.event,
   };
+}
+
+function resolvePreviousInterventionMemoGroup(state: RuntimeWorldState) {
+  const previousInterventions = [...state.interventions.values()].reverse();
+
+  for (const intervention of previousInterventions) {
+    const memoGroup = resolvePlayerMemoGroup(
+      intervention.playerMemo ?? intervention.playerReason,
+    );
+
+    if (memoGroup) {
+      return memoGroup;
+    }
+  }
+
+  return null;
 }
 
 export function issueSnapshotService(

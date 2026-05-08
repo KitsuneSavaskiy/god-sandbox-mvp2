@@ -98,6 +98,25 @@ export type FaithBand =
   | "believes"
   | "devoted";
 
+export type FaithChangeTrigger =
+  | "watch_success"
+  | "watch_failure"
+  | "help_success"
+  | "help_failure"
+  | "trial_success"
+  | "trial_failure"
+  | "player_memo_bonus"
+  | "player_memo_penalty";
+
+export type FaithChangeRecord = {
+  characterId: CharacterId;
+  previousFaith: number;
+  newFaith: number;
+  delta: number;
+  trigger: FaithChangeTrigger;
+  interventionId: string;
+};
+
 export type CharacterState = {
   status: CharacterStatusBlock;
   narrativeRole?: string;

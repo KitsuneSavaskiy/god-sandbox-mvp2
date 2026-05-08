@@ -17,7 +17,11 @@ import {
   selectPendingActivationCharacters,
   selectRoster,
 } from "../application/runtimeSelectors.js";
-import { applyIntervention } from "./interventions.js";
+import {
+  applyFaithChange,
+  applyFaithChangeWithPersonality,
+  applyIntervention,
+} from "./interventions.js";
 import { generateWorldEvent } from "./events.js";
 import type { Character, CharacterRelation, CharacterStatusBlock, SandboxSession, WorldEvent } from "./models.js";
 import { replaceActiveSlot } from "./session.js";
@@ -373,8 +377,30 @@ function testInterventionApplyCostsAndChangeSet(): void {
   assert.equal(watched.session.godPoints, state.session.godPoints);
   assert.equal(watched.changeSets.length, 2);
   assert.equal(watched.intervention.changeSetIds.length, 2);
-  assert.deepEqual(watched.changeSets[0].patch, { insight: 1 });
-  assert.deepEqual(watched.changeSets[1].patch, { insight: 1 });
+  assert.deepEqual(watched.changeSets[0].patch, {
+    insight: 1,
+    faith: 2,
+    faithChange: {
+      characterId: "chr_a",
+      previousFaith: 30,
+      newFaith: 32,
+      delta: 2,
+      trigger: "watch_success",
+      interventionId: "itv_watch",
+    },
+  });
+  assert.deepEqual(watched.changeSets[1].patch, {
+    insight: 1,
+    faith: 2,
+    faithChange: {
+      characterId: "chr_b",
+      previousFaith: 30,
+      newFaith: 32,
+      delta: 2,
+      trigger: "watch_success",
+      interventionId: "itv_watch",
+    },
+  });
   assert.ok(watched.changeSets[0].postApplySnapshot.status);
 
   assert.throws(
@@ -400,12 +426,26 @@ function testInterventionApplyCostsAndChangeSet(): void {
   assert.equal(helped.state.interventions.size, 1);
   assert.equal(helped.state.changeSets.size, 2);
   assert.equal(helped.state.session.godPoints, state.session.godPoints - 2);
+  assert.equal(helped.state.characters.get("chr_a")?.state.status.faith, 34);
+  assert.equal(helped.state.characters.get("chr_b")?.state.status.faith, 34);
   assert.notEqual(helped.state.session.currentEventId, state.session.currentEventId);
   assert.equal(helped.state.events.has(helped.state.session.currentEventId), true);
   assert.equal(
     helped.state.characters.get("chr_b")?.state.recentEventIds.includes(currentEvent.id),
     true,
   );
+
+  const secondHelped = applyInterventionService(helped.state, {
+    type: "help",
+    now,
+    idSeed: "help-second",
+    playerReason: "一緒に支える",
+  });
+  const secondHelpChangeSet = [...secondHelped.state.changeSets.values()].find(
+    (changeSet) => changeSet.interventionId === "itv_help-second",
+  );
+  assert.ok(secondHelpChangeSet);
+  assert.equal(secondHelpChangeSet.patch.faith, 5);
 
   const trialed = applyIntervention({
     session: state.session,
@@ -421,7 +461,20 @@ function testInterventionApplyCostsAndChangeSet(): void {
     trialed.session.godPoints,
     state.session.godPoints - BALANCED_INTERVENTION_COSTS.trial,
   );
-  assert.deepEqual(trialed.changeSets[0].patch, { courage: 2, stress: 1, ambition: 1 });
+  assert.deepEqual(trialed.changeSets[0].patch, {
+    courage: 2,
+    stress: 1,
+    ambition: 1,
+    faith: 5,
+    faithChange: {
+      characterId: "chr_a",
+      previousFaith: 30,
+      newFaith: 35,
+      delta: 5,
+      trigger: "trial_success",
+      interventionId: "itv_trial",
+    },
+  });
 }
 
 function testThirtyMinuteGrowthBalance(): void {
@@ -978,6 +1031,69 @@ function testFaithDomainModelDefaultsAndBands(): void {
   }
 }
 
+function testFaithChangeApplication(): void {
+  assert.equal(applyFaithChange(30, "help_success"), 34);
+  assert.equal(applyFaithChange(30, "help_failure"), 28);
+  assert.equal(applyFaithChange(30, "watch_success"), 32);
+  assert.equal(applyFaithChange(30, "watch_failure"), 29);
+  assert.equal(applyFaithChange(30, "trial_success"), 35);
+  assert.equal(applyFaithChange(30, "trial_failure"), 26);
+  assert.equal(applyFaithChange(30, "player_memo_bonus"), 31);
+  assert.equal(applyFaithChange(30, "player_memo_penalty"), 29);
+  assert.equal(applyFaithChange(98, "help_success"), 100);
+  assert.equal(applyFaithChange(2, "trial_failure"), 0);
+
+  const sensitiveCharacter = character("chr_sensitive", "Sensitive");
+  sensitiveCharacter.profile.personality = { sensitivity: 75 };
+  assert.equal(
+    applyFaithChangeWithPersonality(sensitiveCharacter, "watch_success"),
+    33,
+  );
+
+  const boldCharacter = character("chr_bold", "Bold");
+  boldCharacter.profile.personality = { boldness: 80 };
+  assert.equal(
+    applyFaithChangeWithPersonality(boldCharacter, "trial_failure"),
+    28,
+  );
+
+  const curiousCharacter = character("chr_curious", "Curious");
+  curiousCharacter.profile.personality = { curiosity: 75 };
+  assert.equal(
+    applyFaithChangeWithPersonality(curiousCharacter, "help_failure"),
+    29,
+  );
+
+  const disciplinedCharacter = character("chr_disciplined", "Disciplined");
+  disciplinedCharacter.profile.personality = { discipline: 80 };
+  assert.equal(
+    applyFaithChangeWithPersonality(disciplinedCharacter, "trial_success"),
+    37,
+  );
+
+  const memoCharacter = character("chr_memo", "Memo");
+  assert.equal(
+    applyFaithChangeWithPersonality(memoCharacter, "help_success", "help", null),
+    34,
+  );
+  assert.equal(
+    applyFaithChangeWithPersonality(memoCharacter, "help_success", "help", "help"),
+    35,
+  );
+  assert.equal(
+    applyFaithChangeWithPersonality(memoCharacter, "help_success", "help", "trial"),
+    33,
+  );
+  assert.equal(
+    applyFaithChangeWithPersonality(memoCharacter, "player_memo_bonus", "help", "help"),
+    31,
+  );
+  assert.equal(
+    applyFaithChangeWithPersonality(memoCharacter, "player_memo_penalty", "help", "trial"),
+    29,
+  );
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -994,6 +1110,7 @@ const tests: Array<[string, () => void]> = [
   ["resident sprite manifest read model", testResidentSpriteManifestReadModel],
   ["intervention result emotes remain visible", testInterventionResultEmotesRemainVisible],
   ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
+  ["faith change application", testFaithChangeApplication],
 ];
 
 for (const [name, test] of tests) {
