@@ -69,6 +69,7 @@ function seedCharacter(id: string, displayName: string): Character {
     id,
     profile: {
       displayName,
+      speechStyleId: bundleId,
       personality: {},
       appearance: {
         primaryAssetId: portraitAssetId,
