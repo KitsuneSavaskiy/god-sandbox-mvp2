@@ -1714,6 +1714,16 @@ function testPassportOutsideWorldPayload(): void {
   });
   assert.equal(selfRelations.length, 0);
 
+  // relation not involving sourceCharacterId at all is excluded
+  const { relationSummaries: unrelatedRelations } = buildMemorySummary({
+    sourceCharacterId: "a",
+    events: [],
+    relations: [
+      { id: "r_unrelated", characterAId: "b", characterBId: "c", score: 30, derivedFromEventIds: [], lastRecomputedAt: now },
+    ],
+  });
+  assert.equal(unrelatedRelations.length, 0);
+
   // interventionType is absent (undefined) when unknown
   const { keyEvents: eventsWithType } = buildMemorySummary({
     sourceCharacterId: "chr_x",

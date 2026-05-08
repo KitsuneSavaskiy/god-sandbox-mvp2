@@ -97,16 +97,28 @@ export function buildMemorySummary(input: {
     })
     .slice(0, 5);
 
-  const relationSummaries: PassportRelationSummary[] = sortedRelations.map((r) => ({
-    withCharacterId: resolveOtherCharacterId(r, input.sourceCharacterId),
-    relationDescription: describeRelation(r.score),
-  }));
+  const relationSummaries: PassportRelationSummary[] = sortedRelations
+    .map((r) => {
+      const otherCharacterId = resolveOtherCharacterId(r, input.sourceCharacterId);
+      if (!otherCharacterId) return null;
+      return { withCharacterId: otherCharacterId, relationDescription: describeRelation(r.score) };
+    })
+    .filter((s): s is PassportRelationSummary => s !== null);
 
   return { memorySummary, keyEvents, relationSummaries };
 }
 
-function resolveOtherCharacterId(relation: CharacterRelation, sourceCharacterId: string): string {
-  return relation.characterAId === sourceCharacterId ? relation.characterBId : relation.characterAId;
+function resolveOtherCharacterId(
+  relation: CharacterRelation,
+  sourceCharacterId: string,
+): string | null {
+  if (relation.characterAId === sourceCharacterId && relation.characterBId !== sourceCharacterId) {
+    return relation.characterBId;
+  }
+  if (relation.characterBId === sourceCharacterId && relation.characterAId !== sourceCharacterId) {
+    return relation.characterAId;
+  }
+  return null;
 }
 
 export function buildPassportVoiceProfile(vp: ReturnType<typeof resolveVoiceProfile>): PassportVoiceProfile {
