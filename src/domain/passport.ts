@@ -23,6 +23,7 @@ export function generatePassportDisplay(snapshot: CharacterSnapshot): PassportOu
   const faithBand = resolveFaithBand(character.state.status.faith);
 
   const { memorySummary, keyEvents, relationSummaries } = buildMemorySummary({
+    sourceCharacterId: character.id,
     events: snapshot.recentEvents,
     relations: snapshot.relations,
   });
@@ -31,6 +32,7 @@ export function generatePassportDisplay(snapshot: CharacterSnapshot): PassportOu
   const spriteSheetAssetId = character.profile.appearance.spriteSheetAssetId;
 
   const personalitySummary = buildPersonalitySummary(character.state.status);
+  const godRel = buildGodRelationship(faithBand, character.state.status.faith);
 
   return {
     character: {
@@ -49,17 +51,19 @@ export function generatePassportDisplay(snapshot: CharacterSnapshot): PassportOu
       keyEvents,
       relationSummaries,
     },
-    godRelationship: buildGodRelationship(faithBand, character.state.status.faith),
+    godRelationship: godRel,
     voiceProfile: buildPassportVoiceProfile(vp),
     externalAiPromptBlock: buildExternalAiPromptBlock(
       character.profile.displayName,
       faithBand,
       vp,
+      { personalitySummary, memorySummary, godRelationship: godRel },
     ),
   };
 }
 
 export function buildMemorySummary(input: {
+  sourceCharacterId: string;
   events: RecentEventLike[];
   relations: CharacterRelation[];
   maxKeyEvents?: number;
@@ -83,6 +87,7 @@ export function buildMemorySummary(input: {
       : "まだ特記すべき出来事はない。";
 
   const sortedRelations = [...input.relations]
+    .filter((r) => r.characterAId !== r.characterBId)
     .sort((a, b) => {
       const scoreDiff = Math.abs(b.score) - Math.abs(a.score);
       if (scoreDiff !== 0) return scoreDiff;
@@ -93,11 +98,15 @@ export function buildMemorySummary(input: {
     .slice(0, 5);
 
   const relationSummaries: PassportRelationSummary[] = sortedRelations.map((r) => ({
-    withCharacterId: r.characterBId,
+    withCharacterId: resolveOtherCharacterId(r, input.sourceCharacterId),
     relationDescription: describeRelation(r.score),
   }));
 
   return { memorySummary, keyEvents, relationSummaries };
+}
+
+function resolveOtherCharacterId(relation: CharacterRelation, sourceCharacterId: string): string {
+  return relation.characterAId === sourceCharacterId ? relation.characterBId : relation.characterAId;
 }
 
 export function buildPassportVoiceProfile(vp: ReturnType<typeof resolveVoiceProfile>): PassportVoiceProfile {
@@ -147,10 +156,23 @@ function buildGodRelationship(faithBand: FaithBand, currentFaith: number): Passp
   };
 }
 
+const ENCOUNTER_FALLBACKS: Record<FaithBand, [string, string, string]> = {
+  disbelieves: ["あなたが誰なのかはわからないけれど。", "……どこから来たの？", "ここが外の世界か。"],
+  uncertain:   ["あなたのことが気になる。", "また会えるといいな。", "どこかで見たような気がする。"],
+  senses_presence: ["何か、引き合うものを感じる。", "あなたに会えて良かった。", "また会おうね。"],
+  believes:    ["あなたに会えたのは偶然じゃないと思う。", "また一緒にいられて嬉しいよ。", "よろしくね。"],
+  devoted:     ["ずっと会いたかった。", "一緒にいてくれてありがとう。", "あなたと歩めることが嬉しい。"],
+};
+
 function buildExternalAiPromptBlock(
   name: string,
   faithBand: FaithBand,
   vp: ReturnType<typeof resolveVoiceProfile>,
+  options: {
+    personalitySummary: string;
+    memorySummary: string;
+    godRelationship: PassportGodRelationship;
+  },
 ): ExternalAiPromptBlock {
   const complianceByBand: Record<FaithBand, InstructionReceptivityRule["complianceLevel"]> = {
     disbelieves: "skeptical",
@@ -164,8 +186,11 @@ function buildExternalAiPromptBlock(
     `あなたは「${name}」というキャラクターです。`,
     `一人称は「${vp.firstPerson}」を使います。`,
     `話し方の特徴: ${vp.speechPatterns.slice(0, 3).join("、") || "特になし"}。`,
+    options.personalitySummary ? `性格: ${options.personalitySummary}` : "",
+    options.memorySummary ? `記憶の要約: ${options.memorySummary}` : "",
+    `神との関係: ${options.godRelationship.interpretationOfGod}`,
     "以下の制約を守ってください。",
-  ].join(" ");
+  ].filter(Boolean).join(" ");
 
   const instructionReceptivity: InstructionReceptivityRule = {
     faithBand,
@@ -174,11 +199,18 @@ function buildExternalAiPromptBlock(
     refusalExample: "それはちょっと……",
   };
 
+  const existingLines = vp.passportDialogueExamples
+    .filter((e) => e.type === "first_encounter")
+    .map((e) => e.text);
+  const firstEncounterLines = [...existingLines];
+  for (const line of ENCOUNTER_FALLBACKS[faithBand]) {
+    if (firstEncounterLines.length >= 3) break;
+    firstEncounterLines.push(line);
+  }
+
   return {
     systemPrompt,
-    firstEncounterLines: vp.passportDialogueExamples
-      .filter((e) => e.type === "first_encounter")
-      .map((e) => e.text),
+    firstEncounterLines,
     instructionReceptivity,
     importantConstraints: [
       ...derivePassportDoNotSay(vp.doNotSay).slice(0, 3),

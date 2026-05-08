@@ -1669,13 +1669,21 @@ function testPassportOutsideWorldPayload(): void {
   assert.equal(outside.length, 1);
   assert.equal(outside[0], "「画面」認識表現");
 
+  // firstEncounterLines has at least 3 entries (with fallbacks)
+  assert.ok(display.externalAiPromptBlock.firstEncounterLines.length >= 3);
+
+  // currentFaith numeric value is not leaked into externalAiPromptBlock
+  const promptBlockJson = JSON.stringify(display.externalAiPromptBlock);
+  assert.equal(promptBlockJson.includes('"currentFaith":'), false);
+
   // buildMemorySummary with no events returns fallback text
-  const empty = buildMemorySummary({ events: [], relations: [] });
+  const empty = buildMemorySummary({ sourceCharacterId: "chr_x", events: [], relations: [] });
   assert.ok(empty.memorySummary.length > 0);
   assert.equal(empty.keyEvents.length, 0);
 
-  // buildMemorySummary sorts relations by abs(score) desc
+  // buildMemorySummary sorts relations by abs(score) desc, source on A side
   const { relationSummaries } = buildMemorySummary({
+    sourceCharacterId: "a",
     events: [],
     relations: [
       { id: "r1", characterAId: "a", characterBId: "b", score: 5, derivedFromEventIds: [], lastRecomputedAt: now },
@@ -1686,8 +1694,29 @@ function testPassportOutsideWorldPayload(): void {
   assert.equal(relationSummaries[0].withCharacterId, "c");
   assert.equal(relationSummaries[1].withCharacterId, "d");
 
+  // source on B side resolves A as the "other" character
+  const { relationSummaries: bSideRelations } = buildMemorySummary({
+    sourceCharacterId: "c",
+    events: [],
+    relations: [
+      { id: "r2", characterAId: "a", characterBId: "c", score: -30, derivedFromEventIds: [], lastRecomputedAt: now },
+    ],
+  });
+  assert.equal(bSideRelations[0].withCharacterId, "a");
+
+  // self-relation (both sides same) is excluded
+  const { relationSummaries: selfRelations } = buildMemorySummary({
+    sourceCharacterId: "x",
+    events: [],
+    relations: [
+      { id: "r_self", characterAId: "x", characterBId: "x", score: 0, derivedFromEventIds: [], lastRecomputedAt: now },
+    ],
+  });
+  assert.equal(selfRelations.length, 0);
+
   // interventionType is absent (undefined) when unknown
   const { keyEvents: eventsWithType } = buildMemorySummary({
+    sourceCharacterId: "chr_x",
     events: [{ id: "e1", summary: "テスト", status: "resolved", createdAt: now }],
     relations: [],
   });
