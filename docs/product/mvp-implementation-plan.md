@@ -155,7 +155,13 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ## PBI 4a: Observed dialogue authoring preview
 
-**目的:** PO が箱庭内発話の UI・頻度・距離感・キャラらしさの基礎を確認できるようにする。ソースモードは `authored_fixture`（人手 fixture）と `external_llm_handoff`（外部 LLM 手動渡し）の 2 通りを持つ。アプリ本体は外部 LLM API を直接呼ばない。
+**目的:** PO が箱庭内発話の UI・頻度・距離感・キャラらしさを確認できるようにする。
+ソースモードは `authored_fixture`（B: 人手 fixture）と `external_llm_handoff`（C: 外部 LLM 手動渡し）の 2 通りを持つ。
+ゲーム本体は外部 LLM API を直接呼ばない（不変条件 A、`llm-batch-handoff-spec.md §1` 参照）。
+
+**前提分類（詳細は `observed-dialogue-spec.md §9` 参照）:**
+- **B: PO 確認でも LLM を使わない** → `authored_fixture` モードのみ。UI/頻度/距離感を確認できるが、LLM 生成品質の判断には使えない。
+- **C: PO 確認で外部 LLM を使う** → `external_llm_handoff` モード。ゲーム側が Digest/Prompt を作り PO が手動で外部 LLM へ渡す。候補は `needs_review` → review → adopt。
 
 **仕様参照:** `docs/product/observed-dialogue-spec.md §9`, `docs/architecture/llm-batch-handoff-spec.md §2`
 
@@ -166,22 +172,20 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 **ソースモード別の役割:**
 
-| モード | LLM | 目的 |
-|---|---|---|
-| `authored_fixture` | 使わない | 人手 fixture でUI・頻度・Type A/B/C・doNotSay・faithBand 距離感を確認 |
-| `external_llm_handoff` | 外部（手動） | `DialogueWorldDigest` + `DialoguePromptPack` を作り、PO または Codex Sidekick が外部 LLM へ手動で渡す |
-
-`authored_fixture` で確認できること: UI 表示・吹き出し位置・発話頻度・Type A/B/C の境界・禁止表現フィルタ。
-`authored_fixture` では判断できないこと: LLM 生成品質・「うちの子らしさ」の最終判断。
+| モード | シナリオ | PO が LLM を使うか | 確認できること |
+|---|---|---|---|
+| `authored_fixture` | B | 使わない | UI・頻度・Type A/B/C・doNotSay・faithBand 距離感 |
+| `external_llm_handoff` | C | 外部で手動 | 上記 + LLM がその子らしい発話を作れるか |
 
 **`DialogueCandidate.reviewStatus` の取りうる値:**
 `"needs_review" | "accepted" | "rejected" | "needs_rewrite"`
 
-`external_llm_handoff` で受け取った候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま player-facing UI に出してはならない。`WordEvent / ChangeSet / InterventionResult / Passport` を候補が上書きしてはならない。
+`external_llm_handoff` 候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま player-facing UI に出してはならない。`WorldEvent / ChangeSet / InterventionResult / Passport` を候補が上書きしてはならない。
 
 **PO の確認ステップ（2 段階）:**
-1. `authored_fixture` モードで UI・頻度・距離感を確認する
-2. `external_llm_handoff` モードで実際の LLM 候補を見て「うちの子に愛着がわくか」を判断する
+1. `authored_fixture`（B）で UI・頻度・距離感を確認する
+2. `external_llm_handoff`（C）で実際の LLM 候補を見て「うちの子に愛着がわくか」を判断する
+
 LLM 候補を見ていない段階では発話体験の最終判断を完了扱いにしない。
 
 **触らない範囲:**
