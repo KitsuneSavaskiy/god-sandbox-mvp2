@@ -22,6 +22,13 @@ const intakeScript = path.join(repoRoot, "tools", "sidekick", "sidekick-intake.m
 
 const processing = new Set();
 
+const DEFAULT_JOB_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+const SIGKILL_GRACE_MS = 5_000;
+const rawTimeout = Number(process.env.SIDEKICK_JOB_TIMEOUT_MS);
+const JOB_TIMEOUT_MS = Number.isFinite(rawTimeout) && rawTimeout > 0
+  ? rawTimeout
+  : DEFAULT_JOB_TIMEOUT_MS;
+
 function ensureDir(dir) {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
 }
@@ -69,11 +76,30 @@ async function processRequest(filename) {
 
     await new Promise((resolve, reject) => {
       const proc = spawn("node", args, { cwd: repoRoot, stdio: "inherit" });
+      let settled = false;
+
+      const killTimer = setTimeout(() => {
+        if (settled) return;
+        console.error(`[watcher] Timeout (${JOB_TIMEOUT_MS}ms): sending SIGTERM to ${filename}`);
+        proc.kill("SIGTERM");
+        setTimeout(() => {
+          if (settled) return;
+          console.error(`[watcher] Grace period elapsed: sending SIGKILL to ${filename}`);
+          proc.kill("SIGKILL");
+        }, SIGKILL_GRACE_MS);
+      }, JOB_TIMEOUT_MS);
+
       proc.on("close", (code) => {
+        settled = true;
+        clearTimeout(killTimer);
         if (code === 0) resolve();
         else reject(new Error(`sidekick:intake exited with code ${code}`));
       });
-      proc.on("error", reject);
+      proc.on("error", (err) => {
+        settled = true;
+        clearTimeout(killTimer);
+        reject(err);
+      });
     });
 
     ensureDir(doneDir);
