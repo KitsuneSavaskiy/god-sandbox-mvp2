@@ -73,7 +73,7 @@ function createHandoffBundle(passport: CharacterPassport) {
     "# GodSandbox Character Handoff",
     "",
     `Passport file token: ${passport.fileNameToken}`,
-    `Character: ${String(passport.display.displayName ?? "Unnamed")}`,
+    `Character: ${String(passport.display.character.name ?? "Unnamed")}`,
     "",
     "## Use outside the app",
     "- Open Codex, Claude, or another external tool separately.",

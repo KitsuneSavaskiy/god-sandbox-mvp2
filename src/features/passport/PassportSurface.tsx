@@ -81,7 +81,7 @@ function SnapshotPassportSource({
 function PassportCard({ passport }: { passport: CharacterPassport }) {
   return (
     <article className="passport-card">
-      <h4>{String(passport.display.displayName ?? "Unnamed")}</h4>
+      <h4>{String(passport.display.character.name ?? "Unnamed")}</h4>
       <code>{passport.fileNameToken}.json</code>
       <pre className="passport-card__display">{JSON.stringify(passport.display, null, 2)}</pre>
     </article>
