@@ -19,13 +19,15 @@
 | 1 | Faith domain model + migration | なし |
 | 2 | Faith change application | PBI 1 |
 | 3 | VoiceProfile storage / resolver | なし |
-| 4 | Observed dialogue runtime | PBI 1, 3 |
+| 4a | Observed dialogue PO preview | PBI 1, 3 |
+| 4b | Observed dialogue runtime | PBI 1, 3, 4a |
 | 5 | PassportOutsideWorldPayload 生成 | PBI 1, 3 |
 | 6 | Passport confirm + JSON viewer UI | PBI 5 |
 | 7 | WorldPrinciple template tagging | PBI 1 |
 | 8 | MVP acceptance tests | PBI 1〜7 |
 
 PBI 1 と PBI 3 は互いに依存せず並行着手可能。
+PBI 4a と PBI 4b は直列。4a の `DialogueCandidate` 型と `buildDialogueWorldDigest` が 4b の前提となる。
 PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ---
@@ -151,7 +153,37 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ---
 
-## PBI 4: Observed dialogue runtime
+## PBI 4a: Observed dialogue PO preview
+
+**目的:** 箱庭の世界状態を `DialogueWorldDigest` にまとめ、外部 LLM（ChatGPT 等）への手動コピー用発話候補生成パケットを構築する。PO が受け取った候補を `DialogueCandidate` として保存・審査できる仕組みを実装する。アプリ本体は外部 LLM API を直接呼ばない。
+
+**仕様参照:** `docs/product/observed-dialogue-spec.md §9`, `docs/architecture/llm-batch-handoff-spec.md §2`
+
+**変更対象ファイル:**
+- `src/domain/models.ts` — `DialogueWorldDigest`, `DialogueCandidate`, `DialogueReviewStatus` 型の追加
+- `src/domain/dialogue.ts`（新規） — `buildDialogueWorldDigest(session): DialogueWorldDigest` 関数
+- `src/domain/runtime.test.ts` — PO preview unit テスト追加
+
+**`DialogueCandidate.reviewStatus` の取りうる値:**
+`"needs_review" | "accepted" | "rejected" | "needs_rewrite"`
+
+LLM 生成候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま runtime で使用してはならない。
+
+**触らない範囲:**
+- 外部 LLM API 直接呼び出し（アプリ本体は呼ばない）
+- UI 発話表示・吹き出し（PBI 4b）
+- Passport 発話例（PBI 5）
+
+**Done 条件:**
+- [ ] `buildDialogueWorldDigest` が session から `DialogueWorldDigest` を返す
+- [ ] `DialogueCandidate.reviewStatus` が `"needs_review" | "accepted" | "rejected" | "needs_rewrite"` を取りうる
+- [ ] `validateDialogue` を通過しない候補を `reviewStatus: "rejected"` に設定できる
+- [ ] unit test（`mvp-test-scenarios.md §2.3-a`）通過
+- [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
+
+---
+
+## PBI 4b: Observed dialogue runtime
 
 **目的:** 箱庭内で「生活音のような会話」を生成し表示する。
 
@@ -159,7 +191,7 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 **変更対象ファイル:**
 - `src/domain/models.ts` — `DialogueTrigger` 型の追加
-- `src/domain/dialogue.ts`（新規） — `resolveDialogueTriggerRate`, `validateDialogue`, `generateDialogue` 関数
+- `src/domain/dialogue.ts` — `resolveDialogueTriggerRate`, `validateDialogue`, `generateDialogue` 関数
 - `src/application/runtimeCommands.ts` — イベント・介入後に発話生成を呼び出す処理を追加
 - UI コンポーネント — 吹き出し表示（3〜5 秒後フェードアウト、同時最大 2 件）
 - `src/domain/runtime.test.ts` — dialogue unit テスト追加
@@ -193,7 +225,7 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - [ ] `disbelieves` バンドで「神様が助けてくれた」が出ない
 - [ ] null 発話でゲームが止まらない（fallback: 空配列で継続）
 - [ ] 同時発話 2 件制限テスト通過
-- [ ] unit / negative test（`mvp-test-scenarios.md §2.3`）通過
+- [ ] unit / negative test（`mvp-test-scenarios.md §2.3-b`）通過
 - [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
 
 ---
