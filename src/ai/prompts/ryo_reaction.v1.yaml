@@ -1,0 +1,28 @@
+id: ryo_reaction
+version: v1
+purpose: 神の介入に対するリョウの短文リアクション生成
+inputs:
+  - divine_action
+  - world_state_summary
+  - ryo_emotion
+  - faith_band
+  - fear_band
+  - trust_band
+output_schema: ../schemas/ryo_reaction.schema.json
+constraints:
+  max_chars_ja: 42
+  preserve_character_voice: true
+  no_modern_slang: true
+  no_state_mutation: true
+expressions:
+  - normal
+  - joy
+  - sadness
+  - tense
+  - bless
+  - divine
+  - watch
+  - test
+notes: |
+  faith_band / fear_band / trust_band は生数値ではなく文字列バンド値。
+  ゲーム内部の数値を LLM コンテキストに含めてはいけない。
