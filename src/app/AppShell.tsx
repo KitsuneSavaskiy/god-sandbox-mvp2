@@ -27,6 +27,7 @@ import {
 } from "../features/sidekick/sidekickJobWriter";
 import { LINE3_CHARACTER_TEMPLATE } from "../features/character-creator/characterTemplate";
 import { EventFirstSandbox, type ActiveResidentPreview } from "../features/events/EventFirstSandbox.js";
+import { DialoguePreviewSurface } from "../features/dialogue-preview/DialoguePreviewSurface";
 import { ExternalHandoffSurface } from "../features/external-handoff/ExternalHandoffSurface";
 import { PassportSurface } from "../features/passport/PassportSurface";
 import { CharacterDetailPanel } from "../features/residents/CharacterDetailPanel";
@@ -619,6 +620,10 @@ function PrimaryRouteSurface({
 
   if (route.id === "handoff") {
     return <ExternalHandoffSurface state={runtimeState} />;
+  }
+
+  if (route.id === "dialogue-preview") {
+    return <DialoguePreviewSurface state={runtimeState} />;
   }
 
   if (route.id === "logs") {
