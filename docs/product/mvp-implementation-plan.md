@@ -19,13 +19,15 @@
 | 1 | Faith domain model + migration | なし |
 | 2 | Faith change application | PBI 1 |
 | 3 | VoiceProfile storage / resolver | なし |
-| 4 | Observed dialogue runtime | PBI 1, 3 |
+| 4a | Observed dialogue PO preview | PBI 1, 3 |
+| 4b | Observed dialogue runtime | PBI 1, 3, 4a |
 | 5 | PassportOutsideWorldPayload 生成 | PBI 1, 3 |
 | 6 | Passport confirm + JSON viewer UI | PBI 5 |
 | 7 | WorldPrinciple template tagging | PBI 1 |
 | 8 | MVP acceptance tests | PBI 1〜7 |
 
 PBI 1 と PBI 3 は互いに依存せず並行着手可能。
+PBI 4a と PBI 4b は直列。4a の `DialogueCandidate` 型と `buildDialogueWorldDigest` が 4b の前提となる。
 PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ---
@@ -151,7 +153,57 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ---
 
-## PBI 4: Observed dialogue runtime
+## PBI 4a: Observed dialogue authoring preview
+
+**目的:** PO が箱庭内発話の UI・頻度・距離感・キャラらしさを確認できるようにする。
+ソースモードは `authored_fixture`（B: 人手 fixture）と `external_llm_handoff`（C: 外部 LLM 手動渡し）の 2 通りを持つ。
+ゲーム本体は外部 LLM API を直接呼ばない（不変条件 A、`llm-batch-handoff-spec.md §1` 参照）。
+
+**前提分類（詳細は `observed-dialogue-spec.md §9` 参照）:**
+- **B: PO 確認でも LLM を使わない** → `authored_fixture` モードのみ。UI/頻度/距離感を確認できるが、LLM 生成品質の判断には使えない。
+- **C: PO 確認で外部 LLM を使う** → `external_llm_handoff` モード。ゲーム側が Digest/Prompt を作り PO が手動で外部 LLM へ渡す。候補は `needs_review` → review → adopt。
+
+**仕様参照:** `docs/product/observed-dialogue-spec.md §9`, `docs/architecture/llm-batch-handoff-spec.md §2`
+
+**変更対象ファイル:**
+- `src/domain/models.ts` — `DialogueCandidateSource`, `DialogueWorldDigest`, `DialogueCandidate`, `DialogueReviewStatus` 型の追加
+- `src/domain/dialogue.ts`（新規） — `buildDialogueWorldDigest(session): DialogueWorldDigest`, `buildDialoguePromptPack(digest): DialoguePromptPack` 関数
+- `src/domain/runtime.test.ts` — PO preview unit テスト追加
+
+**ソースモード別の役割:**
+
+| モード | シナリオ | PO が LLM を使うか | 確認できること |
+|---|---|---|---|
+| `authored_fixture` | B | 使わない | UI・頻度・Type A/B/C・doNotSay・faithBand 距離感 |
+| `external_llm_handoff` | C | 外部で手動 | 上記 + LLM がその子らしい発話を作れるか |
+
+**`DialogueCandidate.reviewStatus` の取りうる値:**
+`"needs_review" | "accepted" | "rejected" | "needs_rewrite"`
+
+`external_llm_handoff` 候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま player-facing UI に出してはならない。`WorldEvent / ChangeSet / InterventionResult / Passport` を候補が上書きしてはならない。
+
+**PO の確認ステップ（2 段階）:**
+1. `authored_fixture`（B）で UI・頻度・距離感を確認する
+2. `external_llm_handoff`（C）で実際の LLM 候補を見て「うちの子に愛着がわくか」を判断する
+
+LLM 候補を見ていない段階では発話体験の最終判断を完了扱いにしない。
+
+**触らない範囲:**
+- 外部 LLM API 直接呼び出し（アプリ本体は呼ばない）
+- UI 発話表示・吹き出し（PBI 4b）
+- Passport 発話例（PBI 5）
+
+**Done 条件:**
+- [ ] `buildDialogueWorldDigest` が session から `DialogueWorldDigest` を返す
+- [ ] `DialogueCandidateSource` が `"authored_fixture" | "external_llm_handoff"` を取りうる
+- [ ] `authored_fixture` モードで Type A / B / C の fixture 候補が生成できる
+- [ ] `external_llm_handoff` 候補は `reviewStatus: "needs_review"` で入り、PO 承認前に UI に出ない
+- [ ] unit test（`mvp-test-scenarios.md §2.3-a`）通過
+- [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
+
+---
+
+## PBI 4b: Observed dialogue runtime
 
 **目的:** 箱庭内で「生活音のような会話」を生成し表示する。
 
@@ -159,7 +211,7 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 **変更対象ファイル:**
 - `src/domain/models.ts` — `DialogueTrigger` 型の追加
-- `src/domain/dialogue.ts`（新規） — `resolveDialogueTriggerRate`, `validateDialogue`, `generateDialogue` 関数
+- `src/domain/dialogue.ts` — `resolveDialogueTriggerRate`, `validateDialogue`, `generateDialogue` 関数
 - `src/application/runtimeCommands.ts` — イベント・介入後に発話生成を呼び出す処理を追加
 - UI コンポーネント — 吹き出し表示（3〜5 秒後フェードアウト、同時最大 2 件）
 - `src/domain/runtime.test.ts` — dialogue unit テスト追加
@@ -193,7 +245,7 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 - [ ] `disbelieves` バンドで「神様が助けてくれた」が出ない
 - [ ] null 発話でゲームが止まらない（fallback: 空配列で継続）
 - [ ] 同時発話 2 件制限テスト通過
-- [ ] unit / negative test（`mvp-test-scenarios.md §2.3`）通過
+- [ ] unit / negative test（`mvp-test-scenarios.md §2.3-b`）通過
 - [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
 
 ---

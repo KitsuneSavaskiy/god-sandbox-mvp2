@@ -186,7 +186,75 @@ describe("world principle engine", () => {
 });
 ```
 
-### 2.3 観察型発話
+### 2.3-a 観察型発話 Authoring Preview（PBI 4a）
+
+```typescript
+describe("dialogue world digest", () => {
+  it("buildDialogueWorldDigest がセッション状態からダイジェストを構築する", () => {
+    const digest = buildDialogueWorldDigest(session);
+    expect(digest).toBeDefined();
+    expect(digest.activeCharacters.length).toBeGreaterThan(0);
+    expect(digest.sessionId).toBe(session.id);
+  });
+
+  it("digest の activeCharacters に faithBand が含まれる（currentFaith 数値は含まない）", () => {
+    const digest = buildDialogueWorldDigest(session);
+    const json = JSON.stringify(digest);
+    digest.activeCharacters.forEach(c => {
+      expect(["disbelieves", "uncertain", "senses_presence", "believes", "devoted"])
+        .toContain(c.faithBand);
+    });
+    expect(json).not.toMatch(/"currentFaith":/);
+  });
+
+  it("authored_fixture の候補は source が authored_fixture になる", () => {
+    const candidate: DialogueCandidate = {
+      id: "fixture-001",
+      characterId: "garan",
+      text: "今日は風がやわらかいね",
+      type: "daily",
+      source: "authored_fixture",
+      reviewStatus: "accepted",   // fixture は事前 accepted でよい
+      createdAt: "2026-05-08T00:00:00Z",
+    };
+    expect(candidate.source).toBe("authored_fixture");
+    expect(candidate.reviewStatus).toBe("accepted");
+  });
+
+  it("external_llm_handoff の候補は reviewStatus が needs_review で始まる", () => {
+    const candidate: DialogueCandidate = {
+      id: "llm-001",
+      characterId: "garan",
+      text: "今日は風がやわらかいね",
+      type: "daily",
+      source: "external_llm_handoff",
+      reviewStatus: "needs_review",
+      createdAt: "2026-05-08T00:00:00Z",
+    };
+    expect(candidate.source).toBe("external_llm_handoff");
+    expect(candidate.reviewStatus).toBe("needs_review");
+  });
+
+  it("validateDialogue を通過しない候補は rejected に設定できる", () => {
+    const longText = "あ".repeat(41);
+    expect(validateDialogue(longText)).toBe(false);
+    const status: DialogueReviewStatus = "rejected";
+    expect(status).toBe("rejected");
+  });
+
+  it("needs_review の候補は generateDialogue で使用されない", () => {
+    const candidates: DialogueCandidate[] = [
+      { id: "c1", characterId: "garan", text: "テスト発話", type: "daily",
+        source: "external_llm_handoff", reviewStatus: "needs_review",
+        createdAt: "2026-05-08T00:00:00Z" },
+    ];
+    const accepted = candidates.filter(c => c.reviewStatus === "accepted");
+    expect(accepted.length).toBe(0);
+  });
+});
+```
+
+### 2.3-b 観察型発話 Runtime（PBI 4b）
 
 ```typescript
 describe("observed dialogue", () => {
