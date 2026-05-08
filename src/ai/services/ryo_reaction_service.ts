@@ -25,6 +25,8 @@ export function buildRyoReactionPrompt(input: RyoReactionInput): RyoReactionProm
   const worldBlock = [
     `キャラクター: ${input.worldState.characterName}`,
     `信仰段階: ${input.worldState.faithBand}`,
+    `恐れの度合い: ${input.worldState.fearBand}`,
+    `信頼の度合い: ${input.worldState.trustBand}`,
     `現在の状態: ${input.worldState.emotionSummary}`,
     input.worldState.recentActions.length > 0
       ? `直近の出来事:\n${input.worldState.recentActions.map((a) => `- ${a}`).join("\n")}`

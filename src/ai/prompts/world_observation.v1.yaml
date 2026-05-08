@@ -1,0 +1,12 @@
+id: world_observation
+version: v1
+purpose: 箱庭世界の状況観察ナレーション生成
+inputs:
+  - world_state_summary
+  - world_status_tags
+  - current_event_summary
+output_schema: ../schemas/world_observation.schema.json
+constraints:
+  max_chars_ja: 80
+  preserve_world_tone: true
+  no_state_mutation: true

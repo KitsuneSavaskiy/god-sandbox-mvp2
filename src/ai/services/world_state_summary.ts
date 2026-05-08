@@ -4,6 +4,8 @@ import { resolveFaithBand } from "../../domain/character.js";
 export type WorldStateSummary = {
   characterName: string;
   faithBand: string;
+  fearBand: string;
+  trustBand: string;
   emotionSummary: string;
   recentActions: string[];
   worldStatusTags: string[];
@@ -15,7 +17,11 @@ export function buildWorldStateSummary(
   session: SandboxSession,
   recentEvents: WorldEvent[],
 ): WorldStateSummary {
+  const { stress, trustfulness } = character.state.status;
+
   const faithBand = resolveFaithBand(character.state.status.faith);
+  const fearBand = resolveFearBand(stress);
+  const trustBand = resolveTrustBand(trustfulness);
   const emotionSummary = describeEmotion(character);
   const recentActions = recentEvents
     .slice(-5)
@@ -27,11 +33,25 @@ export function buildWorldStateSummary(
   return {
     characterName: character.profile.displayName,
     faithBand,
+    fearBand,
+    trustBand,
     emotionSummary,
     recentActions,
     worldStatusTags: [...session.worldStatusTags],
     currentEventSummary: currentEvent?.summary ?? "穏やかな日常が続いている",
   };
+}
+
+export function resolveFearBand(stress: number): string {
+  if (stress >= 65) return "high";
+  if (stress >= 35) return "moderate";
+  return "calm";
+}
+
+export function resolveTrustBand(trustfulness: number): string {
+  if (trustfulness >= 60) return "trusting";
+  if (trustfulness >= 30) return "neutral";
+  return "skeptical";
 }
 
 function describeEmotion(character: Character): string {

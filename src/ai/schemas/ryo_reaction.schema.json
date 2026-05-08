@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ryo_reaction_output_v1",
+  "title": "RyoReactionOutput",
+  "description": "神の介入に対するリョウの短文リアクション出力スキーマ",
+  "type": "object",
+  "required": ["expression", "line", "intensity", "tags", "state_change_request"],
+  "additionalProperties": false,
+  "properties": {
+    "expression": {
+      "type": "string",
+      "enum": ["normal", "joy", "sadness", "tense", "bless", "divine", "watch", "test"],
+      "description": "リョウの表情。8値のうちのひとつ"
+    },
+    "line": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 42,
+      "description": "台詞テキスト（42文字以内の日本語）"
+    },
+    "intensity": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "感情の強度（0.0〜1.0）"
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "関連タグ（blessing, joy, despair など）"
+    },
+    "state_change_request": {
+      "type": "null",
+      "description": "常に null。AI はゲーム状態（HP・信仰値・好感度など）を変更できない"
+    }
+  }
+}

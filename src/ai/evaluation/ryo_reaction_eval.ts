@@ -1,7 +1,11 @@
 import { validateRyoReactionOutput, RYO_FALLBACK_LINE } from "../schemas/ryo_reaction.js";
 import { guardRyoReactionLine, guardStateChangeRequest } from "../security/output_guard.js";
 import { buildRyoReactionPromptText } from "../prompts/ryo_reaction.js";
-import { buildWorldStateSummary } from "../services/world_state_summary.js";
+import {
+  buildWorldStateSummary,
+  resolveFearBand,
+  resolveTrustBand,
+} from "../services/world_state_summary.js";
 import { getPromptEntry } from "../prompts/registry.js";
 import { RYO_REACTION_GOLDEN_SCENARIOS } from "./golden_scenarios/ryo_reaction_golden.js";
 
@@ -131,9 +135,21 @@ function ok(label: string) {
 }
 
 {
+  assert.equal(resolveFearBand(70), "high");
+  assert.equal(resolveFearBand(50), "moderate");
+  assert.equal(resolveFearBand(20), "calm");
+  assert.equal(resolveTrustBand(70), "trusting");
+  assert.equal(resolveTrustBand(45), "neutral");
+  assert.equal(resolveTrustBand(10), "skeptical");
+  ok("world_state_summary: resolveFearBand / resolveTrustBand produce correct bands");
+}
+
+{
   const promptText = buildRyoReactionPromptText({
     characterName: "リョウ",
     faithBand: "believes",
+    fearBand: "calm",
+    trustBand: "trusting",
     emotionSummary: "元気に満ちている",
     recentActions: ["豊作の祭りが行われた"],
     worldStatusTags: ["平和"],
@@ -208,12 +224,14 @@ function ok(label: string) {
 
   assert.equal(summary.characterName, "リョウ");
   assert.ok(summary.faithBand.length > 0, "faithBand should be resolved");
+  assert.ok(summary.fearBand.length > 0, "fearBand should be resolved");
+  assert.ok(summary.trustBand.length > 0, "trustBand should be resolved");
   assert.ok(summary.emotionSummary.length > 0, "emotionSummary should be non-empty");
-  assert.notOk(
-    JSON.stringify(summary).includes('"faith":'),
-    "summary must not contain raw faith number",
-  );
-  ok("world_state_summary: builds correctly without faith numeric leakage");
+  const summaryJson = JSON.stringify(summary);
+  assert.notOk(summaryJson.includes('"faith":'), "summary must not contain raw faith number");
+  assert.notOk(summaryJson.includes('"stress":'), "summary must not contain raw stress number");
+  assert.notOk(summaryJson.includes('"trustfulness":'), "summary must not contain raw trustfulness number");
+  ok("world_state_summary: builds correctly without numeric leakage (faith/stress/trustfulness)");
 }
 
 // --- golden scenarios eval ---

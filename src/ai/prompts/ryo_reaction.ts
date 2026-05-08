@@ -4,6 +4,8 @@ import type { RyoExpression } from "../schemas/ryo_reaction.js";
 export type RyoReactionPromptInput = {
   characterName: string;
   faithBand: string;
+  fearBand: string;
+  trustBand: string;
   emotionSummary: string;
   recentActions: string[];
   worldStatusTags: string[];
@@ -17,6 +19,8 @@ export function buildRyoReactionPromptText(input: RyoReactionPromptInput): strin
   const characterBlock = [
     `キャラクター: ${input.characterName}`,
     `信仰段階: ${input.faithBand}`,
+    `恐れの度合い: ${input.fearBand}`,
+    `信頼の度合い: ${input.trustBand}`,
     `現在の状態: ${input.emotionSummary}`,
     input.recentActions.length > 0
       ? `直近の出来事:\n${input.recentActions.map((a) => `- ${a}`).join("\n")}`
