@@ -326,6 +326,27 @@ export type DialogueCandidate = {
   reviewNote?: string;
 };
 
+export type DialogueTrigger =
+  | "event_started"
+  | "event_resolved"
+  | "intervention_applied"
+  | "proximity_enter"
+  | "idle_timer";
+
+export type DialogueValidationResult =
+  | { ok: true }
+  | { ok: false; violations: string[] };
+
+export type ConversationLogEntry = {
+  id: string;
+  speakerCharacterId: CharacterId;
+  speakerDisplayName: string;
+  text: string;
+  dialogueType: "daily" | "relationship" | "god_indirect_reaction";
+  trigger: DialogueTrigger;
+  createdAt: string;
+};
+
 export type DialogueWorldDigest = {
   sessionId: string;
   generatedAt: string;
@@ -333,18 +354,14 @@ export type DialogueWorldDigest = {
     characterId: string;
     name: string;
     faithBand: FaithBand;
-    currentStatus: CharacterStatusBlock;
+    visibleStateSummary: string;
     voiceProfileSummary: {
       firstPerson: string;
       speechPatterns: string[];
       doNotSay: string[];
     };
   }[];
-  activeRelations: {
-    characterAId: string;
-    characterBId: string;
-    score: number;
-  }[];
+  relationSummaries: string[];
   recentEventSummary: string[];
   currentSituationTag: string[];
 };

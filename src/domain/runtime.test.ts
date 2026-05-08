@@ -76,7 +76,12 @@ import {
   buildDialoguePromptPack,
   validateDialogue,
 } from "./dialogue.js";
-import type { DialogueCandidate, DialogueReviewStatus } from "./models.js";
+import type {
+  ConversationLogEntry,
+  DialogueCandidate,
+  DialogueReviewStatus,
+  DialogueTrigger,
+} from "./models.js";
 import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
@@ -1486,13 +1491,17 @@ function testDialogueAuthoringPreview(): void {
   assert.equal(digest.sessionId, world.session.id);
   assert.ok(digest.activeCharacters.length > 0);
 
-  // activeCharacters have faithBand (not currentFaith numeric)
+  // activeCharacters have faithBand — no numeric faith or status values in digest
   const validBands = ["disbelieves", "uncertain", "senses_presence", "believes", "devoted"];
   for (const c of digest.activeCharacters) {
     assert.ok(validBands.includes(c.faithBand));
+    assert.ok(typeof c.visibleStateSummary === "string");
   }
   const digestJson = JSON.stringify(digest);
   assert.equal(digestJson.includes('"currentFaith":'), false);
+  assert.equal(digestJson.includes('"faith":'), false);
+  assert.equal(digestJson.includes('"score":'), false);
+  assert.equal(digestJson.includes('"currentStatus":'), false);
 
   // buildDialoguePromptPack produces a non-empty prompt
   const pack = buildDialoguePromptPack(digest);
@@ -1525,9 +1534,25 @@ function testDialogueAuthoringPreview(): void {
   assert.equal(llmCandidate.source, "external_llm_handoff");
   assert.equal(llmCandidate.reviewStatus, "needs_review");
 
-  // validateDialogue rejects text over 40 chars
-  assert.equal(validateDialogue("あ".repeat(41)), false);
-  assert.equal(validateDialogue("あ".repeat(40)), true);
+  // validateDialogue returns DialogueValidationResult
+  const tooLong = validateDialogue("あ".repeat(41));
+  assert.equal(tooLong.ok, false);
+  if (!tooLong.ok) assert.ok(tooLong.violations.length > 0);
+
+  const justRight = validateDialogue("あ".repeat(40));
+  assert.equal(justRight.ok, true);
+
+  const withForbiddenAddress = validateDialogue("あなたのことが好き");
+  assert.equal(withForbiddenAddress.ok, false);
+
+  const withGodDirect = validateDialogue("神様を信じている");
+  assert.equal(withGodDirect.ok, false);
+
+  const withDeath = validateDialogue("キャラクターが死亡する");
+  assert.equal(withDeath.ok, false);
+
+  const normalText = validateDialogue("今日は風がやわらかいね");
+  assert.equal(normalText.ok, true);
 
   // needs_review candidates are excluded from accepted list
   const candidates: DialogueCandidate[] = [llmCandidate];
@@ -1537,6 +1562,20 @@ function testDialogueAuthoringPreview(): void {
   // DialogueReviewStatus exhaustiveness check
   const status: DialogueReviewStatus = "rejected";
   assert.equal(status, "rejected");
+
+  // ConversationLogEntry type check (PBI 4b 前提)
+  const trigger: DialogueTrigger = "intervention_applied";
+  const logEntry: ConversationLogEntry = {
+    id: "log-001",
+    speakerCharacterId: "chr_garan",
+    speakerDisplayName: "Garan",
+    text: "今日は風がやわらかいね",
+    dialogueType: "daily",
+    trigger,
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(logEntry.trigger, "intervention_applied");
+  assert.equal(logEntry.speakerDisplayName, "Garan");
 }
 
 const tests: Array<[string, () => void]> = [
