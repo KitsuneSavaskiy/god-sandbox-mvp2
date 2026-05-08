@@ -1673,6 +1673,25 @@ function testPassportOutsideWorldPayload(): void {
   const empty = buildMemorySummary({ events: [], relations: [] });
   assert.ok(empty.memorySummary.length > 0);
   assert.equal(empty.keyEvents.length, 0);
+
+  // buildMemorySummary sorts relations by abs(score) desc
+  const { relationSummaries } = buildMemorySummary({
+    events: [],
+    relations: [
+      { id: "r1", characterAId: "a", characterBId: "b", score: 5, derivedFromEventIds: [], lastRecomputedAt: now },
+      { id: "r2", characterAId: "a", characterBId: "c", score: -30, derivedFromEventIds: [], lastRecomputedAt: now },
+      { id: "r3", characterAId: "a", characterBId: "d", score: 20, derivedFromEventIds: [], lastRecomputedAt: now },
+    ],
+  });
+  assert.equal(relationSummaries[0].withCharacterId, "c");
+  assert.equal(relationSummaries[1].withCharacterId, "d");
+
+  // interventionType is absent (undefined) when unknown
+  const { keyEvents: eventsWithType } = buildMemorySummary({
+    events: [{ id: "e1", summary: "テスト", status: "resolved", createdAt: now }],
+    relations: [],
+  });
+  assert.equal("interventionType" in eventsWithType[0], false);
 }
 
 const tests: Array<[string, () => void]> = [

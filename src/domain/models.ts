@@ -391,13 +391,14 @@ export type PassportCharacterProfile = {
 export type PassportKeyEvent = {
   eventId: string;
   title: string;
-  interventionType: "watch" | "help" | "trial";
+  interventionType?: "watch" | "help" | "trial";
   outcome: "resolved" | "failed" | "ongoing";
   characterReflection: string;
 };
 
 export type PassportRelationSummary = {
-  withCharacterName: string;
+  withCharacterId: CharacterId;
+  withCharacterName?: string;
   relationDescription: string;
 };
 

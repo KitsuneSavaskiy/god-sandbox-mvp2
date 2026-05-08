@@ -66,10 +66,13 @@ export function buildMemorySummary(input: {
 }): { memorySummary: string; keyEvents: PassportKeyEvent[]; relationSummaries: PassportRelationSummary[] } {
   const maxKeyEvents = input.maxKeyEvents ?? 5;
 
-  const keyEvents: PassportKeyEvent[] = input.events.slice(-maxKeyEvents).map((e) => ({
+  const sortedEvents = [...input.events]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, maxKeyEvents);
+
+  const keyEvents: PassportKeyEvent[] = sortedEvents.map((e) => ({
     eventId: e.id,
     title: e.summary ?? "（出来事）",
-    interventionType: "watch" as const,
     outcome: e.status === "resolved" ? "resolved" : e.status === "active" ? "ongoing" : "failed",
     characterReflection: "この経験から何かを学んだ。",
   }));
@@ -79,8 +82,18 @@ export function buildMemorySummary(input: {
       ? `${keyEvents.length}つの出来事を経験した。`
       : "まだ特記すべき出来事はない。";
 
-  const relationSummaries: PassportRelationSummary[] = input.relations.slice(0, 5).map((r) => ({
-    withCharacterName: r.characterBId,
+  const sortedRelations = [...input.relations]
+    .sort((a, b) => {
+      const scoreDiff = Math.abs(b.score) - Math.abs(a.score);
+      if (scoreDiff !== 0) return scoreDiff;
+      const aKey = [a.characterAId, a.characterBId].sort().join("__");
+      const bKey = [b.characterAId, b.characterBId].sort().join("__");
+      return aKey.localeCompare(bKey);
+    })
+    .slice(0, 5);
+
+  const relationSummaries: PassportRelationSummary[] = sortedRelations.map((r) => ({
+    withCharacterId: r.characterBId,
     relationDescription: describeRelation(r.score),
   }));
 
@@ -167,7 +180,10 @@ function buildExternalAiPromptBlock(
       .filter((e) => e.type === "first_encounter")
       .map((e) => e.text),
     instructionReceptivity,
-    importantConstraints: [...vp.doNotSay.slice(0, 3), ...vp.doNotInvent.slice(0, 2)],
+    importantConstraints: [
+      ...derivePassportDoNotSay(vp.doNotSay).slice(0, 3),
+      ...vp.doNotInvent.slice(0, 2),
+    ],
   };
 }
 
