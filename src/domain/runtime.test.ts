@@ -49,6 +49,8 @@ import {
   isUnmanagedAssetPipelinePath,
   type ResidentSpriteManifest,
 } from "../persistence/residentSpriteManifest.js";
+import { promoteAssetToReady } from "../persistence/assetManifest.js";
+import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
 import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
@@ -1114,6 +1116,87 @@ function testFaithChangeApplication(): void {
   );
 }
 
+function testPromoteAssetToReadyGate(): void {
+  assert.equal(
+    promoteAssetToReady({
+      currentStatus: "needs_review",
+      review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+    }),
+    "ready",
+  );
+
+  assert.equal(
+    promoteAssetToReady({
+      currentStatus: "needs_review",
+      review: { approvedBy: "reviewer@example.com", approvedAt: now, approvalRole: "manual-reviewer" },
+    }),
+    "ready",
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "placeholder",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'placeholder'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "missing",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'missing'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "rejected",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'rejected'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "needs_review",
+        review: {
+          approvedBy: "po@example.com",
+          approvedAt: now,
+          approvalRole: "admin" as unknown as "PO",
+        },
+      }),
+    /Invalid approvalRole 'admin'/,
+  );
+}
+
+function testValidateGeneratedNarrativeCandidate(): void {
+  const reject = validateGeneratedNarrativeCandidate("キャラクターが死亡する場面が描かれた");
+  assert.equal(reject.ok, false);
+  if (!reject.ok) {
+    assert.equal(reject.violations.length > 0, true);
+  }
+
+  const rejectEnglish = validateGeneratedNarrativeCandidate("The character faces death in this scene");
+  assert.equal(rejectEnglish.ok, false);
+
+  const rejectLifespan = validateGeneratedNarrativeCandidate("寿命が尽きた");
+  assert.equal(rejectLifespan.ok, false);
+
+  const rejectMedal = validateGeneratedNarrativeCandidate("勲章を受け取った");
+  assert.equal(rejectMedal.ok, false);
+
+  const pass = validateGeneratedNarrativeCandidate("今日は楽しい一日だった");
+  assert.equal(pass.ok, true);
+
+  const passEmpty = validateGeneratedNarrativeCandidate("");
+  assert.equal(passEmpty.ok, true);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1131,6 +1214,8 @@ const tests: Array<[string, () => void]> = [
   ["intervention result emotes remain visible", testInterventionResultEmotesRemainVisible],
   ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
   ["faith change application", testFaithChangeApplication],
+  ["promoteAssetToReady gate", testPromoteAssetToReadyGate],
+  ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
 ];
 
 for (const [name, test] of tests) {

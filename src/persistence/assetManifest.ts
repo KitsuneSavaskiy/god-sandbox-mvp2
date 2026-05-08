@@ -83,6 +83,11 @@ export function promoteAssetToReady(input: {
   if (!input.review.approvedBy || !input.review.approvedAt) {
     throw new Error("Cannot promote to ready without approvedBy and approvedAt.");
   }
+  if (input.review.approvalRole !== "PO" && input.review.approvalRole !== "manual-reviewer") {
+    throw new Error(
+      `Invalid approvalRole '${String(input.review.approvalRole)}'. Must be 'PO' or 'manual-reviewer'.`,
+    );
+  }
   return "ready";
 }
 
