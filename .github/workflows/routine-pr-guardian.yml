@@ -111,14 +111,19 @@ jobs:
               String(hasRoutine && !hasManual && !touchesProtected)
             );
 
-      - name: Approve routine PR
+      - name: Comment on routine PR (manual review required)
         if: steps.decide.outputs.routine == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr review ${{ github.event.pull_request.number }} -R ${{ github.repository }} --approve --body "Routine PR auto-approved by guardian workflow."
-
-      - name: Enable auto-merge for routine PR
-        if: steps.decide.outputs.routine == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh pr merge ${{ github.event.pull_request.number }} -R ${{ github.repository }} --auto --squash --delete-branch
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                'This PR is routine-eligible (touches no protected paths and carries the `agent-routine` label).',
+                '',
+                'Auto-approve and auto-merge have been **disabled** as a security hardening measure.',
+                'Please have a human reviewer approve and merge this PR.',
+              ].join('\n')
+            });
