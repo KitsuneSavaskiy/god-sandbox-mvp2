@@ -8,6 +8,7 @@ export type AppRouteId =
   | "handoff"
   | "character-editor"
   | "sidekick-setup"
+  | "dialogue-preview"
   | "not-found";
 
 export interface AppRoute {
@@ -21,6 +22,7 @@ export const navigationRoutes: AppRoute[] = [
   { id: "sandbox", path: "/sandbox", label: "箱庭" },
   { id: "roster", path: "/roster", label: "住民" },
   { id: "passports", path: "/passports", label: "Passport" },
+  { id: "dialogue-preview", path: "/dialogue-preview", label: "発話プレビュー" },
 ];
 
 export function parseRoute(pathname: string): AppRoute {
@@ -50,6 +52,10 @@ export function parseRoute(pathname: string): AppRoute {
 
   if (pathname === "/sidekick-setup") {
     return { id: "sidekick-setup", path: "/sidekick-setup", label: "サイドキック設定" };
+  }
+
+  if (pathname === "/dialogue-preview") {
+    return { id: "dialogue-preview", path: "/dialogue-preview", label: "発話プレビュー" };
   }
 
   const passportMatch = pathname.match(/^\/passports\/([^/]+)$/);

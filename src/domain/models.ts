@@ -302,6 +302,77 @@ export type CharacterSnapshot = {
   };
 };
 
+export type DialogueReviewStatus =
+  | "needs_review"
+  | "accepted"
+  | "rejected"
+  | "needs_rewrite";
+
+export type DialogueCandidateSource =
+  | "authored_fixture"
+  | "external_llm_handoff";
+
+export type DialogueCandidate = {
+  id: string;
+  characterId: string;
+  text: string;
+  type: "daily" | "relationship" | "god_indirect_reaction";
+  source: DialogueCandidateSource;
+  reviewStatus: DialogueReviewStatus;
+  faithBandContext?: FaithBand;
+  targetCharacterId?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+};
+
+export type DialogueTrigger =
+  | "event_started"
+  | "event_resolved"
+  | "intervention_applied"
+  | "proximity_enter"
+  | "idle_timer"
+  | "phase_change";
+
+export type DialogueValidationResult =
+  | { ok: true }
+  | { ok: false; violations: string[] };
+
+export type ConversationLogEntry = {
+  id: string;
+  speakerCharacterId: CharacterId;
+  speakerDisplayName: string;
+  text: string;
+  dialogueType: "daily" | "relationship" | "god_indirect_reaction";
+  trigger: DialogueTrigger;
+  createdAt: string;
+};
+
+export type DialogueWorldDigest = {
+  sessionId: string;
+  generatedAt: string;
+  activeCharacters: {
+    characterId: string;
+    name: string;
+    faithBand: FaithBand;
+    visibleStateSummary: string;
+    voiceProfileSummary: {
+      firstPerson: string;
+      speechPatterns: string[];
+      doNotSay: string[];
+    };
+  }[];
+  relationSummaries: string[];
+  recentEventSummary: string[];
+  currentSituationTag: string[];
+};
+
+export type DialoguePromptPack = {
+  digestId: string;
+  generatedAt: string;
+  promptText: string;
+};
+
 export type CharacterPassport = {
   id: string;
   snapshotId: string;

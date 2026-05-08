@@ -72,6 +72,19 @@ import {
 import { promoteAssetToReady } from "../persistence/assetManifest.js";
 import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
 import {
+  buildDialogueWorldDigest,
+  buildDialoguePromptPack,
+  parseDialogueCandidatesFromText,
+  validateDialogue,
+  type ParsedCandidateRaw,
+} from "./dialogue.js";
+import type {
+  ConversationLogEntry,
+  DialogueCandidate,
+  DialogueReviewStatus,
+  DialogueTrigger,
+} from "./models.js";
+import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
   GROWTH_CYCLE_TARGET_MINUTES,
@@ -1481,6 +1494,133 @@ function testValidateGeneratedNarrativeCandidate(): void {
   assert.equal(passEmpty.ok, true);
 }
 
+function testDialogueAuthoringPreview(): void {
+  const world = createSeedRuntimeWorld();
+
+  // buildDialogueWorldDigest returns sessionId matching session
+  const events = [...world.events.values()];
+  const relations = [...world.relations.values()];
+  const digest = buildDialogueWorldDigest(world.session, world.characters, relations, events);
+  assert.equal(digest.sessionId, world.session.id);
+  assert.ok(digest.activeCharacters.length > 0);
+
+  // activeCharacters have faithBand — no numeric faith or status values in digest
+  const validBands = ["disbelieves", "uncertain", "senses_presence", "believes", "devoted"];
+  for (const c of digest.activeCharacters) {
+    assert.ok(validBands.includes(c.faithBand));
+    assert.ok(typeof c.visibleStateSummary === "string");
+  }
+  const digestJson = JSON.stringify(digest);
+  assert.equal(digestJson.includes('"currentFaith":'), false);
+  assert.equal(digestJson.includes('"faith":'), false);
+  assert.equal(digestJson.includes('"score":'), false);
+  assert.equal(digestJson.includes('"currentStatus":'), false);
+
+  // buildDialoguePromptPack produces a non-empty prompt
+  const pack = buildDialoguePromptPack(digest);
+  assert.ok(pack.promptText.length > 0);
+  assert.equal(pack.digestId.startsWith(digest.sessionId), true);
+
+  // authored_fixture candidate: DialogueCandidate source and reviewStatus
+  const fixture: DialogueCandidate = {
+    id: "fixture-001",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "authored_fixture",
+    reviewStatus: "accepted",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(fixture.source, "authored_fixture");
+  assert.equal(fixture.reviewStatus, "accepted");
+
+  // parseDialogueCandidatesFromText: known speaker resolves characterId
+  const nameToIdMap = new Map([["Garan", "chr_garan"], ["Ryo", "chr_ryo"]]);
+  const parseNow = "2026-05-08T00:00:00Z";
+  const knownResult = parseDialogueCandidatesFromText("Garan：今日は風がやわらかいね", nameToIdMap, parseNow);
+  assert.equal(knownResult.length, 1);
+  assert.equal(knownResult[0].characterId, "chr_garan");
+  assert.equal(knownResult[0].rawSpeakerName, "Garan");
+  assert.equal(knownResult[0].source, "external_llm_handoff");
+  assert.equal(knownResult[0].reviewStatus, "needs_review");
+
+  // parseDialogueCandidatesFromText: unknown speaker → characterId is null
+  const unknownResult = parseDialogueCandidatesFromText("Suzu：散歩したい気分", nameToIdMap, parseNow);
+  assert.equal(unknownResult.length, 1);
+  assert.equal(unknownResult[0].characterId, null);
+  assert.equal(unknownResult[0].rawSpeakerName, "Suzu");
+
+  // ParsedCandidateRaw type: llm_handoff starts as needs_review
+  const llmCandidate: ParsedCandidateRaw = {
+    id: "llm-001",
+    rawSpeakerName: "Garan",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "external_llm_handoff",
+    reviewStatus: "needs_review",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(llmCandidate.source, "external_llm_handoff");
+  assert.equal(llmCandidate.reviewStatus, "needs_review");
+
+  // validateDialogue returns DialogueValidationResult
+  const tooLong = validateDialogue("あ".repeat(41));
+  assert.equal(tooLong.ok, false);
+  if (!tooLong.ok) assert.ok(tooLong.violations.length > 0);
+
+  const justRight = validateDialogue("あ".repeat(40));
+  assert.equal(justRight.ok, true);
+
+  const withForbiddenAddress = validateDialogue("あなたのことが好き");
+  assert.equal(withForbiddenAddress.ok, false);
+
+  const withGodDirect = validateDialogue("神様を信じている");
+  assert.equal(withGodDirect.ok, false);
+
+  const withDeath = validateDialogue("キャラクターが死亡する");
+  assert.equal(withDeath.ok, false);
+
+  const normalText = validateDialogue("今日は風がやわらかいね");
+  assert.equal(normalText.ok, true);
+
+  // needs_review DialogueCandidate is excluded from accepted filter
+  const needsReviewCandidate: DialogueCandidate = {
+    id: "llm-002",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "external_llm_handoff",
+    reviewStatus: "needs_review",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  const candidates: DialogueCandidate[] = [needsReviewCandidate];
+  const accepted = candidates.filter((c) => c.reviewStatus === "accepted");
+  assert.equal(accepted.length, 0);
+
+  // DialogueReviewStatus exhaustiveness check
+  const status: DialogueReviewStatus = "rejected";
+  assert.equal(status, "rejected");
+
+  // ConversationLogEntry type check (PBI 4b 前提)
+  // phase_change is a valid DialogueTrigger
+  const phaseTrigger: DialogueTrigger = "phase_change";
+  assert.equal(phaseTrigger, "phase_change");
+
+  const trigger: DialogueTrigger = "intervention_applied";
+  const logEntry: ConversationLogEntry = {
+    id: "log-001",
+    speakerCharacterId: "chr_garan",
+    speakerDisplayName: "Garan",
+    text: "今日は風がやわらかいね",
+    dialogueType: "daily",
+    trigger,
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(logEntry.trigger, "intervention_applied");
+  assert.equal(logEntry.speakerDisplayName, "Garan");
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1502,6 +1642,7 @@ const tests: Array<[string, () => void]> = [
   ["voice profile storage and resolver", testVoiceProfileStorageAndResolver],
   ["promoteAssetToReady gate", testPromoteAssetToReadyGate],
   ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
+  ["dialogue authoring preview (PBI 4a)", testDialogueAuthoringPreview],
 ];
 
 for (const [name, test] of tests) {

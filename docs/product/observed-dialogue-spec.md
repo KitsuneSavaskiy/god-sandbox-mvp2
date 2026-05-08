@@ -345,18 +345,14 @@ type DialogueWorldDigest = {
     characterId: string;
     name: string;
     faithBand: FaithBand;           // currentFaith 数値は含めない
-    currentStatus: CharacterStatusBlock;
+    visibleStateSummary: string;    // 「元気」「疲れ気味」等の自然言語要約（数値なし）
     voiceProfileSummary: {
       firstPerson: string;
       speechPatterns: string[];
       doNotSay: string[];
     };
   }[];
-  activeRelations: {
-    characterAId: string;
-    characterBId: string;
-    score: number;
-  }[];
+  relationSummaries: string[];     // 「AとBは良好な関係にある」等の自然言語要約（score 数値なし）
   recentEventSummary: string[];    // 直近イベントの自然言語要約（数値なし）
   currentSituationTag: string[];   // world context tag
 };
