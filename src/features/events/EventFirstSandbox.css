@@ -340,6 +340,8 @@
   --resident-figure-height: clamp(112px, 13vw, 176px);
   --resident-frame-width: 192px;
   --resident-frame-height: 208px;
+  --resident-frame-max-span: 1;
+  --resident-display-scale: 1.5;
   --resident-sheet-width: 1536px;
   --resident-sheet-height: 1872px;
   --resident-sheet-x-end: -1536px;
@@ -373,12 +375,15 @@
   content: "";
   filter: blur(1px);
   transform: scaleX(var(--resident-shadow-scale));
+  transition: transform 3.2s ease;
 }
 
 .event-first-sandbox__resident--paused {
   --resident-motion-note-opacity: 0.92;
+}
 
-  animation-play-state: paused;
+.event-first-sandbox__resident--position-frozen {
+  animation: none;
   transition-property: none;
 }
 
@@ -501,6 +506,11 @@
   --resident-patrol-duration: 3.8s;
 }
 
+.event-first-sandbox__resident.event-first-sandbox__resident--position-frozen {
+  animation-name: none;
+  transition-property: none;
+}
+
 .event-first-sandbox__apostle-runner {
   --apostle-frame-size: 72px;
   --apostle-sheet-width: 432px;
@@ -606,6 +616,9 @@ button.event-first-sandbox__emote:disabled {
   font: inherit;
   transform: scale(var(--resident-scale)) rotate(var(--resident-tilt));
   transform-origin: center bottom;
+  transition:
+    transform 3.2s ease,
+    filter 180ms ease;
 }
 
 .event-first-sandbox__resident-figure {
@@ -617,11 +630,10 @@ button.event-first-sandbox__emote:disabled {
 }
 
 .event-first-sandbox__resident--sprite-ready .event-first-sandbox__resident-figure {
-  width: var(--resident-frame-width);
-  height: var(--resident-frame-height);
-  place-items: center;
-  overflow: hidden;
-  zoom: calc(var(--resident-figure-width) / 192px);
+  width: calc(var(--resident-frame-width) * var(--resident-frame-max-span) * var(--resident-display-scale));
+  height: calc(var(--resident-frame-height) * var(--resident-display-scale));
+  place-items: end center;
+  overflow: visible;
 }
 
 .event-first-sandbox__resident-figure img {
@@ -644,11 +656,17 @@ button.event-first-sandbox__emote:disabled {
   background-repeat: no-repeat;
   background-size: var(--resident-sheet-width) var(--resident-sheet-height);
   filter: drop-shadow(0 12px 12px rgba(28, 42, 22, 0.28));
-  image-rendering: pixelated;
+  image-rendering: auto;
+  transform: scale(var(--resident-display-scale));
+  transform-origin: center bottom;
 }
 
 .event-first-sandbox__resident--motion-idle .event-first-sandbox__resident-sprite {
   animation: event-first-resident-sprite-motion 1.1s steps(var(--resident-sprite-frames)) infinite;
+}
+
+.event-first-sandbox__resident--motion-failed .event-first-sandbox__resident-sprite {
+  animation: event-first-resident-sprite-failed-motion 1.25s step-end infinite;
 }
 
 .event-first-sandbox__resident--motion-walk-up .event-first-sandbox__resident-sprite,
@@ -668,6 +686,10 @@ button.event-first-sandbox__emote:disabled {
 .event-first-sandbox__resident--paused .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--paused .event-first-sandbox__emote {
   animation-play-state: paused;
+}
+
+.event-first-sandbox__resident--paused.event-first-sandbox__resident--motion-failed .event-first-sandbox__resident-sprite {
+  animation-play-state: running;
 }
 
 .event-first-sandbox__resident-placeholder {
@@ -1099,6 +1121,38 @@ button.event-first-sandbox__emote:disabled {
 
   to {
     background-position: var(--resident-sheet-x-end) var(--resident-motion-row);
+  }
+}
+
+@keyframes event-first-resident-sprite-failed-motion {
+  0%,
+  19.99% {
+    width: var(--resident-frame-width);
+    background-position: 0 var(--resident-motion-row);
+  }
+
+  20%,
+  39.99% {
+    width: var(--resident-frame-width);
+    background-position: calc(var(--resident-frame-width) * -1) var(--resident-motion-row);
+  }
+
+  40%,
+  59.99% {
+    width: var(--resident-frame-width);
+    background-position: calc(var(--resident-frame-width) * -2) var(--resident-motion-row);
+  }
+
+  60%,
+  79.99% {
+    width: calc(var(--resident-frame-width) * 2);
+    background-position: calc(var(--resident-frame-width) * -3) var(--resident-motion-row);
+  }
+
+  80%,
+  100% {
+    width: calc(var(--resident-frame-width) * 2);
+    background-position: calc(var(--resident-frame-width) * -5) var(--resident-motion-row);
   }
 }
 

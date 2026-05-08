@@ -6,6 +6,8 @@
  * These are collected by the game's character creation screen and passed to this tool.
  * The Codex sidekick (separate process) executes all remaining steps autonomously,
  * including sprite sheet generation via Codex pet.
+ * Current PO preview work uses the Eve/Ryo combined-sheet procedure; this intake
+ * tool only prepares source folders and canonical two-sheet prompt files.
  *
  * Operator usage:
  *   npm run sidekick:intake -- --slug ryo --name "Ryo" --personality "明るい" --tone "タメ口" --age 17 --portrait <path>
@@ -44,8 +46,13 @@ What this tool does:
   1. Validates all inputs
   2. Prepares local folders and portrait reference
   3. Auto-generates internal IDs and job record
-  4. Auto-generates prompt files for the 2 sprite sheets if absent
-  5. Outputs the next automated generation / validation steps
+  4. Auto-generates prompt files for the canonical 2 sprite sheets if absent
+  5. Outputs the canonical-ready generation / validation gate
+
+Current PO preview exception:
+  If the task is PO visual preview from one portrait, use the Eve/Ryo combined-sheet procedure:
+    .agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md
+    docs/operations/resident-sprite-po-preview-quality.md
 
 The non-technical user provides only the 5 character creation inputs via the game UI.
 The Codex sidekick executes all remaining steps autonomously.
@@ -218,6 +225,9 @@ function main() {
     console.log(`  prompt (Sheet 1): ${prompt.path}${prompt.generated ? "  (auto-generated)" : ""}`);
     console.log(`  prompt (Sheet 2): ${extendedPrompt.path}${extendedPrompt.generated ? "  (auto-generated)" : ""}`);
 
+    console.log(`\nPO preview note:`);
+    console.log(`  Eve/Ryo-style PO preview should use one combined Codex pet sheet, not this 2-sheet gate.`);
+    console.log(`  Read .agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md before preview generation.`);
     console.log(`\nGeneration gate — Sheet 1 (motion):`);
     console.log(`  npm run sidekick:resident:hatch-pet -- --slug ${slug} --sheet motion --portrait ${refRelPath} --prompt ${prompt.path}`);
     console.log(`\nGeneration gate — Sheet 2 (extended):`);

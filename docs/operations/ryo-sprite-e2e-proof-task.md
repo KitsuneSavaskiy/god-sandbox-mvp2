@@ -1,5 +1,15 @@
 # 作業名: Ryo resident sprite end-to-end proof
 
+Status: superseded for PO preview.
+
+この文書の `1536x1872 / 2-sheet / incoming` 手順は、RyoのPO確認で使った正本ではない。
+現在のRyo以降のPO previewは、Eve/Ryoで実施した1枚combined sheet手順を正本にする。
+
+```txt
+.agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md
+docs/operations/resident-sprite-po-preview-quality.md
+```
+
 対象repo: god-sandbox-mvp2  
 担当: 単独Codexスレッド（サイドキック）
 
