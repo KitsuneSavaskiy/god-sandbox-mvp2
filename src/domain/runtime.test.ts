@@ -55,6 +55,8 @@ import {
   isUnmanagedAssetPipelinePath,
   type ResidentSpriteManifest,
 } from "../persistence/residentSpriteManifest.js";
+import { promoteAssetToReady } from "../persistence/assetManifest.js";
+import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
 import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
@@ -639,7 +641,7 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(
     ryoAssetBundle.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
   );
   assert.equal(
     ryoAssetBundle.spriteSheet.plannedPath,
@@ -648,8 +650,8 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
   // Ryo PO preview sheet: one combined Codex pet sheet, 7 cols, 14 rows
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 127);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 126);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 136);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 7);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 14);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
@@ -661,8 +663,8 @@ function testRuntimeSelectorsAndCommands(): void {
   // Extended motions share the same PO preview PNG.
   assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
   assert.equal(ryoAssetBundle.extendedSheet.ready, true);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 127);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 126);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 118);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 136);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-up"]?.row, 8);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-happy"]?.row, 10);
@@ -688,16 +690,27 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.failed?.frames, 5);
   assert.equal(activeAssetBundles[1]?.spriteSheet.ready, false);
   assert.equal(activeAssetBundles[2]?.spriteSheet.ready, true);
-  assert.equal(activeAssetBundles[3]?.spriteSheet.ready, false);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.ready, true);
   assert.equal(activeAssetBundles[1]?.spriteSheet.path, null);
   assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, "not-generated-yet");
   assert.equal(
     activeAssetBundles[2]?.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
   );
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 127);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 126);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 136);
   assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 5);
+  assert.equal(
+    activeAssetBundles[3]?.spriteSheet.path,
+    "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
+  );
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions["walk-left"]?.row, 1);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions["walk-right"]?.row, 2);
+  assert.equal(activeAssetBundles[3]?.spriteSheet.metadata?.motions.failed?.frames, 6);
   assert.equal(activeAssetBundles.every((bundle) => bundle.extendedSheet.metadata !== null), true);
   assert.equal(activeAssetBundles[0]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.frameWidth, 118);
@@ -710,8 +723,12 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
   assert.equal(activeAssetBundles[1]?.extendedSheet.ready, false);
   assert.equal(activeAssetBundles[2]?.extendedSheet.ready, true);
-  assert.equal(activeAssetBundles[3]?.extendedSheet.ready, false);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
   assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
   assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
   assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
@@ -945,8 +962,12 @@ function testResidentSpriteManifestReadModel(): void {
   assert.equal(eveAssetBundle.spriteSheet.missingReason, "source-not-adopted");
   assert.equal(eveAssetBundle.spriteSheet.fallbackAssetId, "eve-portrait-neutral");
 
-  assert.equal(suzuAssetBundle.spriteSheet.status, "placeholder");
-  assert.equal(suzuAssetBundle.spriteSheet.ready, false);
+  assert.equal(suzuAssetBundle.spriteSheet.status, "ready");
+  assert.equal(suzuAssetBundle.spriteSheet.ready, true);
+  assert.equal(
+    suzuAssetBundle.spriteSheet.path,
+    "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
+  );
   assert.equal(suzuAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/suzu/portrait.png");
   assert.equal(partialStatus.tone, "ready");
   assert.equal(partialStatus.label, "準備済み");
@@ -984,7 +1005,7 @@ function testInterventionResultEmotesRemainVisible(): void {
     latestOutcome: { interventionType: "help" },
   });
 
-  assert.equal(focusedBystanderEmote, null);
+  assert.equal(focusedBystanderEmote, "talk-request");
   assert.equal(primaryHelpEmote, "joy");
   assert.equal(supportingHelpEmote, "surprise");
   assert.equal(bystanderHelpEmote, "joy");
@@ -992,8 +1013,9 @@ function testInterventionResultEmotesRemainVisible(): void {
   assert.equal(resolveResidentMotion(primaryHelpEmote, true, null), "idle");
   assert.equal(resolveResidentMotion("event-alert", false, "left"), "walk-left");
   assert.equal(resolveResidentMotion("talk-request", false, null), "idle");
+  assert.equal(resolveResidentMotion("talk-request", false, "right"), "walk-right");
   assert.equal(isResidentMovementBlockingEmote("event-alert"), false);
-  assert.equal(isResidentMovementBlockingEmote("talk-request"), true);
+  assert.equal(isResidentMovementBlockingEmote("talk-request"), false);
 }
 
 function testFaithDomainModelDefaultsAndBands(): void {
@@ -1157,6 +1179,87 @@ function testVoiceProfileStorageAndResolver(): void {
   );
 }
 
+function testPromoteAssetToReadyGate(): void {
+  assert.equal(
+    promoteAssetToReady({
+      currentStatus: "needs_review",
+      review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+    }),
+    "ready",
+  );
+
+  assert.equal(
+    promoteAssetToReady({
+      currentStatus: "needs_review",
+      review: { approvedBy: "reviewer@example.com", approvedAt: now, approvalRole: "manual-reviewer" },
+    }),
+    "ready",
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "placeholder",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'placeholder'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "missing",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'missing'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "rejected",
+        review: { approvedBy: "po@example.com", approvedAt: now, approvalRole: "PO" },
+      }),
+    /Cannot promote to ready from 'rejected'/,
+  );
+
+  assert.throws(
+    () =>
+      promoteAssetToReady({
+        currentStatus: "needs_review",
+        review: {
+          approvedBy: "po@example.com",
+          approvedAt: now,
+          approvalRole: "admin" as unknown as "PO",
+        },
+      }),
+    /Invalid approvalRole 'admin'/,
+  );
+}
+
+function testValidateGeneratedNarrativeCandidate(): void {
+  const reject = validateGeneratedNarrativeCandidate("キャラクターが死亡する場面が描かれた");
+  assert.equal(reject.ok, false);
+  if (!reject.ok) {
+    assert.equal(reject.violations.length > 0, true);
+  }
+
+  const rejectEnglish = validateGeneratedNarrativeCandidate("The character faces death in this scene");
+  assert.equal(rejectEnglish.ok, false);
+
+  const rejectLifespan = validateGeneratedNarrativeCandidate("寿命が尽きた");
+  assert.equal(rejectLifespan.ok, false);
+
+  const rejectMedal = validateGeneratedNarrativeCandidate("勲章を受け取った");
+  assert.equal(rejectMedal.ok, false);
+
+  const pass = validateGeneratedNarrativeCandidate("今日は楽しい一日だった");
+  assert.equal(pass.ok, true);
+
+  const passEmpty = validateGeneratedNarrativeCandidate("");
+  assert.equal(passEmpty.ok, true);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1175,6 +1278,8 @@ const tests: Array<[string, () => void]> = [
   ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
   ["faith change application", testFaithChangeApplication],
   ["voice profile storage and resolver", testVoiceProfileStorageAndResolver],
+  ["promoteAssetToReady gate", testPromoteAssetToReadyGate],
+  ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
 ];
 
 for (const [name, test] of tests) {

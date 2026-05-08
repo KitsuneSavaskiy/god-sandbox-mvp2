@@ -7,3 +7,9 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
+      - id: git-boundary
+        name: prevent generated/local files from entering git
+        entry: node tools/security/check-git-boundary.mjs --include-untracked
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
