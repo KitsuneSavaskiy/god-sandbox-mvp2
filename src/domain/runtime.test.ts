@@ -1159,6 +1159,17 @@ function testVoiceProfileStorageAndResolver(): void {
   const garanProfile = getDefaultVoiceProfile("garan");
   assert.equal(DEFAULT_DO_NOT_SAY_SANDBOX.join("").includes("ステータス"), true);
   assert.equal(ALLOWED_GOD_INDIRECT_REFERENCES.length >= 3, true);
+
+  // atomicity: 「あなた」「プレイヤー」「神様」が別エントリである
+  const entryWithAnata = DEFAULT_DO_NOT_SAY_SANDBOX.filter((e) => e.includes("「あなた」"));
+  const entryWithPlayer = DEFAULT_DO_NOT_SAY_SANDBOX.filter((e) => e.includes("「プレイヤー」"));
+  const entryWithGodSama = DEFAULT_DO_NOT_SAY_SANDBOX.filter((e) => e.includes("「神様」"));
+  assert.equal(entryWithAnata.length, 1);
+  assert.equal(entryWithPlayer.length, 1);
+  assert.equal(entryWithGodSama.length, 1);
+  assert.notEqual(entryWithAnata[0], entryWithPlayer[0]);
+  assert.notEqual(entryWithAnata[0], entryWithGodSama[0]);
+  assert.notEqual(entryWithPlayer[0], entryWithGodSama[0]);
   assert.equal(
     garanProfile.passportDialogueExamples.some(
       (example) =>
