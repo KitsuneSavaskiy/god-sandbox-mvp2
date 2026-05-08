@@ -11,6 +11,8 @@ const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png";
 const RYO_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png";
+const GARAN_PO_PREVIEW_COMBINED_SHEET_PATH =
+  "art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png";
 const SUZU_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png";
 
@@ -71,6 +73,43 @@ const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
 };
 
 const RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
+  kind: "extended",
+  frameWidth: 118,
+  frameHeight: 136,
+  columns: 7,
+  rows: 14,
+  motions: {
+    "walk-up": { row: 8, frames: 7 },
+    "walk-down": { row: 9, frames: 7 },
+    "walk-forward": { row: 9, frames: 7 },
+    "walk-back": { row: 8, frames: 7 },
+    "emote-happy": { row: 10, frames: 7 },
+    "emote-angry": { row: 11, frames: 7 },
+    "emote-sad": { row: 12, frames: 7 },
+    "emote-surprised": { row: 13, frames: 7 },
+  },
+};
+
+const GARAN_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
+  kind: "motion",
+  frameWidth: 118,
+  frameHeight: 136,
+  columns: 7,
+  rows: 14,
+  motions: {
+    idle: { row: 0, frames: 7 },
+    "walk-right": { row: 1, frames: 7 },
+    "walk-left": { row: 2, frames: 7 },
+    waving: { row: 3, frames: 7 },
+    jumping: { row: 4, frames: 7 },
+    failed: { row: 5, frames: 7 },
+    waiting: { row: 6, frames: 7 },
+    running: { row: 1, frames: 7 },
+    review: { row: 7, frames: 7 },
+  },
+};
+
+const GARAN_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
   kind: "extended",
   frameWidth: 118,
   frameHeight: 136,
@@ -194,6 +233,14 @@ assertRequiredSpriteSheetMotions(
   "ryo-po-preview-combined-extended-sheet",
 );
 assertRequiredSpriteSheetMotions(
+  GARAN_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  "garan-po-preview-combined-motion-sheet",
+);
+assertRequiredSpriteSheetMotions(
+  GARAN_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  "garan-po-preview-combined-extended-sheet",
+);
+assertRequiredSpriteSheetMotions(
   SUZU_PO_PREVIEW_COMBINED_MOTION_METADATA,
   "suzu-po-preview-combined-motion-sheet",
 );
@@ -306,6 +353,36 @@ function createRyoPoPreviewCombinedExtendedSheet(): AssetManifestEntry {
   };
 }
 
+function createGaranPoPreviewCombinedMotionSheet(): AssetManifestEntry {
+  return {
+    id: "garan-sprite-sheet",
+    ownerCharacterId: "chr_garan",
+    kind: "sprite-sheet",
+    status: "ready",
+    sourcePath: "assets/generated/residents/garan/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${GARAN_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: GARAN_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "garan-portrait-neutral",
+    generatedFromAssetIds: ["garan-portrait-neutral"],
+    spriteSheet: GARAN_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  };
+}
+
+function createGaranPoPreviewCombinedExtendedSheet(): AssetManifestEntry {
+  return {
+    id: "garan-sprite-sheet-extended",
+    ownerCharacterId: "chr_garan",
+    kind: "sprite-sheet-extended",
+    status: "ready",
+    sourcePath: "assets/generated/residents/garan/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${GARAN_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: GARAN_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "garan-portrait-neutral",
+    generatedFromAssetIds: ["garan-portrait-neutral"],
+    spriteSheet: GARAN_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  };
+}
+
 function createSuzuPoPreviewCombinedMotionSheet(): AssetManifestEntry {
   return {
     id: "suzu-sprite-sheet",
@@ -382,8 +459,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/garan/portrait.png",
     },
-    createResidentMotionSheetPlaceholder("garan", "chr_garan"),
-    createResidentExtendedSheetPlaceholder("garan", "chr_garan"),
+    createGaranPoPreviewCombinedMotionSheet(),
+    createGaranPoPreviewCombinedExtendedSheet(),
     {
       id: "garan-expression-happy",
       ownerCharacterId: "chr_garan",

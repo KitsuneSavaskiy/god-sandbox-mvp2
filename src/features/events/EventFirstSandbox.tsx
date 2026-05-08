@@ -1450,12 +1450,14 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
   const metadata = resident.spriteSheetMetadata;
   const failedFrameMaxSpan = isVariableWidthFailedResident(resident) ? 2 : 1;
   const emoteTopInset = resolveResidentEmoteTopInset(metadata);
+  const displayScale = resolveResidentDisplayScale(metadata);
 
   return {
     "--resident-sprite-sheet": `url("${activeSheetPath}")`,
     "--resident-frame-width": metadata ? `${metadata.frameWidth}px` : undefined,
     "--resident-frame-height": metadata ? `${metadata.frameHeight}px` : undefined,
     "--resident-frame-max-span": failedFrameMaxSpan,
+    "--resident-display-scale": displayScale.toFixed(3),
     "--resident-emote-top-inset": `${emoteTopInset}px`,
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
@@ -1470,7 +1472,23 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
       ? `-${metadata.row * metadata.frameHeight}px`
       : undefined,
     "--resident-sprite-frames": metadata?.frames,
-  } as CSSProperties;
+} as CSSProperties;
+}
+
+function resolveResidentDisplayScale(metadata: ResidentSpriteMetadata | null): number {
+  if (!metadata) {
+    return 1.5;
+  }
+
+  if (metadata.frameWidth === 156 && metadata.frameHeight === 144 && metadata.columns === 4) {
+    return 1.82;
+  }
+
+  if (metadata.frameWidth === 180 && metadata.frameHeight === 170 && metadata.columns === 4) {
+    return 1.5;
+  }
+
+  return 1.5;
 }
 
 function resolveResidentEmoteTopInset(metadata: ResidentSpriteMetadata | null): number {
@@ -1480,6 +1498,14 @@ function resolveResidentEmoteTopInset(metadata: ResidentSpriteMetadata | null): 
 
   if (metadata.frameWidth === 148 && metadata.frameHeight === 144) {
     return 18;
+  }
+
+  if (metadata.frameWidth === 156 && metadata.frameHeight === 144) {
+    return 18;
+  }
+
+  if (metadata.frameWidth === 180 && metadata.frameHeight === 170) {
+    return 24;
   }
 
   if (metadata.frameWidth === 118 && metadata.frameHeight === 136) {

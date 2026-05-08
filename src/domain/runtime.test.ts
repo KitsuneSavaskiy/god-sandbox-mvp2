@@ -716,11 +716,18 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.rows, 14);
   assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.idle?.frames, 7);
   assert.equal(activeAssetBundles[0]?.spriteSheet.metadata?.motions.failed?.frames, 5);
-  assert.equal(activeAssetBundles[1]?.spriteSheet.ready, false);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.ready, true);
   assert.equal(activeAssetBundles[2]?.spriteSheet.ready, true);
   assert.equal(activeAssetBundles[3]?.spriteSheet.ready, true);
-  assert.equal(activeAssetBundles[1]?.spriteSheet.path, null);
-  assert.equal(activeAssetBundles[1]?.spriteSheet.missingReason, "not-generated-yet");
+  assert.equal(
+    activeAssetBundles[1]?.spriteSheet.path,
+    "/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png",
+  );
+  assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.frameHeight, 136);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.columns, 7);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.motions.failed?.frames, 7);
   assert.equal(
     activeAssetBundles[2]?.spriteSheet.path,
     "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
@@ -749,9 +756,13 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["walk-back"]?.row, 8);
   assert.equal(activeAssetBundles[0]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
-  assert.equal(activeAssetBundles[1]?.extendedSheet.ready, false);
+  assert.equal(activeAssetBundles[1]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[2]?.extendedSheet.ready, true);
   assert.equal(activeAssetBundles[3]?.extendedSheet.ready, true);
+  assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.frameWidth, 118);
+  assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.frameHeight, 136);
+  assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["emote-angry"]?.row, 11);
   assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameWidth, 148);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);

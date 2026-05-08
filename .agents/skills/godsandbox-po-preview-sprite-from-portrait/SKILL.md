@@ -63,12 +63,13 @@ row 13: emote-surprised
 The row count may change only when the PO approves a new preview contract. Record
 the chosen contract in the preview manifest.
 
-## Eve PO-Approved Procedure As Canonical
+## Eve PO-Approved Procedure As PO Preview Source Of Truth
 
-Use the Eve iteration as the canonical operating procedure for later residents
-such as Ryo, Garan, and Suzu.
+Use the Eve iteration as the PO preview operating procedure for later residents
+such as Ryo, Garan, and Suzu. This is not canonical ready adoption; canonical
+ready remains the separate two-sheet `1536x1872 / 8x9 / 192x208` target.
 
-Canonical preview contract unless PO changes it:
+Fixed PO preview contract unless PO changes it:
 
 ```txt
 one combined preview PNG
@@ -82,9 +83,31 @@ extended rows: 8-13
 failed row logical frames: 1,1,1,2,2
 ```
 
+For Garan and later residents, this Eve-shaped grid is the source of truth.
+If a generated resident clips inside this grid, reject that candidate and
+regenerate from the portrait/Codex pet prompt. Do not change the accepted grid
+to a larger cell size such as `180x170` just to hide clipping.
+
+Garan-specific fit target inside each `118x136` cell:
+
+```txt
+left/right safe margin: at least 8 px
+top safe margin: 10-12 px, including horns and hair
+bottom safe margin: 10-12 px, including boots and feet
+full silhouette width: about 76-88 px
+full silhouette height: about 104-114 px
+feet baseline: 10-14 px above the cell bottom
+```
+
+If Garan is too tall, scale the whole character down during generation. Never
+crop horns, hair, hands, or feet, and never enlarge the preview grid to hide
+clipping.
+
 Eve PO review rules to preserve:
 
 - Row count matters more than keeping the old two-sheet shape.
+- The accepted PO preview grid is `14 rows x 7 columns`, `118x136` per cell,
+  `826x1904` total. A 13-row, 6-column, or larger-cell candidate is reject.
 - Every row must keep the exact same cell height, including sitting/fallen rows.
 - If a row is visually wrong, repair that row/cell group only.
 - `failed` uses three single-cell transition frames, then two 2-cell fallen
@@ -104,6 +127,68 @@ Common PO checks:
 - `emote-surprised` must not look angry.
 - No row may let animation pick up neighboring cells or another row.
 
+## Quality Function
+
+`sprite:fit` is only a preflight gate. Do not accept a preview candidate from
+`sprite:fit` alone.
+
+Use this acceptance function for every generated or repaired preview:
+
+```txt
+accept =
+  hardGatesPass
+  AND qualityScore >= 90
+  AND everyScorePart >= 80
+  AND lowEffortSubagent == ACCEPT
+  AND leadDoubleCheck == ACCEPT
+```
+
+Hard gates:
+
+- Codex pet / hatch-pet evidence exists. Local code-native drawing is reject.
+- PNG contract matches runtime metadata exactly: `columns`, `rows`,
+  `frameWidth`, `frameHeight`, and per-motion `frames`.
+- `sprite:fit` passes with the exact selected contract.
+- No visible head, horns, hands, feet, body, or emote effect touches or crosses
+  a logical frame edge unless the row has an explicit variable-width rule.
+- The sandbox runtime uses the same sheet version and display scale recorded in
+  the preview manifest.
+
+Score parts:
+
+```txt
+contractScore      20 points
+containmentScore   20 points
+motionFlowScore    20 points
+rowSemanticScore   15 points
+sandboxScaleScore  15 points
+styleEvidenceScore 10 points
+```
+
+Scoring rules:
+
+- `contractScore`: canvas, grid, row manifest, metadata, preview page, and
+  sandbox manifest all agree.
+- `containmentScore`: `sprite:fit` passes and the lead can visually confirm
+  complete full-body silhouettes. Top/bottom numeric margins are not enough if
+  the head or feet still appear cut off.
+- `motionFlowScore`: playback order matches the intended motion direction.
+  Ping-pong or duplicated columns are acceptable only when explicitly chosen for
+  that row; otherwise use sequential `0 -> 1 -> ...`.
+- `rowSemanticScore`: each row reads as its manifest motion. In particular,
+  `waiting` must differ from `idle`, `jumping` must show airborne movement, and
+  `walk-forward` must look like walking toward the viewer.
+- `sandboxScaleScore`: in the sandbox, the displayed resident body height at the
+  same y position should stay close to the PO-approved roster size. A candidate
+  that is much smaller or larger than Eve/Ryo/Suzu is not acceptable even if the
+  PNG grid passes.
+- `styleEvidenceScore`: the result remains Codex pet pixel-art-adjacent and the
+  manifest records the generated source and any deterministic repack steps.
+
+The low-effort subagent review must quote this quality function and must not
+return ACCEPT if any hard gate fails. The lead agent must double-check both the
+PNG/contact sheet and the sandbox-rendered result before PO review.
+
 ## Workflow
 
 1. Run the Codex pet / `hatch-pet` procedure below from the portrait.
@@ -114,10 +199,18 @@ Common PO checks:
    `frameHeight` tall.
 5. Repair only the failing row/cells when PO points out a concrete issue.
 6. Run `sprite:fit` with the exact preview contract.
-7. Ask a subagent with `reasoning_effort=low` to review the selected result.
-8. Wire the preview into the manifest and sandbox only after the gate passes.
-9. Have PO review in the local browser, then iterate from the specific PO
+7. Evaluate the candidate with the full quality function above.
+8. Ask a subagent with `reasoning_effort=low` to review the selected result.
+9. Wire the preview into the manifest and sandbox only after all gates pass.
+10. Have PO review in the local browser, then iterate from the specific PO
    finding. Do not restart the full pipeline unless the source is unusable.
+
+For Garan, full-sheet generation may fail to respect the grid. After three
+fresh full-sheet attempts that produce the wrong row/column count or clipped
+parts, stop full-sheet retries and switch to fresh row-by-row or frame-by-frame
+Codex pet generation, then deterministically pack only those fresh generated
+rows/frames into the fixed `14x7 / 118x136 / 826x1904` grid. Do not pack from
+past Garan sprite sheets.
 
 ## One Resident At A Time
 
@@ -242,7 +335,7 @@ For other layouts, pass the actual selected values:
 npm run sprite:fit -- assets/generated/residents/<slug>/po-preview/resident-sprite-sheet-combined.png --kind combined --columns <columns> --rows <rows> --frame-width <frameWidth> --frame-height <frameHeight> --out assets/generated/residents/<slug>/po-preview/resident-sprite-sheet-combined.fit.json
 ```
 
-Pass means:
+`sprite:fit` pass means:
 
 - canvas equals `columns * frameWidth` by `rows * frameHeight`,
 - every used frame is nonempty,
@@ -251,6 +344,9 @@ Pass means:
 - each row keeps the exact selected `frameHeight`,
 - no large detached body parts are detected,
 - metadata matches the PNG and runtime playback.
+
+This does not mean the candidate is accepted. After `sprite:fit`, apply the
+full quality function above and inspect the sandbox-rendered resident size.
 
 Small detached emote effects can be warnings. Detached body parts in normal
 motion rows are not acceptable unless the row has an explicit variable-width
@@ -293,6 +389,9 @@ When wiring a combined preview into the sandbox:
 - Set `frameWidth`, `frameHeight`, `columns`, `rows`, and `frames` from the PNG.
 - Use CSS display scaling for sandbox readability, for example
   `--resident-display-scale: 1.5`; do not change the PNG to fake scale.
+- Check the displayed body size against the accepted roster at the same y
+  position. If the resident is clearly smaller or larger, record an explicit
+  display-scale override in code and the preview manifest.
 - If a motion is variable-width, add motion-specific CSS and state selection.
 - Confirm the browser URL returns the latest asset with a cache-busting query.
 
@@ -309,10 +408,11 @@ Give it:
 - row manifest,
 - variable-width row rules such as `mixed-row 5:1,1,1,2,2`,
 - `sprite:fit` report path,
+- sandbox preview URL or display-scale override,
 - concrete PO concern being checked.
 
-It reports `accept` or `reject` and any residual PO visual risk. The lead agent
-then double-checks before accepting.
+It reports `ACCEPT` or `REJECT` against the full quality function and any
+residual PO visual risk. The lead agent then double-checks before accepting.
 
 ## Prompt And Repair Loop
 
@@ -322,8 +422,10 @@ If quality fails:
 - Prefer repairing or regenerating only that row/cell group.
 - Tighten the prompt with exact columns, rows, full-body cells, attached feet,
   safe margins, no labels, and one combined sheet.
-- If repeated crop failure happens, reduce columns only after recording the new
-  preview contract.
+- If repeated full-sheet failure happens for Garan, do not reduce columns or
+  change the cell size. Switch to fresh row-by-row or frame-by-frame Codex pet
+  generation and deterministic pack into the fixed Eve-shaped grid. Only change
+  the grid if PO explicitly approves a new preview contract.
 - Never hide a broken sheet with CSS offsets, crop tricks, or mismatched metadata.
 
 ## Output Manifest

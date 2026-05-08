@@ -29,8 +29,10 @@ motions[motion].frames
 ```
 
 For Eve PO preview, PO selected the generated source image with the best size
-balance as the visual reference. The animation metadata follows that image
-instead of forcing it back into the old `192x208` preview frame:
+balance as the visual reference. This Eve-shaped grid is also the PO preview
+source of truth for Garan generation. It is not canonical ready. The animation
+metadata follows this image instead of forcing it back into the old `192x208`
+preview frame:
 
 ```txt
 frame: 118 x 136
@@ -47,6 +49,12 @@ Therefore, the frame size and row index are the hard requirements for slicing.
 For this PO preview, `118x136` is the selected frame size. This is not canonical
 ready for the old `1536x1872` atlas.
 
+For Garan specifically, reject generated candidates that do not match this
+grid. A `13 rows x 6 columns` output, or a larger-cell workaround such as
+`180x170`, is not acceptable. If Garan appears clipped inside this grid, the
+correct fix is to regenerate the Codex pet source to fit the grid, not to change
+the grid.
+
 For PO readability, the character should keep the selected source image's size
 balance while leaving a small safety margin:
 
@@ -56,6 +64,22 @@ minimum top/bottom safety margin: 3 px
 minimum left/right safety margin: 3 px
 row 5 failed may be shorter if it uses a sitting or falling pose
 ```
+
+For Garan, use a stricter target because horns, hair, and a stockier body make
+the `118x136` cell easier to overfill:
+
+```txt
+target full silhouette width: 76-88 px
+target full silhouette height: 104-114 px
+left/right safe margin: 8 px or more
+top safe margin: 10-12 px, including horns and hair
+bottom safe margin: 10-12 px, including feet and boots
+feet baseline: 10-14 px above the cell bottom
+```
+
+If Garan exceeds this box, regenerate with a smaller whole-body scale. Do not
+crop body parts, and do not change the PO preview grid unless PO explicitly
+selects a new grid.
 
 Even when a row contains a sitting or fallen pose, the extraction row itself
 must remain exactly the selected `frameHeight` including blank padding. The
@@ -89,14 +113,81 @@ Do not add unused rows to this PO-selected source-canonical sheet.
 
 ## Evaluation Function
 
+`sprite:fit` is a preflight gate. It is required, but it is not the complete
+quality function. Recent PO reviews showed that a sheet can pass cell-boundary
+checks while still being too small in the sandbox, visually clipped, or animated
+with an unnatural frame order.
+
+Use this acceptance function:
+
+```txt
+accept =
+  hardGatesPass
+  AND qualityScore >= 90
+  AND everyScorePart >= 80
+  AND lowEffortSubagent == ACCEPT
+  AND leadDoubleCheck == ACCEPT
+```
+
+Hard gates:
+
+- The visual source is Codex pet / hatch-pet generated, with evidence recorded.
+- For Garan PO preview, the candidate uses the fixed Eve-shaped grid:
+  `826x1904`, `14 rows x 7 columns`, `118x136` cells.
+- PNG size equals `columns * frameWidth` by `rows * frameHeight`.
+- Runtime metadata and preview page use the same `columns`, `rows`,
+  `frameWidth`, `frameHeight`, row indexes, frame counts, and PNG version.
+- `sprite:fit` passes with the exact selected contract.
+- No head, horns, hands, feet, body, or emote effect appears cut off or crosses
+  a logical frame boundary.
+- The sandbox-rendered resident uses the intended display scale and the same
+  sprite version as the PO preview page.
+
+Score parts:
+
+```txt
+contractScore      20
+containmentScore   20
+motionFlowScore    20
+rowSemanticScore   15
+sandboxScaleScore  15
+styleEvidenceScore 10
+```
+
+Scoring definitions:
+
+- `contractScore`: canvas, grid, row manifest, manifest metadata, runtime
+  metadata, and preview page all agree.
+- `containmentScore`: full-body silhouettes are visually complete inside each
+  logical frame. Numeric top/bottom margins are necessary but not sufficient:
+  reject if the head, horns, feet, or pose appears clipped.
+- `motionFlowScore`: frame order follows the intended movement. Use sequential
+  `0 -> 1 -> ...` playback unless a row explicitly documents ping-pong,
+  variable-width, or held-frame behavior. Reject rows that slide while facing
+  the wrong direction or show nearly no motion when motion is expected.
+- `rowSemanticScore`: row meanings match the manifest. `waiting` differs from
+  `idle`; `jumping` has airborne motion; `walk-forward` reads as approaching
+  the viewer; `emote-surprised` does not read as anger.
+- `sandboxScaleScore`: render the resident in the sandbox at the same y position
+  as an accepted resident. The displayed body height should stay close to the
+  PO-approved roster size. If the character is clearly smaller or larger than
+  Eve/Ryo/Suzu, adjust display scale or regenerate before PO review.
+- `styleEvidenceScore`: the result remains Codex pet pixel-art-adjacent, and the
+  manifest records source images, generated paths, deterministic repack steps,
+  `sprite:fit`, low-effort review, and lead double-check.
+
+The lead agent must record the score parts in the preview manifest or the PR
+summary. A subagent review with `reasoning_effort=low` must check the same
+function and cannot override a failed hard gate.
+
 Run:
 
 ```bash
 npm run sprite:fit -- assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.png --kind combined --columns 7 --rows 14 --frame-width 118 --frame-height 136 --min-margin-x 3 --min-margin-top 3 --min-margin-bottom 3 --edge-band 3 --row-seam-band 3 --out assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.fit.json
 ```
 
-If the generated preview uses a different source-canonical layout, pass that
-exact frame and row layout:
+Only use a different source-canonical layout when PO explicitly selects a new
+grid. Otherwise, use the Eve-shaped `7x14 / 118x136` contract above:
 
 ```bash
 npm run sprite:fit -- assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.png --kind combined --columns <columns> --rows <rows> --frame-width <frameWidth> --frame-height <frameHeight> --out assets/generated/residents/eve/po-preview/resident-sprite-sheet-combined.fit.json
@@ -142,7 +233,10 @@ The subagent must check:
 
 - whether the image follows the intended `columns x rows` layout,
 - whether every used frame keeps head, torso, and feet inside one selected frame cell,
+- whether the apparent head and feet are visually complete, not just numerically inside margins,
 - whether all 14 row meanings match the combined row manifest,
+- whether the frame order matches the intended motion flow,
+- whether sandbox display scale keeps the resident close to the accepted roster size,
 - whether the spare row, if any, is fully transparent and not used as motion,
 - whether the generated result should be accepted, regenerated, or reduced in columns,
 - whether the current prompt needs a concrete correction.
@@ -154,6 +248,7 @@ updates the prompt, regenerates, or accepts the candidate.
 
 A PO preview candidate can be shown only when:
 
+- the full `accept` function above is true,
 - `sprite:fit` passes for the combined sheet,
 - the PNG width equals `columns * frameWidth`,
 - the PNG height equals `rows * frameHeight`,
@@ -196,9 +291,16 @@ If `sprite:fit` fails:
    prompt against this document.
 3. Tighten the prompt around that failure.
 4. Prefer regenerating only the failing row or a small row group.
-5. If repeated cropping happens, reduce columns only for PO preview and record
-   the new `columns` value in the preview manifest.
-6. Never hide broken frames with CSS cropping or row offsets.
+5. For Garan, after three fresh full-sheet attempts fail because of wrong
+   row/column count or clipping, stop full-sheet retries. Switch to fresh
+   row-by-row or frame-by-frame Codex pet generation, then deterministically
+   pack only those fresh generated rows/frames into the fixed `14x7 / 118x136`
+   grid.
+6. Do not use old Garan sprite sheets as packer input. They are rejected
+   evidence only.
+7. Only reduce columns, enlarge cells, or change canvas size if PO explicitly
+   selects a new preview contract.
+8. Never hide broken frames with CSS cropping or row offsets.
 
 Prompt changes must explicitly mention:
 
