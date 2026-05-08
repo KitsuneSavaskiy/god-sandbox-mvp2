@@ -153,21 +153,36 @@ PBI 7 は PBI 2〜6 と独立しており、任意の順序で着手できる。
 
 ---
 
-## PBI 4a: Observed dialogue PO preview
+## PBI 4a: Observed dialogue authoring preview
 
-**目的:** 箱庭の世界状態を `DialogueWorldDigest` にまとめ、外部 LLM（ChatGPT 等）への手動コピー用発話候補生成パケットを構築する。PO が受け取った候補を `DialogueCandidate` として保存・審査できる仕組みを実装する。アプリ本体は外部 LLM API を直接呼ばない。
+**目的:** PO が箱庭内発話の UI・頻度・距離感・キャラらしさの基礎を確認できるようにする。ソースモードは `authored_fixture`（人手 fixture）と `external_llm_handoff`（外部 LLM 手動渡し）の 2 通りを持つ。アプリ本体は外部 LLM API を直接呼ばない。
 
 **仕様参照:** `docs/product/observed-dialogue-spec.md §9`, `docs/architecture/llm-batch-handoff-spec.md §2`
 
 **変更対象ファイル:**
-- `src/domain/models.ts` — `DialogueWorldDigest`, `DialogueCandidate`, `DialogueReviewStatus` 型の追加
-- `src/domain/dialogue.ts`（新規） — `buildDialogueWorldDigest(session): DialogueWorldDigest` 関数
+- `src/domain/models.ts` — `DialogueCandidateSource`, `DialogueWorldDigest`, `DialogueCandidate`, `DialogueReviewStatus` 型の追加
+- `src/domain/dialogue.ts`（新規） — `buildDialogueWorldDigest(session): DialogueWorldDigest`, `buildDialoguePromptPack(digest): DialoguePromptPack` 関数
 - `src/domain/runtime.test.ts` — PO preview unit テスト追加
+
+**ソースモード別の役割:**
+
+| モード | LLM | 目的 |
+|---|---|---|
+| `authored_fixture` | 使わない | 人手 fixture でUI・頻度・Type A/B/C・doNotSay・faithBand 距離感を確認 |
+| `external_llm_handoff` | 外部（手動） | `DialogueWorldDigest` + `DialoguePromptPack` を作り、PO または Codex Sidekick が外部 LLM へ手動で渡す |
+
+`authored_fixture` で確認できること: UI 表示・吹き出し位置・発話頻度・Type A/B/C の境界・禁止表現フィルタ。
+`authored_fixture` では判断できないこと: LLM 生成品質・「うちの子らしさ」の最終判断。
 
 **`DialogueCandidate.reviewStatus` の取りうる値:**
 `"needs_review" | "accepted" | "rejected" | "needs_rewrite"`
 
-LLM 生成候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま runtime で使用してはならない。
+`external_llm_handoff` で受け取った候補は必ず `"needs_review"` で入り、PO 審査後に `"accepted"` へ昇格する。`"needs_review"` のまま player-facing UI に出してはならない。`WordEvent / ChangeSet / InterventionResult / Passport` を候補が上書きしてはならない。
+
+**PO の確認ステップ（2 段階）:**
+1. `authored_fixture` モードで UI・頻度・距離感を確認する
+2. `external_llm_handoff` モードで実際の LLM 候補を見て「うちの子に愛着がわくか」を判断する
+LLM 候補を見ていない段階では発話体験の最終判断を完了扱いにしない。
 
 **触らない範囲:**
 - 外部 LLM API 直接呼び出し（アプリ本体は呼ばない）
@@ -176,8 +191,9 @@ LLM 生成候補は必ず `"needs_review"` で入り、PO 審査後に `"accepte
 
 **Done 条件:**
 - [ ] `buildDialogueWorldDigest` が session から `DialogueWorldDigest` を返す
-- [ ] `DialogueCandidate.reviewStatus` が `"needs_review" | "accepted" | "rejected" | "needs_rewrite"` を取りうる
-- [ ] `validateDialogue` を通過しない候補を `reviewStatus: "rejected"` に設定できる
+- [ ] `DialogueCandidateSource` が `"authored_fixture" | "external_llm_handoff"` を取りうる
+- [ ] `authored_fixture` モードで Type A / B / C の fixture 候補が生成できる
+- [ ] `external_llm_handoff` 候補は `reviewStatus: "needs_review"` で入り、PO 承認前に UI に出ない
 - [ ] unit test（`mvp-test-scenarios.md §2.3-a`）通過
 - [ ] `npm run typecheck && npm run test:domain && npm run build` が成功
 

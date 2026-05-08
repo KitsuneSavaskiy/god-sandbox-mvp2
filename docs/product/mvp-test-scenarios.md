@@ -186,7 +186,7 @@ describe("world principle engine", () => {
 });
 ```
 
-### 2.3-a 観察型発話 PO Preview（PBI 4a）
+### 2.3-a 観察型発話 Authoring Preview（PBI 4a）
 
 ```typescript
 describe("dialogue world digest", () => {
@@ -197,28 +197,41 @@ describe("dialogue world digest", () => {
     expect(digest.sessionId).toBe(session.id);
   });
 
-  it("digest の activeCharacters に faithBand が含まれる", () => {
+  it("digest の activeCharacters に faithBand が含まれる（currentFaith 数値は含まない）", () => {
     const digest = buildDialogueWorldDigest(session);
+    const json = JSON.stringify(digest);
     digest.activeCharacters.forEach(c => {
       expect(["disbelieves", "uncertain", "senses_presence", "believes", "devoted"])
         .toContain(c.faithBand);
     });
-  });
-
-  it("digest に currentFaith の数値が含まれない（faithBand のみ）", () => {
-    const json = JSON.stringify(buildDialogueWorldDigest(session));
     expect(json).not.toMatch(/"currentFaith":/);
   });
 
-  it("DialogueCandidate の reviewStatus が needs_review で始まる", () => {
+  it("authored_fixture の候補は source が authored_fixture になる", () => {
     const candidate: DialogueCandidate = {
-      id: "cand-001",
+      id: "fixture-001",
       characterId: "garan",
       text: "今日は風がやわらかいね",
       type: "daily",
+      source: "authored_fixture",
+      reviewStatus: "accepted",   // fixture は事前 accepted でよい
+      createdAt: "2026-05-08T00:00:00Z",
+    };
+    expect(candidate.source).toBe("authored_fixture");
+    expect(candidate.reviewStatus).toBe("accepted");
+  });
+
+  it("external_llm_handoff の候補は reviewStatus が needs_review で始まる", () => {
+    const candidate: DialogueCandidate = {
+      id: "llm-001",
+      characterId: "garan",
+      text: "今日は風がやわらかいね",
+      type: "daily",
+      source: "external_llm_handoff",
       reviewStatus: "needs_review",
       createdAt: "2026-05-08T00:00:00Z",
     };
+    expect(candidate.source).toBe("external_llm_handoff");
     expect(candidate.reviewStatus).toBe("needs_review");
   });
 
@@ -230,10 +243,10 @@ describe("dialogue world digest", () => {
   });
 
   it("needs_review の候補は generateDialogue で使用されない", () => {
-    // generateDialogue は accepted 候補のみを参照することを確認
     const candidates: DialogueCandidate[] = [
       { id: "c1", characterId: "garan", text: "テスト発話", type: "daily",
-        reviewStatus: "needs_review", createdAt: "2026-05-08T00:00:00Z" },
+        source: "external_llm_handoff", reviewStatus: "needs_review",
+        createdAt: "2026-05-08T00:00:00Z" },
     ];
     const accepted = candidates.filter(c => c.reviewStatus === "accepted");
     expect(accepted.length).toBe(0);
