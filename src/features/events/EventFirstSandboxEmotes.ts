@@ -69,14 +69,14 @@ export function resolveResidentEmote(input: {
   }
 
   if (input.latestOutcome.interventionType === "help") {
-    return input.isPrimary ? "joy" : input.isSupporting ? "surprise" : null;
+    return input.isPrimary ? "joy" : input.isSupporting ? "surprise" : "joy";
   }
 
   if (input.latestOutcome.interventionType === "trial") {
     return input.isPrimary ? "anger" : input.isSupporting ? "surprise" : "sadness";
   }
 
-  return input.isPrimary ? "talk-request" : null;
+  return input.isPrimary ? "talk-request" : input.isSupporting ? "surprise" : "surprise";
 }
 
 export function resolveDisplayedResidentEmote(
@@ -124,15 +124,26 @@ export function resolveResidentMotion(
   isPaused: boolean,
   movementDirection: ResidentMovementDirection,
 ): ResidentMotionKey {
+  const emoteMotion = emoteKindToMotion(emote);
+  if (emoteMotion !== null && !isPaused) {
+    return emoteMotion;
+  }
+
   if (isPaused) {
     return "idle";
   }
 
-  const emoteMotion = emoteKindToMotion(emote);
-  if (emoteMotion !== null) {
-    return emoteMotion;
-  }
   return directionToMotion(movementDirection);
+}
+
+export function isResidentMovementBlockingEmote(emote: EmoteKind): boolean {
+  return (
+    emote === "joy" ||
+    emote === "anger" ||
+    emote === "sadness" ||
+    emote === "surprise" ||
+    emote === "talk-request"
+  );
 }
 
 function emoteKindToMotion(emote: EmoteKind): ResidentMotionKey | null {
@@ -148,9 +159,8 @@ function emoteKindToMotion(emote: EmoteKind): ResidentMotionKey | null {
     case "surprise":
       return "emote-surprised";
     case "talk-request":
-      return "walk-forward";
     case "event-alert":
-      return "walk-forward";
+      return null;
   }
 }
 

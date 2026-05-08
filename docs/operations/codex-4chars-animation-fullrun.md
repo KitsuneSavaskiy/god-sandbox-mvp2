@@ -1,5 +1,19 @@
 # Codex 指示書: 4 キャラクター アニメーション フルラン
 
+Status: current PO previewでは実行しない。canonical 2-sheet gate用の旧手順。
+
+Eve/RyoのPO確認では、このfullrunよりも1キャラずつCodex petで作り、
+1枚combined sheetを`PO確認 -> 局所修正 -> 再確認`で仕上げる手順の方が要件に合った。
+
+現在のPO previewでは次を正本にする。
+
+```txt
+.agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md
+docs/operations/resident-sprite-po-preview-quality.md
+```
+
+この文書は、将来2-sheet生成が安定した後のcanonical ready gateとしてだけ参照する。
+
 ## この指示書の使い方
 
 Codex スレッドで以下を先頭に置いて実行する。

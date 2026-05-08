@@ -8,17 +8,16 @@ Do not treat the 4 resident sprite jobs as parallel work.
 Current source of truth:
 
 ```txt
-docs/operations/codex-4chars-animation-fullrun.md
-docs/operations/resident-hatch-pet-wrapper.md
+.agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md
+docs/operations/resident-sprite-po-preview-quality.md
 ```
 
 Current safe order:
 
 ```txt
-1. Ryo proof
-2. Eve
-3. Garan
-4. Suzu
+1. Finish the current PO-reviewed resident.
+2. Start the next resident only after PO preview gates pass.
+3. Never generate multiple residents in parallel.
 ```
 
 Generated output remains gitignored and must not be committed.

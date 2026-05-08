@@ -32,6 +32,7 @@ import {
 } from "../tutorial/tutorialStateMachine.js";
 import {
   createNextAmbientResidentEmote,
+  isResidentMovementBlockingEmote,
   resolveDisplayedResidentEmote,
   resolveResidentEmote,
   resolveResidentMotion,
@@ -119,6 +120,7 @@ type ResidentMovementState = {
   y: number;
   direction: "left" | "right" | "up" | "down" | "forward" | "back" | null;
 };
+type ResidentMoveDirection = NonNullable<ResidentMovementState["direction"]>;
 
 const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
 type SandboxDayPhase = (typeof sandboxDayPhases)[number];
@@ -210,9 +212,25 @@ const initialApostleMotion: ApostleMotionState = {
 const SANDBOX_BACKGROUND_PHASE_INTERVAL_MS = 45_000;
 const DEFAULT_SANDBOX_BACKGROUND_PATH = "/art/world/backgrounds/world_spring_noon.png";
 
-const RESIDENT_BOUNDS = { minX: 10, maxX: 88, minY: 35, maxY: 70 };
+// Resident y is the top edge of the resident wrapper as a viewport percentage.
+// The lower limit intentionally lets the wrapper move below the viewport so only
+// the top of the head can peek from the bottom edge.
+const RESIDENT_BOTTOM_PEEK_Y = 94;
+const RESIDENT_BOUNDS = { minX: -4, maxX: 94, minY: 28, maxY: RESIDENT_BOTTOM_PEEK_Y };
+const RESIDENT_BOTTOM_RETURN_Y = 92;
+const RESIDENT_BOTTOM_STRONG_RETURN_Y = RESIDENT_BOTTOM_PEEK_Y;
+const RESIDENT_PERSPECTIVE_RANGE = { minY: 12, maxY: RESIDENT_BOTTOM_PEEK_Y };
 const MOVEMENT_TRANSITION_MS = 3200;
 const MOVEMENT_INTERVAL_MS = 5000;
+const AMBIENT_EMOTE_DURATION_MS = 2400;
+const RESIDENT_MOVE_STEP: Record<ResidentMoveDirection, [number, number]> = {
+  left: [-14, 0],
+  right: [14, 0],
+  up: [0, -10],
+  down: [0, 10],
+  forward: [0, 8],
+  back: [0, -8],
+};
 const RESIDENT_DEFAULT_POSITIONS: Array<{ x: number; y: number }> = [
   { x: 21, y: 54 },
   { x: 58, y: 42 },
@@ -333,6 +351,8 @@ export function EventFirstSandbox({
     sandboxDayPhases.indexOf("noon"),
   );
   const apostleMotionRef = useRef(apostleMotion);
+  const residentEmoteRef = useRef<EmoteKind[]>([]);
+  const residentMovementsRef = useRef<ResidentMovementState[]>(residentMovements);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const residentNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const previousBackgroundRef = useRef<SandboxBackgroundState | null>(null);
@@ -347,10 +367,6 @@ export function EventFirstSandbox({
     () => selectActiveCharacterAssetBundleReadModels(runtimeState),
     [runtimeState],
   );
-  const activeResidentIdSignature = useMemo(
-    () => activeCharacters.map((character) => character.id).join("|"),
-    [activeCharacters],
-  );
   const ambientPersonalitySignature = useMemo(
     () =>
       activeCharacters
@@ -359,6 +375,7 @@ export function EventFirstSandbox({
     [activeCharacters],
   );
   const sandboxPaused = eventWindowOpen || Boolean(latestOutcome);
+  const residentVisualPaused = eventWindowOpen && latestOutcome === null;
 
   const activeResidents = useMemo(
     () =>
@@ -404,7 +421,7 @@ export function EventFirstSandbox({
         const motion =
           latestOutcome?.interventionType === "trial" && isPrimary
             ? "failed"
-            : resolveResidentMotion(emote, sandboxPaused, movement.direction);
+            : resolveResidentMotion(emote, residentVisualPaused, movement.direction);
         const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
           ? resolveResidentSpriteSheetMetadata(
               assetBundle?.spriteSheet.metadata,
@@ -452,13 +469,20 @@ export function EventFirstSandbox({
       currentEvent,
       latestOutcome,
       residentMovements,
-      sandboxPaused,
+      residentVisualPaused,
       sandboxStage,
     ],
   );
 
   const primaryResident = activeResidents.find((resident) => resident.isPrimary);
   const primaryResidentId = primaryResident?.id ?? activeResidents[0]?.id;
+  const activeResidentEmoteSignature = useMemo(
+    () =>
+      activeResidents
+        .map((resident, index) => `${index}:${resident.emote ?? "none"}`)
+        .join("|"),
+    [activeResidents],
+  );
   const tutorialBinding = getTutorialBinding(tutorialState, {
     routePath,
     stage: sandboxStage,
@@ -507,6 +531,14 @@ export function EventFirstSandbox({
   }, [apostleMotion]);
 
   useEffect(() => {
+    residentEmoteRef.current = activeResidents.map((resident) => resident.emote);
+  }, [activeResidents]);
+
+  useEffect(() => {
+    residentMovementsRef.current = residentMovements;
+  }, [residentMovements]);
+
+  useEffect(() => {
     if (backgroundCyclePaused) {
       return;
     }
@@ -532,38 +564,6 @@ export function EventFirstSandbox({
       isMoving: false,
     }));
   }, [sandboxPaused]);
-
-  useEffect(() => {
-    if (!sandboxPaused || !viewportRef.current) {
-      return;
-    }
-
-    const viewportWidth = viewportRef.current.clientWidth;
-    const viewportHeight = viewportRef.current.clientHeight;
-    if (viewportWidth <= 0 || viewportHeight <= 0) {
-      return;
-    }
-
-    setResidentMovements((current) =>
-      current.map((movement, index) => {
-        const residentId = activeCharacters[index]?.id;
-        const residentNode = residentId ? residentNodeRefs.current[residentId] : null;
-        if (!residentNode) {
-          return { ...movement, direction: null };
-        }
-
-        const style = window.getComputedStyle(residentNode);
-        const left = Number.parseFloat(style.left);
-        const top = Number.parseFloat(style.top);
-
-        return {
-          x: Number.isFinite(left) ? (left / viewportWidth) * 100 : movement.x,
-          y: Number.isFinite(top) ? (top / viewportHeight) * 100 : movement.y,
-          direction: null,
-        };
-      }),
-    );
-  }, [activeCharacters, activeResidentIdSignature, sandboxPaused]);
 
   useEffect(() => {
     if (!apostleMotion.isMoving) {
@@ -682,15 +682,35 @@ export function EventFirstSandbox({
   }, [activeCharacters, activeCharacters.length, ambientPersonalitySignature, sandboxPaused]);
 
   useEffect(() => {
-    if (sandboxPaused) return;
+    if (sandboxPaused || !ambientResidentEmote) {
+      return;
+    }
 
-    type MovDir = "left" | "right" | "up" | "down" | "forward" | "back";
-    const DIRECTIONS: MovDir[] = ["left", "right", "up", "down", "forward", "back"];
-    const STEP: Record<MovDir, [number, number]> = {
-      left: [-14, 0], right: [14, 0],
-      up: [0, -10], down: [0, 10],
-      forward: [0, 8], back: [0, -8],
+    const timeoutId = window.setTimeout(() => {
+      setAmbientResidentEmote((current) =>
+        current === ambientResidentEmote ? null : current,
+      );
+    }, AMBIENT_EMOTE_DURATION_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
     };
+  }, [ambientResidentEmote, sandboxPaused]);
+
+  useEffect(() => {
+    if (sandboxPaused) {
+      return;
+    }
+
+    activeResidents.forEach((resident, index) => {
+      if (isResidentMovementBlockingEmote(resident.emote)) {
+        freezeResidentMovementAtCurrentScreenPosition(index);
+      }
+    });
+  }, [activeResidentEmoteSignature, sandboxPaused]);
+
+  useEffect(() => {
+    if (sandboxPaused) return;
 
     let cancelled = false;
     const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
@@ -699,15 +719,25 @@ export function EventFirstSandbox({
       const id = setTimeout(() => {
         pendingTimers.delete(id);
         if (cancelled) return;
+
+        if (isResidentMovementBlockingEmote(residentEmoteRef.current[index])) {
+          scheduleMove(index, 700);
+          return;
+        }
+
+        const currentMovement = residentMovementsRef.current[index];
+        if (!currentMovement) {
+          scheduleMove(index, MOVEMENT_INTERVAL_MS);
+          return;
+        }
+
+        const target = chooseResidentMoveTarget(currentMovement);
+
         setResidentMovements((prev) => {
           const current = prev[index];
           if (!current) return prev;
-          const dir = DIRECTIONS[Math.floor(Math.random() * DIRECTIONS.length)];
-          const [dx, dy] = STEP[dir];
-          const newX = Math.min(RESIDENT_BOUNDS.maxX, Math.max(RESIDENT_BOUNDS.minX, current.x + dx));
-          const newY = Math.min(RESIDENT_BOUNDS.maxY, Math.max(RESIDENT_BOUNDS.minY, current.y + dy));
           const next = [...prev] as ResidentMovementState[];
-          next[index] = { x: newX, y: newY, direction: dir };
+          next[index] = target;
           return next;
         });
         const resetId = setTimeout(() => {
@@ -720,7 +750,7 @@ export function EventFirstSandbox({
           });
         }, MOVEMENT_TRANSITION_MS);
         pendingTimers.add(resetId);
-        scheduleMove(index, MOVEMENT_INTERVAL_MS + Math.random() * 2000);
+        scheduleMove(index, getNextResidentMoveDelay(target.y));
       }, delayMs);
       pendingTimers.add(id);
     }
@@ -740,6 +770,7 @@ export function EventFirstSandbox({
   }
 
   function handleIntervention(type: InterventionKind) {
+    freezeResidentMovementsAtCurrentScreenPosition();
     const previousInterventionIds = new Set(runtimeState.interventions.keys());
     const previousChangeSetIds = new Set(runtimeState.changeSets.keys());
     const applied = applyFocusedEventInterventionCommand(runtimeState, {
@@ -839,11 +870,58 @@ export function EventFirstSandbox({
     event.preventDefault();
     event.stopPropagation();
 
+    openEventWindowWithFrozenResidents();
+  }
+
+  function openEventWindowWithFrozenResidents() {
     if (eventWindowOpen || latestOutcome) {
       return;
     }
 
+    freezeResidentMovementsAtCurrentScreenPosition();
     setEventWindowOpen(true);
+  }
+
+  function freezeResidentMovementsAtCurrentScreenPosition() {
+    freezeResidentMovementAtCurrentScreenPosition();
+  }
+
+  function freezeResidentMovementAtCurrentScreenPosition(targetIndex?: number) {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const viewportWidth = viewportRect.width;
+    const viewportHeight = viewportRect.height;
+    if (viewportWidth <= 0 || viewportHeight <= 0) {
+      return;
+    }
+
+    setResidentMovements((current) =>
+      current.map((movement, index) => {
+        if (targetIndex !== undefined && index !== targetIndex) {
+          return movement;
+        }
+
+        const residentId = activeCharacters[index]?.id;
+        const residentNode = residentId ? residentNodeRefs.current[residentId] : null;
+        if (!residentNode) {
+          return { ...movement, direction: null };
+        }
+
+        const residentRect = residentNode.getBoundingClientRect();
+        const currentX = ((residentRect.left - viewportRect.left) / viewportWidth) * 100;
+        const currentY = ((residentRect.top - viewportRect.top) / viewportHeight) * 100;
+
+        return {
+          x: Number.isFinite(currentX) ? currentX : movement.x,
+          y: Number.isFinite(currentY) ? currentY : movement.y,
+          direction: null,
+        };
+      }),
+    );
   }
 
   return (
@@ -917,7 +995,9 @@ export function EventFirstSandbox({
                 ? "event-first-sandbox__resident--sprite-ready"
                 : "event-first-sandbox__resident--sprite-fallback"
             } ${
-              sandboxPaused ? "event-first-sandbox__resident--paused" : ""
+              sandboxPaused ? "event-first-sandbox__resident--position-frozen" : ""
+            } ${
+              residentVisualPaused ? "event-first-sandbox__resident--paused" : ""
             }`}
             data-resident-depth={resident.depthClassName.replace(
               "event-first-sandbox__resident--depth-",
@@ -925,7 +1005,7 @@ export function EventFirstSandbox({
             )}
             data-resident-motion={resident.motion}
             data-resident-visual={resident.visualMode}
-            style={{ ...createResidentStyle(resident), left: `${resident.movement.x}%`, top: `${resident.movement.y}%` }}
+            style={{ ...createResidentStyle(resident), ...createResidentPlacementStyle(resident) }}
           >
             {resident.emote === "event-alert" ? (
               <button
@@ -1041,7 +1121,7 @@ export function EventFirstSandbox({
                       tutorialBinding?.anchorId === "tutorial-anchor-event-entry" || undefined
                     }
                     disabled={eventWindowOpen || !!latestOutcome}
-                    onClick={() => setEventWindowOpen(true)}
+                    onClick={openEventWindowWithFrozenResidents}
                   >
                     <span className="event-first-sandbox__event-entry-mark">!</span>
                     <span>
@@ -1222,6 +1302,53 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function chooseResidentMoveTarget(current: ResidentMovementState): ResidentMovementState {
+  if (current.y >= RESIDENT_BOTTOM_STRONG_RETURN_Y) {
+    const direction: ResidentMoveDirection = Math.random() < 0.65 ? "up" : "back";
+    return {
+      x: clamp(current.x + randomBetween(-10, 10), RESIDENT_BOUNDS.minX, RESIDENT_BOUNDS.maxX),
+      y: randomBetween(48, 58),
+      direction,
+    };
+  }
+
+  if (current.y >= RESIDENT_BOTTOM_RETURN_Y) {
+    const direction: ResidentMoveDirection = Math.random() < 0.58 ? "up" : "back";
+    return {
+      x: clamp(current.x + randomBetween(-12, 12), RESIDENT_BOUNDS.minX, RESIDENT_BOUNDS.maxX),
+      y: randomBetween(54, 66),
+      direction,
+    };
+  }
+
+  const directions: ResidentMoveDirection[] =
+    current.y <= RESIDENT_BOUNDS.minY + 8
+      ? ["down", "forward", "left", "right", "right", "left"]
+      : ["left", "right", "up", "down", "forward", "back"];
+  const direction = directions[Math.floor(Math.random() * directions.length)] ?? "up";
+  const [dx, dy] = RESIDENT_MOVE_STEP[direction];
+
+  return {
+    x: clamp(current.x + dx, RESIDENT_BOUNDS.minX, RESIDENT_BOUNDS.maxX),
+    y: clamp(current.y + dy, RESIDENT_BOUNDS.minY, RESIDENT_BOUNDS.maxY),
+    direction,
+  };
+}
+
+function getNextResidentMoveDelay(y: number): number {
+  if (y >= RESIDENT_BOTTOM_STRONG_RETURN_Y) {
+    return MOVEMENT_TRANSITION_MS + 700 + Math.random() * 500;
+  }
+  if (y >= RESIDENT_BOTTOM_RETURN_Y) {
+    return MOVEMENT_TRANSITION_MS + 900 + Math.random() * 700;
+  }
+  return MOVEMENT_INTERVAL_MS + Math.random() * 2000;
+}
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
 function resolveSandboxBackground(cycleStep: number): SandboxBackgroundState {
   const normalizedStep = Math.max(0, cycleStep);
   const dayPhaseIndex = normalizedStep % sandboxDayPhases.length;
@@ -1333,6 +1460,42 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
       : undefined,
     "--resident-sprite-frames": metadata?.frames,
   } as CSSProperties;
+}
+
+function createResidentPlacementStyle(resident: ResidentViewModel): CSSProperties {
+  const perspective = resolveResidentPerspective(resident.movement.y);
+
+  return {
+    left: `${resident.movement.x}%`,
+    top: `${resident.movement.y}%`,
+    "--resident-scale": perspective.scale.toFixed(3),
+    "--resident-shadow-scale": perspective.shadowScale.toFixed(3),
+    zIndex: perspective.zIndex,
+  } as CSSProperties;
+}
+
+function resolveResidentPerspective(y: number): {
+  scale: number;
+  shadowScale: number;
+  zIndex: number;
+} {
+  const rawDepth = clamp(
+    (y - RESIDENT_PERSPECTIVE_RANGE.minY) /
+      (RESIDENT_PERSPECTIVE_RANGE.maxY - RESIDENT_PERSPECTIVE_RANGE.minY),
+    0,
+    1,
+  );
+  const depth = smoothPerspectiveDepth(rawDepth);
+
+  return {
+    scale: 0.52 + depth * 0.48,
+    shadowScale: 0.62 + depth * 0.38,
+    zIndex: Math.round(12 + depth * 56),
+  };
+}
+
+function smoothPerspectiveDepth(depth: number): number {
+  return depth * depth * depth * (depth * (depth * 6 - 15) + 10);
 }
 
 function describeChangeSet(

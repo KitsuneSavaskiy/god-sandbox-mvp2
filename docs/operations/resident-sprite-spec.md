@@ -5,6 +5,32 @@ Status: canonical spec — authoritative for all resident sprites
 This document defines the sprite sheet standard for every character in the sandbox.
 Character-specific task docs must not redefine these constraints; they inherit from here.
 
+## Current PO preview exception
+
+The canonical ready target is still the 2-sheet `1536 x 1872` contract below.
+However, PO review for Eve and Ryo showed that the automated 2-sheet pipeline
+does not yet meet the animation-quality requirement reliably.
+
+Until PO explicitly approves a new automated generation pipeline, resident
+animation previews must follow the Eve/Ryo procedure:
+
+- Generate and repair only one resident at a time.
+- Use Codex pet / hatch-pet as the visual source.
+- Use one combined preview PNG when separate motion and extended sheets drift in
+  scale or quality.
+- Keep the PNG's real frame size, row count, column count, and variable-width
+  rows in the runtime metadata.
+- Run `sprite:fit`, low-effort subagent review, and lead double-check before
+  showing the preview.
+- Treat the result as PO preview only, not canonical ready.
+
+The current operating guide for this exception is:
+
+```txt
+.agents/skills/godsandbox-po-preview-sprite-from-portrait/SKILL.md
+docs/operations/resident-sprite-po-preview-quality.md
+```
+
 ## 2-sheet architecture
 
 Each resident uses two sprite sheets:
@@ -52,8 +78,14 @@ When a sprite sheet is marked `ready` in the manifest, the sandbox animates the 
   - `sadness` → `emote-sad` (Sheet 2 row 6)
   - `surprise` → `emote-surprised` (Sheet 2 row 7)
   - `talk-request` / `event-alert` → `walk-forward` (Sheet 2 row 2)
-  - `joy` (ambient default) → follows patrol direction
-- All resident CSS animations pause while the event window is open.
+  - `joy` → `emote-happy` (Sheet 2 row 4)
+- Opening the event window freezes the resident at the current visible position.
+- While the event window is open, resident sprite animation and background time
+  are paused.
+- After an intervention result appears, resident positions stay frozen but result
+  emote animations may play.
+- Residents use perspective scaling in the sandbox: farther back on the stage
+  renders smaller, and closer to the front renders larger.
 
 ### Manifest activation
 

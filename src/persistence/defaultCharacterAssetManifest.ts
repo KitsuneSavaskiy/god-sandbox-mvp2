@@ -9,6 +9,8 @@ import {
 const updatedAt = "2026-05-07T00:00:00.000Z";
 const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png";
+const RYO_PO_PREVIEW_COMBINED_SHEET_PATH =
+  "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v5.png";
 
 const EVE_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
   kind: "motion",
@@ -33,6 +35,43 @@ const EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
   kind: "extended",
   frameWidth: 118,
   frameHeight: 136,
+  columns: 7,
+  rows: 14,
+  motions: {
+    "walk-up": { row: 8, frames: 7 },
+    "walk-down": { row: 9, frames: 7 },
+    "walk-forward": { row: 9, frames: 7 },
+    "walk-back": { row: 8, frames: 7 },
+    "emote-happy": { row: 10, frames: 7 },
+    "emote-angry": { row: 11, frames: 7 },
+    "emote-sad": { row: 12, frames: 7 },
+    "emote-surprised": { row: 13, frames: 7 },
+  },
+};
+
+const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
+  kind: "motion",
+  frameWidth: 127,
+  frameHeight: 126,
+  columns: 7,
+  rows: 14,
+  motions: {
+    idle: { row: 0, frames: 7 },
+    "walk-right": { row: 1, frames: 7 },
+    "walk-left": { row: 2, frames: 7 },
+    waving: { row: 3, frames: 7 },
+    jumping: { row: 4, frames: 7 },
+    failed: { row: 5, frames: 5 },
+    waiting: { row: 6, frames: 7 },
+    running: { row: 1, frames: 7 },
+    review: { row: 7, frames: 7 },
+  },
+};
+
+const RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
+  kind: "extended",
+  frameWidth: 127,
+  frameHeight: 126,
   columns: 7,
   rows: 14,
   motions: {
@@ -107,6 +146,14 @@ assertRequiredSpriteSheetMotions(
   EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
   "eve-po-preview-combined-extended-sheet",
 );
+assertRequiredSpriteSheetMotions(
+  RYO_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  "ryo-po-preview-combined-motion-sheet",
+);
+assertRequiredSpriteSheetMotions(
+  RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  "ryo-po-preview-combined-extended-sheet",
+);
 
 // Keep legacy export alias so runtime.test.ts can update incrementally
 export const DEFAULT_RESIDENT_SPRITE_SHEET_METADATA = DEFAULT_MOTION_SHEET_METADATA;
@@ -179,6 +226,36 @@ function createEvePoPreviewCombinedExtendedSheet(): AssetManifestEntry {
     fallbackAssetId: "eve-portrait-neutral",
     generatedFromAssetIds: ["eve-portrait-neutral"],
     spriteSheet: EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
+  };
+}
+
+function createRyoPoPreviewCombinedMotionSheet(): AssetManifestEntry {
+  return {
+    id: "ryo-sprite-sheet",
+    ownerCharacterId: "chr_ryo",
+    kind: "sprite-sheet",
+    status: "ready",
+    sourcePath: "assets/generated/residents/ryo/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${RYO_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: RYO_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "ryo-portrait-neutral",
+    generatedFromAssetIds: ["ryo-portrait-neutral"],
+    spriteSheet: RYO_PO_PREVIEW_COMBINED_MOTION_METADATA,
+  };
+}
+
+function createRyoPoPreviewCombinedExtendedSheet(): AssetManifestEntry {
+  return {
+    id: "ryo-sprite-sheet-extended",
+    ownerCharacterId: "chr_ryo",
+    kind: "sprite-sheet-extended",
+    status: "ready",
+    sourcePath: "assets/generated/residents/ryo/po-preview/resident-sprite-sheet-combined.png",
+    publicPath: `/${RYO_PO_PREVIEW_COMBINED_SHEET_PATH}`,
+    relativePath: RYO_PO_PREVIEW_COMBINED_SHEET_PATH,
+    fallbackAssetId: "ryo-portrait-neutral",
+    generatedFromAssetIds: ["ryo-portrait-neutral"],
+    spriteSheet: RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA,
   };
 }
 
@@ -264,8 +341,8 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       kind: "appearance-source",
       relativePath: "art/characters/defaults/ryo/portrait.png",
     },
-    createResidentMotionSheetPlaceholder("ryo", "chr_ryo"),
-    createResidentExtendedSheetPlaceholder("ryo", "chr_ryo"),
+    createRyoPoPreviewCombinedMotionSheet(),
+    createRyoPoPreviewCombinedExtendedSheet(),
     {
       id: "ryo-expression-happy",
       ownerCharacterId: "chr_ryo",

@@ -375,12 +375,15 @@
   content: "";
   filter: blur(1px);
   transform: scaleX(var(--resident-shadow-scale));
+  transition: transform 3.2s ease;
 }
 
 .event-first-sandbox__resident--paused {
   --resident-motion-note-opacity: 0.92;
+}
 
-  animation-play-state: paused;
+.event-first-sandbox__resident--position-frozen {
+  animation: none;
   transition-property: none;
 }
 
@@ -503,6 +506,11 @@
   --resident-patrol-duration: 3.8s;
 }
 
+.event-first-sandbox__resident.event-first-sandbox__resident--position-frozen {
+  animation-name: none;
+  transition-property: none;
+}
+
 .event-first-sandbox__apostle-runner {
   --apostle-frame-size: 72px;
   --apostle-sheet-width: 432px;
@@ -608,6 +616,9 @@ button.event-first-sandbox__emote:disabled {
   font: inherit;
   transform: scale(var(--resident-scale)) rotate(var(--resident-tilt));
   transform-origin: center bottom;
+  transition:
+    transform 3.2s ease,
+    filter 180ms ease;
 }
 
 .event-first-sandbox__resident-figure {
