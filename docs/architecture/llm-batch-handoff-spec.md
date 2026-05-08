@@ -28,18 +28,27 @@ GodSandbox における外部 AI（LLM・画像生成）への情報送信境界
 
 ### Review Batch（Passport 生成）
 
-外部 AI に渡す情報：
+**Raw Passport JSON（内部保存・未送信）**
+
+Raw Passport JSON はシステム内部に保存される記録であり、外部 AI へは送信しない。
+`currentFaith`（数値）を含んでいてよい。
+
+**外部 AI プロンプトテキスト（`externalAiPromptBlock`）**
+
+Raw Passport JSON から外部 AI へ渡すテキストを構築する際に含めてよい情報：
 - キャラクター名・性格要約
 - 話し方（口調・禁止事項）
 - 箱庭での出来事の自然言語要約（数値なし）
-- 神との関係の段階（faithBand のみ、数値は含めない）
+- 神との関係の段階（`faithBand` のみ、`currentFaith` 数値は含めない）
 - 発話例
 
-外部 AI に渡してはならない情報：
+外部 AI プロンプトテキストに含めてはならない情報：
 - 陰陽五行の内部値（`wood`, `fire`, `earth`, `metal`, `water`, `yin`, `yang`）
-- 信仰度の詳細な数値（`currentFaith`）
+- 信仰度の数値（`currentFaith`）— `faithBand` + `interpretationOfGod` のみ使用する
 - ユーザーのアカウント情報
 - GodSandbox 固有の計算パラメータ
+
+> **注意**: ユーザーが確認画面で Raw Passport JSON をコピーして直接外部 AI に貼り付けた場合は、`currentFaith` 数値も外部に渡ることになる。これはユーザーの意図的な操作であり、このドキュメントの制約（システムが自動送信しないこと）は満たされているが、ユーザーへの説明文に含めることを推奨する。
 
 ### Execution Job（Sprite Sheet 生成）
 
@@ -80,7 +89,7 @@ SPECA 手動ブリッジ domain: `llm_batch_handoff_boundary`
 2. GodSandbox core app MUST NOT call external LLM or image generation APIs directly
 3. LLM バッチパケット MUST include only purpose-allowlisted fields
 4. API keys, tokens, secrets, account information MUST NOT appear in any LLM batch packet
-5. Five-phase values and yin-yang internal values MUST NOT appear in any LLM batch packet
+5. Five-phase values, yin-yang internal values, and currentFaith numeric values MUST NOT appear in the external AI prompt text (externalAiPromptBlock); use faithBand and interpretationOfGod instead
 6. Sprite sheet generation jobs MUST preserve thread isolation and MUST NOT batch multiple sprite sheets into one generation thread
 7. Generated LLM or image result MUST enter incoming/candidate/needs_review and MUST NOT be treated as adopted/ready
 8. LLM result MUST NOT overwrite official narrative, asset, character profile, snapshot, passport, WorldEvent, or ChangeSet before user review
@@ -89,15 +98,18 @@ SPECA 手動ブリッジ domain: `llm_batch_handoff_boundary`
 
 ---
 
-## 5. 出力禁止事項
+## 5. 外部 AI プロンプトテキスト 禁止事項
 
-Passport に含まれない（外部 AI に渡さない）情報：
+`externalAiPromptBlock`（外部 AI へのプロンプトテキスト）に含めてはならない情報：
 
 ```
 ✗ 陰陽五行の内部値（wood: 0.42 など）
-✗ 信仰度の詳細な数値（currentFaith: 58 など）
+✗ 信仰度の数値（currentFaith: 58 など）— faithBand + interpretationOfGod のみ使用
 ✗ ユーザーのアカウント情報
 ✗ GodSandbox 固有の計算パラメータ
 ✗ API キー・トークン・シークレット
 ✗ ローカルファイルパス（/home/... など）
 ```
+
+Raw Passport JSON（内部保存）は上記の値を含んでいてよい。
+外部 AI へ送信するプロンプトテキストを構築するときにのみ上記制約が適用される。
