@@ -5,9 +5,9 @@ inputs:
   - divine_action
   - world_state_summary
   - ryo_emotion
-  - faith_level
-  - fear_level
-  - trust_level
+  - faith_band
+  - fear_band
+  - trust_band
 output_schema: ../schemas/ryo_reaction.schema.json
 constraints:
   max_chars_ja: 42
@@ -24,6 +24,5 @@ expressions:
   - watch
   - test
 notes: |
-  faith_level / fear_level / trust_level は生数値ではなく
-  faithBand / fearBand / trustBand（文字列）に変換して渡すこと。
+  faith_band / fear_band / trust_band は生数値ではなく文字列バンド値。
   ゲーム内部の数値を LLM コンテキストに含めてはいけない。

@@ -31,8 +31,12 @@ export function clearTraces(): void {
   _traces.length = 0;
 }
 
-export function buildTraceId(feature: string, now: string): string {
-  return `gs_trace_${feature}_${Date.parse(now).toString(36)}`;
+export function buildTraceId(
+  feature: string,
+  now: string,
+  seed = Math.random().toString(36).slice(2, 8),
+): string {
+  return `gs_trace_${feature}_${Date.parse(now).toString(36)}_${seed}`;
 }
 
 export function hashWorldState(tags: string[], eventSummary: string): string {

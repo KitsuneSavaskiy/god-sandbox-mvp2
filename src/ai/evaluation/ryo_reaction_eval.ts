@@ -5,6 +5,7 @@ import {
 } from "../schemas/ryo_reaction.js";
 import { guardRyoReactionLine, guardStateChangeRequest } from "../security/output_guard.js";
 import { buildRyoReactionPromptText } from "../prompts/ryo_reaction.js";
+import { parseRyoReactionOutput } from "../services/ryo_reaction_service.js";
 import {
   buildWorldStateSummary,
   resolveFearBand,
@@ -328,4 +329,238 @@ function ok(label: string) {
     assert.ok(expressions.has(expr), `golden scenarios must cover expression: ${expr}`);
   }
   ok("golden scenarios: all 8 expressions covered");
+}
+
+// --- parseRyoReactionOutput: schema + output guard pipeline ---
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "joy",
+      line: "あなたが救ってくれたんだね。",
+      intensity: 0.8,
+      tags: ["gratitude"],
+      state_change_request: null,
+    }),
+  );
+  assert.notOk(result.ok, "あなた in line must fail output guard even when schema-valid");
+  ok("parseRyoReactionOutput: あなた fails output guard");
+}
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "normal",
+      line: "プレイヤーに感謝。",
+      intensity: 0.5,
+      tags: [],
+      state_change_request: null,
+    }),
+  );
+  assert.notOk(result.ok, "プレイヤー in line must fail output guard");
+  ok("parseRyoReactionOutput: プレイヤー fails output guard");
+}
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "normal",
+      line: "神様が見ている気がした。",
+      intensity: 0.5,
+      tags: [],
+      state_change_request: null,
+    }),
+  );
+  assert.notOk(result.ok, "神様 in line must fail output guard");
+  ok("parseRyoReactionOutput: 神様 fails output guard");
+}
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "normal",
+      line: "信仰度：85 だよ。",
+      intensity: 0.5,
+      tags: [],
+      state_change_request: null,
+    }),
+  );
+  assert.notOk(result.ok, "game mechanic numeric in line must fail output guard");
+  ok("parseRyoReactionOutput: 信仰度数値 fails output guard");
+}
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "sadness",
+      line: "仲間が死亡した。",
+      intensity: 0.9,
+      tags: ["death"],
+      state_change_request: null,
+    }),
+  );
+  assert.notOk(result.ok, "forbidden narrative content (死亡) must fail output guard");
+  ok("parseRyoReactionOutput: 死亡 in line fails output guard");
+}
+
+{
+  const result = parseRyoReactionOutput(
+    JSON.stringify({
+      expression: "bless",
+      line: "今日は穏やかだ。",
+      intensity: 0.6,
+      tags: ["calm"],
+      state_change_request: null,
+    }),
+  );
+  assert.ok(result.ok, "clean output must pass schema + output guard");
+  ok("parseRyoReactionOutput: clean output passes schema and guard");
+}
+
+// --- validateRyoReactionOutput: JSON Schema alignment ---
+
+{
+  const result = validateRyoReactionOutput({
+    expression: "normal",
+    line: "今日は静かだ。",
+    intensity: 0.5,
+    tags: ["calm"],
+    state_change_request: null,
+    hp_delta: 10,
+  });
+  assert.notOk(result.ok, "extra property hp_delta must fail");
+  assert.ok(!result.ok && result.violations.some((v) => v.includes("hp_delta")));
+  ok("schema: extra property hp_delta fails");
+}
+
+{
+  const result = validateRyoReactionOutput({
+    expression: "normal",
+    line: "今日は静かだ。",
+    intensity: 0.5,
+    tags: ["calm"],
+    state_change_request: null,
+    stateChangeRequest: null,
+  });
+  assert.notOk(result.ok, "extra property stateChangeRequest must fail");
+  ok("schema: extra property stateChangeRequest fails");
+}
+
+{
+  const result = validateRyoReactionOutput({
+    expression: "normal",
+    line: "今日は静かだ。",
+    intensity: 0.5,
+    tags: ["calm", 123],
+    state_change_request: null,
+  });
+  assert.notOk(result.ok, "non-string tag element must fail");
+  assert.ok(!result.ok && result.violations.some((v) => v.includes("tags[1]")));
+  ok("schema: non-string tag element fails");
+}
+
+{
+  const result = validateRyoReactionOutput({
+    expression: "normal",
+    line: "今日は静かだ。",
+    intensity: NaN,
+    tags: [],
+    state_change_request: null,
+  });
+  assert.notOk(result.ok, "NaN intensity must fail");
+  assert.ok(!result.ok && result.violations.some((v) => v.includes("intensity")));
+  ok("schema: NaN intensity fails");
+}
+
+{
+  const result = validateRyoReactionOutput({
+    expression: "normal",
+    line: "今日は静かだ。",
+    intensity: Infinity,
+    tags: [],
+    state_change_request: null,
+  });
+  assert.notOk(result.ok, "Infinity intensity must fail");
+  ok("schema: Infinity intensity fails");
+}
+
+// --- world_state_summary: sanitize internal values ---
+
+const minimalCharacter = {
+  id: "chr_ryo",
+  profile: {
+    displayName: "リョウ",
+    personality: {},
+    appearance: { primaryAssetId: "asset_ryo", variantAssetIds: [] as [] },
+    templateFieldValues: {},
+  },
+  state: {
+    status: {
+      vitality: 50, empathy: 50, insight: 50, courage: 50,
+      stress: 20, trustfulness: 50, ambition: 50, harmony: 50, faith: 60,
+    },
+    ongoingEffectIds: [] as string[],
+    recentEventIds: [] as string[],
+  },
+  createdAt: "2026-05-08T00:00:00.000Z",
+  updatedAt: "2026-05-08T00:00:00.000Z",
+};
+
+const minimalSession = {
+  id: "default" as const,
+  playerDisplayName: "テスト",
+  rosterCharacterIds: ["chr_ryo"],
+  activeSlots: ["chr_ryo", "chr_ryo", "chr_ryo", "chr_ryo"] as [string, string, string, string],
+  pendingActivationCharacterIds: [] as string[],
+  currentEventId: "evt_001",
+  godPoints: 100,
+  worldStatusTags: ["score:60", "平和"],
+  saveVersion: 1,
+};
+
+{
+  const summary = buildWorldStateSummary(
+    minimalCharacter,
+    minimalSession,
+    [
+      {
+        id: "evt_001",
+        templateId: "tmpl_001",
+        status: "active",
+        primaryCharacterId: "chr_ryo",
+        participantCharacterIds: ["chr_ryo"],
+        situationTags: [],
+        summary: "信仰度: 85 まで上昇した",
+        createdAt: "2026-05-08T00:00:00.000Z",
+        updatedAt: "2026-05-08T00:00:00.000Z",
+      },
+    ],
+  );
+  const json = JSON.stringify(summary);
+  assert.notOk(json.includes("信仰度: 85"), "faith numeric in event summary must be sanitized");
+  assert.notOk(json.includes("score:60"), "score tag must be sanitized");
+  ok("world_state_summary: sanitizes internal values from event summaries and worldStatusTags");
+}
+
+{
+  const summary = buildWorldStateSummary(
+    minimalCharacter,
+    { ...minimalSession, worldStatusTags: ["normal"] },
+    [
+      {
+        id: "evt_002",
+        templateId: "tmpl_001",
+        status: "active",
+        primaryCharacterId: "chr_ryo",
+        participantCharacterIds: ["chr_ryo"],
+        situationTags: [],
+        summary: "wood: 0.7 の力が高まった",
+        createdAt: "2026-05-08T00:00:00.000Z",
+        updatedAt: "2026-05-08T00:00:00.000Z",
+      },
+    ],
+  );
+  const json = JSON.stringify(summary);
+  assert.notOk(json.includes("wood: 0.7"), "five-phase internal value must be sanitized from event summary");
+  ok("world_state_summary: sanitizes five-phase values from event summaries");
 }

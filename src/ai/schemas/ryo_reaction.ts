@@ -81,6 +81,14 @@ export const RYO_REACTION_SCHEMA_FOR_LLM = JSON.stringify(
   2,
 );
 
+const ALLOWED_OUTPUT_KEYS = new Set([
+  "expression",
+  "line",
+  "intensity",
+  "tags",
+  "state_change_request",
+]);
+
 export function validateRyoReactionOutput(raw: unknown): RyoReactionValidationResult {
   const violations: string[] = [];
 
@@ -89,6 +97,12 @@ export function validateRyoReactionOutput(raw: unknown): RyoReactionValidationRe
   }
 
   const obj = raw as Record<string, unknown>;
+
+  for (const key of Object.keys(obj)) {
+    if (!ALLOWED_OUTPUT_KEYS.has(key)) {
+      violations.push(`additional property is not allowed: ${key}`);
+    }
+  }
 
   if (!RYO_EXPRESSIONS.has(String(obj.expression ?? ""))) {
     violations.push(`expression "${String(obj.expression)}" is not a valid RyoExpression`);
@@ -100,12 +114,23 @@ export function validateRyoReactionOutput(raw: unknown): RyoReactionValidationRe
     violations.push(`line exceeds 42 chars: ${obj.line.length}`);
   }
 
-  if (typeof obj.intensity !== "number" || obj.intensity < 0 || obj.intensity > 1) {
-    violations.push("intensity must be a number in [0.0, 1.0]");
+  if (
+    typeof obj.intensity !== "number" ||
+    !Number.isFinite(obj.intensity) ||
+    obj.intensity < 0 ||
+    obj.intensity > 1
+  ) {
+    violations.push("intensity must be a finite number in [0.0, 1.0]");
   }
 
   if (!Array.isArray(obj.tags)) {
     violations.push("tags must be an array");
+  } else {
+    for (const [index, tag] of (obj.tags as unknown[]).entries()) {
+      if (typeof tag !== "string") {
+        violations.push(`tags[${index}] must be a string`);
+      }
+    }
   }
 
   if (obj.state_change_request !== null) {

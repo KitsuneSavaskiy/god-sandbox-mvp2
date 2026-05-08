@@ -1,6 +1,21 @@
 import type { Character, SandboxSession, WorldEvent } from "../../domain/models.js";
 import { resolveFaithBand } from "../../domain/character.js";
 
+const INTERNAL_VALUE_PATTERNS: ReadonlyArray<RegExp> = [
+  /信仰度\s*[:：]\s*\d+/g,
+  /恐怖値\s*[:：]\s*\d+/g,
+  /スコア\s*[:：]\s*\d+/g,
+  /score\s*[:：]\s*\d+/gi,
+  /\b(wood|fire|earth|metal|water|yin|yang)\s*[:：]\s*[\d.]+/gi,
+];
+
+function sanitizeWorldContextText(text: string): string {
+  return INTERNAL_VALUE_PATTERNS.reduce(
+    (acc, pattern) => acc.replace(pattern, "[内部値]"),
+    text,
+  );
+}
+
 export type WorldStateSummary = {
   characterName: string;
   faithBand: string;
@@ -25,7 +40,7 @@ export function buildWorldStateSummary(
   const emotionSummary = describeEmotion(character);
   const recentActions = recentEvents
     .slice(-5)
-    .map((e) => e.summary)
+    .map((e) => sanitizeWorldContextText(e.summary))
     .filter((s) => s.length > 0);
 
   const currentEvent = recentEvents.at(-1);
@@ -37,8 +52,8 @@ export function buildWorldStateSummary(
     trustBand,
     emotionSummary,
     recentActions,
-    worldStatusTags: [...session.worldStatusTags],
-    currentEventSummary: currentEvent?.summary ?? "穏やかな日常が続いている",
+    worldStatusTags: [...session.worldStatusTags].map(sanitizeWorldContextText),
+    currentEventSummary: sanitizeWorldContextText(currentEvent?.summary ?? "穏やかな日常が続いている"),
   };
 }
 

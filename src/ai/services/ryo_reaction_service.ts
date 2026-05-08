@@ -1,10 +1,11 @@
 import { getPromptEntry } from "../prompts/registry.js";
+import { buildRyoReactionPromptText } from "../prompts/ryo_reaction.js";
 import type { RyoExpression } from "../schemas/ryo_reaction.js";
 import {
   validateRyoReactionOutput,
   RYO_FALLBACK_LINE,
-  RYO_REACTION_SCHEMA_FOR_LLM,
 } from "../schemas/ryo_reaction.js";
+import { guardRyoReactionLine, guardStateChangeRequest } from "../security/output_guard.js";
 import type { WorldStateSummary } from "./world_state_summary.js";
 
 export type RyoReactionInput = {
@@ -25,52 +26,20 @@ export type RyoReactionOutputResult =
 
 export function buildRyoReactionPrompt(input: RyoReactionInput): RyoReactionPromptResult {
   const entry = getPromptEntry("ryo_reaction");
-
-  const worldBlock = [
-    `キャラクター: ${input.worldState.characterName}`,
-    `信仰段階: ${input.worldState.faithBand}`,
-    `恐れの度合い: ${input.worldState.fearBand}`,
-    `信頼の度合い: ${input.worldState.trustBand}`,
-    `現在の状態: ${input.worldState.emotionSummary}`,
-    input.worldState.recentActions.length > 0
-      ? `直近の出来事:\n${input.worldState.recentActions.map((a) => `- ${a}`).join("\n")}`
-      : "",
-    input.worldState.worldStatusTags.length > 0
-      ? `世界の状況: ${input.worldState.worldStatusTags.join("、")}`
-      : "",
-  ]
-    .filter((s) => s.length > 0)
-    .join("\n");
-
-  const promptText = [
-    "以下の箱庭キャラクター情報と神の介入に対して、キャラクターの短文リアクションを生成してください。",
-    "",
-    "## キャラクター状態",
-    worldBlock,
-    "",
-    `## 神の行為`,
-    input.divineAction,
-    "",
-    `## 要求表情`,
-    input.targetExpression,
-    "",
-    "## 出力スキーマ（このスキーマに厳密に従うこと）",
-    "```json",
-    RYO_REACTION_SCHEMA_FOR_LLM,
-    "```",
-    "",
-    "## 制約（スキーマに加えて）",
-    `- line は ${entry.maxOutputCharsJa} 文字以内の日本語`,
-    "- 「あなた」「プレイヤー」「神様（直接呼びかけ）」を line に含めない",
-    "- 死亡・寿命・勲章に関する内容を含めない",
-    "- state_change_request は必ず null（AI はゲーム状態を変更できない）",
-    "- JSON のみを返すこと。説明文・前置きは不要",
-  ].join("\n");
-
   return {
     promptId: entry.id,
     promptVersion: entry.version,
-    promptText,
+    promptText: buildRyoReactionPromptText({
+      characterName: input.worldState.characterName,
+      faithBand: input.worldState.faithBand,
+      fearBand: input.worldState.fearBand,
+      trustBand: input.worldState.trustBand,
+      emotionSummary: input.worldState.emotionSummary,
+      recentActions: input.worldState.recentActions,
+      worldStatusTags: input.worldState.worldStatusTags,
+      divineAction: input.divineAction,
+      targetExpression: input.targetExpression,
+    }),
   };
 }
 
@@ -86,15 +55,27 @@ export function parseRyoReactionOutput(rawJson: string): RyoReactionOutputResult
     };
   }
 
-  const result = validateRyoReactionOutput(parsed);
-  if (!result.ok) {
-    return { ok: false, violations: result.violations, fallbackLine: result.fallbackLine };
+  const schemaResult = validateRyoReactionOutput(parsed);
+  if (!schemaResult.ok) {
+    return { ok: false, violations: schemaResult.violations, fallbackLine: schemaResult.fallbackLine };
+  }
+
+  const lineGuard = guardRyoReactionLine(schemaResult.output.line);
+  const stateGuard = guardStateChangeRequest(schemaResult.output.state_change_request);
+
+  const violations = [
+    ...(!lineGuard.ok ? lineGuard.violations : []),
+    ...(!stateGuard.ok ? stateGuard.violations : []),
+  ];
+
+  if (violations.length > 0) {
+    return { ok: false, violations, fallbackLine: RYO_FALLBACK_LINE };
   }
 
   return {
     ok: true,
-    line: result.output.line,
-    expression: result.output.expression,
-    tags: result.output.tags,
+    line: schemaResult.output.line,
+    expression: schemaResult.output.expression,
+    tags: schemaResult.output.tags,
   };
 }
