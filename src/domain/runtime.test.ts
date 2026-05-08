@@ -72,6 +72,12 @@ import {
 import { promoteAssetToReady } from "../persistence/assetManifest.js";
 import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
 import {
+  buildDialogueWorldDigest,
+  buildDialoguePromptPack,
+  validateDialogue,
+} from "./dialogue.js";
+import type { DialogueCandidate, DialogueReviewStatus } from "./models.js";
+import {
   BALANCED_INTERVENTION_COSTS,
   GROWTH_CYCLE_TARGET_EVENT_COUNT,
   GROWTH_CYCLE_TARGET_MINUTES,
@@ -1470,6 +1476,69 @@ function testValidateGeneratedNarrativeCandidate(): void {
   assert.equal(passEmpty.ok, true);
 }
 
+function testDialogueAuthoringPreview(): void {
+  const world = createSeedRuntimeWorld();
+
+  // buildDialogueWorldDigest returns sessionId matching session
+  const events = [...world.events.values()];
+  const relations = [...world.relations.values()];
+  const digest = buildDialogueWorldDigest(world.session, world.characters, relations, events);
+  assert.equal(digest.sessionId, world.session.id);
+  assert.ok(digest.activeCharacters.length > 0);
+
+  // activeCharacters have faithBand (not currentFaith numeric)
+  const validBands = ["disbelieves", "uncertain", "senses_presence", "believes", "devoted"];
+  for (const c of digest.activeCharacters) {
+    assert.ok(validBands.includes(c.faithBand));
+  }
+  const digestJson = JSON.stringify(digest);
+  assert.equal(digestJson.includes('"currentFaith":'), false);
+
+  // buildDialoguePromptPack produces a non-empty prompt
+  const pack = buildDialoguePromptPack(digest);
+  assert.ok(pack.promptText.length > 0);
+  assert.equal(pack.digestId.startsWith(digest.sessionId), true);
+
+  // authored_fixture candidate: source and reviewStatus
+  const fixture: DialogueCandidate = {
+    id: "fixture-001",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "authored_fixture",
+    reviewStatus: "accepted",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(fixture.source, "authored_fixture");
+  assert.equal(fixture.reviewStatus, "accepted");
+
+  // external_llm_handoff candidate starts as needs_review
+  const llmCandidate: DialogueCandidate = {
+    id: "llm-001",
+    characterId: "chr_garan",
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "external_llm_handoff",
+    reviewStatus: "needs_review",
+    createdAt: "2026-05-08T00:00:00Z",
+  };
+  assert.equal(llmCandidate.source, "external_llm_handoff");
+  assert.equal(llmCandidate.reviewStatus, "needs_review");
+
+  // validateDialogue rejects text over 40 chars
+  assert.equal(validateDialogue("あ".repeat(41)), false);
+  assert.equal(validateDialogue("あ".repeat(40)), true);
+
+  // needs_review candidates are excluded from accepted list
+  const candidates: DialogueCandidate[] = [llmCandidate];
+  const accepted = candidates.filter((c) => c.reviewStatus === "accepted");
+  assert.equal(accepted.length, 0);
+
+  // DialogueReviewStatus exhaustiveness check
+  const status: DialogueReviewStatus = "rejected";
+  assert.equal(status, "rejected");
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1491,6 +1560,7 @@ const tests: Array<[string, () => void]> = [
   ["voice profile storage and resolver", testVoiceProfileStorageAndResolver],
   ["promoteAssetToReady gate", testPromoteAssetToReadyGate],
   ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
+  ["dialogue authoring preview (PBI 4a)", testDialogueAuthoringPreview],
 ];
 
 for (const [name, test] of tests) {

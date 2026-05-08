@@ -302,6 +302,59 @@ export type CharacterSnapshot = {
   };
 };
 
+export type DialogueReviewStatus =
+  | "needs_review"
+  | "accepted"
+  | "rejected"
+  | "needs_rewrite";
+
+export type DialogueCandidateSource =
+  | "authored_fixture"
+  | "external_llm_handoff";
+
+export type DialogueCandidate = {
+  id: string;
+  characterId: string;
+  text: string;
+  type: "daily" | "relationship" | "god_indirect_reaction";
+  source: DialogueCandidateSource;
+  reviewStatus: DialogueReviewStatus;
+  faithBandContext?: FaithBand;
+  targetCharacterId?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+};
+
+export type DialogueWorldDigest = {
+  sessionId: string;
+  generatedAt: string;
+  activeCharacters: {
+    characterId: string;
+    name: string;
+    faithBand: FaithBand;
+    currentStatus: CharacterStatusBlock;
+    voiceProfileSummary: {
+      firstPerson: string;
+      speechPatterns: string[];
+      doNotSay: string[];
+    };
+  }[];
+  activeRelations: {
+    characterAId: string;
+    characterBId: string;
+    score: number;
+  }[];
+  recentEventSummary: string[];
+  currentSituationTag: string[];
+};
+
+export type DialoguePromptPack = {
+  digestId: string;
+  generatedAt: string;
+  promptText: string;
+};
+
 export type CharacterPassport = {
   id: string;
   snapshotId: string;
