@@ -117,6 +117,30 @@ export type FaithChangeRecord = {
   interventionId: string;
 };
 
+export type FivePhase = "wood" | "fire" | "earth" | "metal" | "water";
+export type YinYangPolarity = "yang" | "yin" | "balanced";
+export type EventPrincipleRole =
+  | "nourish"
+  | "restrain"
+  | "circulate"
+  | "reveal"
+  | "bind"
+  | "separate";
+
+export type EventTemplatePrincipleProfile = {
+  dominantPhase: FivePhase;
+  polarity: YinYangPolarity;
+  principleRole: EventPrincipleRole;
+};
+
+export type EventTemplate = {
+  id: string;
+  name: string;
+  situationTags: string[];
+  summaryTemplate: string;
+  principleProfile?: EventTemplatePrincipleProfile;
+};
+
 export type CharacterState = {
   status: CharacterStatusBlock;
   narrativeRole?: string;

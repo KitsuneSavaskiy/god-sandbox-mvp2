@@ -1,5 +1,12 @@
-import type { Character, CharacterRelation, SandboxSession, WorldEvent } from "./models.js";
+import type {
+  Character,
+  CharacterRelation,
+  EventTemplate,
+  SandboxSession,
+  WorldEvent,
+} from "./models.js";
 import { assertSandboxSessionInvariants } from "./session.js";
+import { calcEventWeight } from "./worldPrinciple.js";
 
 export type GenerateWorldEventInput = {
   session: SandboxSession;
@@ -8,6 +15,64 @@ export type GenerateWorldEventInput = {
   now: string;
   seed: string;
 };
+
+export const EVENT_TEMPLATES: readonly EventTemplate[] = [
+  {
+    id: "daily-sandbox-observation",
+    name: "小さな日常",
+    situationTags: ["daily-life", "focused-event"],
+    summaryTemplate: "{name}に小さな出来事が起きています。",
+    principleProfile: {
+      dominantPhase: "wood",
+      polarity: "yin",
+      principleRole: "circulate",
+    },
+  },
+  {
+    id: "small-disagreement",
+    name: "言葉の行き違い",
+    situationTags: ["daily-life", "friction"],
+    summaryTemplate: "{name}のまわりで、言葉の行き違いが起きています。",
+    principleProfile: {
+      dominantPhase: "fire",
+      polarity: "yang",
+      principleRole: "restrain",
+    },
+  },
+  {
+    id: "shared-work",
+    name: "共同作業",
+    situationTags: ["daily-life", "cooperation"],
+    summaryTemplate: "{name}が、誰かと小さな作業に取り組んでいます。",
+    principleProfile: {
+      dominantPhase: "earth",
+      polarity: "balanced",
+      principleRole: "bind",
+    },
+  },
+  {
+    id: "quiet-trial",
+    name: "静かな試練",
+    situationTags: ["daily-life", "small-trial"],
+    summaryTemplate: "{name}が、ひとりで小さな課題に向き合っています。",
+    principleProfile: {
+      dominantPhase: "metal",
+      polarity: "yang",
+      principleRole: "reveal",
+    },
+  },
+  {
+    id: "small-sadness",
+    name: "小さな沈黙",
+    situationTags: ["daily-life", "reflection"],
+    summaryTemplate: "{name}が、静かな気配に立ち止まっています。",
+    principleProfile: {
+      dominantPhase: "water",
+      polarity: "yin",
+      principleRole: "separate",
+    },
+  },
+];
 
 export function createWorldEvent(input: WorldEvent): WorldEvent {
   if (!input.primaryCharacterId) {
@@ -48,15 +113,32 @@ export function generateWorldEvent(input: GenerateWorldEventInput): WorldEvent {
     input.relations ?? [],
     input.seed,
   );
+  const participantCharacters = participantCharacterIds
+    .filter((characterId) => characterId !== primaryCharacter.id)
+    .map((characterId) => {
+      const character = input.characters.get(characterId);
+      if (!character) {
+        throw new Error(`Participant character not found: ${characterId}`);
+      }
+      return character;
+    });
+  const template = selectEventTemplate(
+    EVENT_TEMPLATES,
+    {
+      primaryCharacter,
+      participantCharacters,
+    },
+    input.seed,
+  );
 
   return createWorldEvent({
     id: `evt_${stableHash(`${input.seed}:${input.now}:${primaryCharacter.id}`).toString(36)}`,
-    templateId: "daily-sandbox-observation",
+    templateId: template.id,
     status: "active",
     primaryCharacterId: primaryCharacter.id,
     participantCharacterIds,
-    situationTags: ["daily-life", "focused-event"],
-    summary: `${primaryCharacter.profile.displayName}に小さな出来事が起きています。`,
+    situationTags: [...template.situationTags],
+    summary: template.summaryTemplate.replace("{name}", primaryCharacter.profile.displayName),
     structuredPayload: {
       seed: input.seed,
       primaryCharacterName: primaryCharacter.profile.displayName,
@@ -65,6 +147,35 @@ export function generateWorldEvent(input: GenerateWorldEventInput): WorldEvent {
     createdAt: input.now,
     updatedAt: input.now,
   });
+}
+
+export function selectEventTemplate(
+  templates: readonly EventTemplate[],
+  context: {
+    primaryCharacter: Character;
+    participantCharacters: Character[];
+  },
+  seed: string,
+): EventTemplate {
+  if (templates.length < 1) {
+    throw new Error("At least one event template is required.");
+  }
+
+  const weightedTemplates = templates.map((template) => ({
+    template,
+    weight: calcEventWeight(template, context),
+  }));
+  const totalWeight = weightedTemplates.reduce((sum, entry) => sum + entry.weight, 0);
+  let cursor = stableUnitInterval(`${seed}:event-template`) * totalWeight;
+
+  for (const entry of weightedTemplates) {
+    cursor -= entry.weight;
+    if (cursor <= 0) {
+      return entry.template;
+    }
+  }
+
+  return weightedTemplates[weightedTemplates.length - 1].template;
 }
 
 function selectEventParticipants(
@@ -162,6 +273,10 @@ function addParticipantIfNeeded(
 
 function deterministicIndex(seed: string, length: number): number {
   return stableHash(seed) % length;
+}
+
+function stableUnitInterval(seed: string): number {
+  return (stableHash(seed) % 1_000_000) / 1_000_000;
 }
 
 export function stableHash(value: string): number {

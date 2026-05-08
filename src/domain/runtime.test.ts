@@ -22,8 +22,16 @@ import {
   applyFaithChangeWithPersonality,
   applyIntervention,
 } from "./interventions.js";
-import { generateWorldEvent } from "./events.js";
-import type { Character, CharacterRelation, CharacterStatusBlock, SandboxSession, WorldEvent } from "./models.js";
+import { EVENT_TEMPLATES, generateWorldEvent, selectEventTemplate } from "./events.js";
+import type {
+  Character,
+  CharacterRelation,
+  CharacterStatusBlock,
+  EventTemplate,
+  FivePhase,
+  SandboxSession,
+  WorldEvent,
+} from "./models.js";
 import { replaceActiveSlot } from "./session.js";
 import {
   applyInterventionService,
@@ -36,6 +44,12 @@ import {
   normalizeCharacterStatus,
   resolveFaithBand,
 } from "./character.js";
+import {
+  calcEventWeight,
+  getPrincipleRelation,
+  resolveImplicitPhase,
+  resolvePolarity,
+} from "./worldPrinciple.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
@@ -1094,6 +1108,191 @@ function testFaithChangeApplication(): void {
   );
 }
 
+function testWorldPrincipleEngine(): void {
+  const status = (patch: Partial<CharacterStatusBlock>): CharacterStatusBlock => {
+    const next = { ...DEFAULT_CHARACTER_STATUS };
+    for (const [key, value] of Object.entries(patch)) {
+      if (typeof value === "number") {
+        next[key] = value;
+      }
+    }
+    return next;
+  };
+  const withStatus = (id: string, patch: Partial<CharacterStatusBlock>): Character => ({
+    ...character(id, id),
+    state: {
+      ...character(id, id).state,
+      status: status(patch),
+    },
+  });
+
+  assert.equal(resolveImplicitPhase(status({ ambition: 90, empathy: 85 })), "wood");
+  assert.equal(
+    resolveImplicitPhase(status({ courage: 90, stress: 85, ambition: 20, empathy: 20 })),
+    "fire",
+  );
+  assert.equal(
+    resolveImplicitPhase(
+      status({ harmony: 90, trustfulness: 85, ambition: 20, empathy: 20 }),
+    ),
+    "earth",
+  );
+  assert.equal(
+    resolveImplicitPhase(status({ insight: 90, stress: 10, ambition: 20, empathy: 20 })),
+    "metal",
+  );
+  assert.equal(
+    resolveImplicitPhase(status({ vitality: 95, empathy: 90, ambition: 20 })),
+    "water",
+  );
+  assert.equal(
+    resolveImplicitPhase(
+      status({
+        ambition: 70,
+        empathy: 70,
+        vitality: 70,
+        courage: 40,
+        stress: 30,
+        harmony: 30,
+        trustfulness: 30,
+        insight: 30,
+      }),
+    ),
+    "wood",
+  );
+
+  const expectedRelations: Record<FivePhase, Record<FivePhase, string>> = {
+    wood: {
+      wood: "neutral",
+      fire: "nourish",
+      earth: "restrain",
+      metal: "neutral",
+      water: "neutral",
+    },
+    fire: {
+      wood: "neutral",
+      fire: "neutral",
+      earth: "nourish",
+      metal: "restrain",
+      water: "neutral",
+    },
+    earth: {
+      wood: "neutral",
+      fire: "neutral",
+      earth: "neutral",
+      metal: "nourish",
+      water: "restrain",
+    },
+    metal: {
+      wood: "restrain",
+      fire: "neutral",
+      earth: "neutral",
+      metal: "neutral",
+      water: "nourish",
+    },
+    water: {
+      wood: "nourish",
+      fire: "restrain",
+      earth: "neutral",
+      metal: "neutral",
+      water: "neutral",
+    },
+  };
+  const phases = Object.keys(expectedRelations) as FivePhase[];
+  for (const from of phases) {
+    for (const to of phases) {
+      assert.equal(getPrincipleRelation(from, to), expectedRelations[from][to]);
+    }
+  }
+
+  const woodCharacter = withStatus("chr_wood", {
+    ambition: 90,
+    empathy: 85,
+    vitality: 40,
+    courage: 20,
+    stress: 20,
+  });
+  const fireTemplate: EventTemplate = {
+    id: "fire-template",
+    name: "Fire Template",
+    situationTags: ["test"],
+    summaryTemplate: "{name}",
+    principleProfile: {
+      dominantPhase: "fire",
+      polarity: "balanced",
+      principleRole: "restrain",
+    },
+  };
+  const metalTemplate: EventTemplate = {
+    id: "metal-template",
+    name: "Metal Template",
+    situationTags: ["test"],
+    summaryTemplate: "{name}",
+    principleProfile: {
+      dominantPhase: "metal",
+      polarity: "balanced",
+      principleRole: "reveal",
+    },
+  };
+  const untaggedTemplate: EventTemplate = {
+    id: "untagged",
+    name: "Untagged",
+    situationTags: ["test"],
+    summaryTemplate: "{name}",
+  };
+  const context = { primaryCharacter: woodCharacter, participantCharacters: [] };
+
+  assert.equal(resolvePolarity(status({ courage: 90, stress: 90, ambition: 90 })), "yang");
+  assert.equal(resolvePolarity(status({ vitality: 90, harmony: 90, empathy: 90, stress: 10 })), "yin");
+  assert.equal(resolvePolarity(DEFAULT_CHARACTER_STATUS), "balanced");
+  assert.equal(calcEventWeight(untaggedTemplate, context), 1.0);
+  assert.equal(
+    calcEventWeight(fireTemplate, context) > calcEventWeight(metalTemplate, context),
+    true,
+  );
+
+  const selectedFirst = selectEventTemplate(EVENT_TEMPLATES, context, "principle-seed");
+  const selectedSecond = selectEventTemplate(EVENT_TEMPLATES, context, "principle-seed");
+  assert.equal(selectedFirst.id, selectedSecond.id);
+
+  const state = worldState();
+  const generatedFirst = generateWorldEvent({
+    session: state.session,
+    characters: state.characters,
+    relations: [...state.relations.values()],
+    now,
+    seed: "principle-event-seed",
+  });
+  const generatedSecond = generateWorldEvent({
+    session: state.session,
+    characters: state.characters,
+    relations: [...state.relations.values()],
+    now,
+    seed: "principle-event-seed",
+  });
+  assert.equal(generatedFirst.templateId, generatedSecond.templateId);
+  assert.equal(EVENT_TEMPLATES.some((template) => template.id === generatedFirst.templateId), true);
+  assert.equal(JSON.stringify(generatedFirst).includes('"wood":'), false);
+  assert.equal(JSON.stringify(generatedFirst).includes('"fire":'), false);
+
+  const issuedSnapshot = issueSnapshotService(worldState(), {
+    characterId: "chr_a",
+    snapshotId: "snp_no_phase",
+    now,
+  });
+  const issuedPassport = issuePassportService(issuedSnapshot.state, {
+    snapshotId: "snp_no_phase",
+    passportId: "psp_no_phase",
+    fileNameToken: "no-phase",
+    schemaVersion: 1,
+    now,
+  });
+  const passportDisplayJson = JSON.stringify(issuedPassport.passport.display);
+  for (const phase of phases) {
+    assert.equal(passportDisplayJson.includes(`"${phase}":`), false);
+  }
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1111,6 +1310,7 @@ const tests: Array<[string, () => void]> = [
   ["intervention result emotes remain visible", testInterventionResultEmotesRemainVisible],
   ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
   ["faith change application", testFaithChangeApplication],
+  ["world principle engine", testWorldPrincipleEngine],
 ];
 
 for (const [name, test] of tests) {
