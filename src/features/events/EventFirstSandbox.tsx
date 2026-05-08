@@ -995,6 +995,10 @@ export function EventFirstSandbox({
                 ? "event-first-sandbox__resident--sprite-ready"
                 : "event-first-sandbox__resident--sprite-fallback"
             } ${
+              isVariableWidthFailedResident(resident)
+                ? "event-first-sandbox__resident--failed-variable"
+                : ""
+            } ${
               sandboxPaused ? "event-first-sandbox__resident--position-frozen" : ""
             } ${
               residentVisualPaused ? "event-first-sandbox__resident--paused" : ""
@@ -1434,18 +1438,25 @@ function resolveResidentSpriteSheetMetadata(
   };
 }
 
+function isVariableWidthFailedResident(resident: ResidentViewModel): boolean {
+  return resident.motion === "failed" && resident.spriteSheetMetadata?.frames === 5;
+}
+
 function createResidentStyle(resident: ResidentViewModel): CSSProperties {
   const useExtended = EXTENDED_SHEET_MOTIONS.has(resident.motion) && resident.extendedSheetPath !== null;
   const activeSheetPath = useExtended ? resident.extendedSheetPath : resident.spriteSheetPath;
   if (!activeSheetPath) return {};
 
   const metadata = resident.spriteSheetMetadata;
+  const failedFrameMaxSpan = isVariableWidthFailedResident(resident) ? 2 : 1;
+  const emoteTopInset = resolveResidentEmoteTopInset(metadata);
 
   return {
     "--resident-sprite-sheet": `url("${activeSheetPath}")`,
     "--resident-frame-width": metadata ? `${metadata.frameWidth}px` : undefined,
     "--resident-frame-height": metadata ? `${metadata.frameHeight}px` : undefined,
-    "--resident-frame-max-span": resident.motion === "failed" ? 2 : 1,
+    "--resident-frame-max-span": failedFrameMaxSpan,
+    "--resident-emote-top-inset": `${emoteTopInset}px`,
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
       : undefined,
@@ -1460,6 +1471,26 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
       : undefined,
     "--resident-sprite-frames": metadata?.frames,
   } as CSSProperties;
+}
+
+function resolveResidentEmoteTopInset(metadata: ResidentSpriteMetadata | null): number {
+  if (!metadata) {
+    return 0;
+  }
+
+  if (metadata.frameWidth === 148 && metadata.frameHeight === 144) {
+    return 18;
+  }
+
+  if (metadata.frameWidth === 118 && metadata.frameHeight === 136) {
+    return 12;
+  }
+
+  if (metadata.frameWidth === 127 && metadata.frameHeight === 126) {
+    return 4;
+  }
+
+  return 0;
 }
 
 function createResidentPlacementStyle(resident: ResidentViewModel): CSSProperties {

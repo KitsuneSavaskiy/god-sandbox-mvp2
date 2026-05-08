@@ -58,10 +58,7 @@ export function resolveResidentEmote(input: {
     if (input.isPrimary) {
       return "event-alert";
     }
-    if (input.isSupporting) {
-      return "talk-request";
-    }
-    return null;
+    return "talk-request";
   }
 
   if (!input.latestOutcome) {
@@ -141,8 +138,7 @@ export function isResidentMovementBlockingEmote(emote: EmoteKind): boolean {
     emote === "joy" ||
     emote === "anger" ||
     emote === "sadness" ||
-    emote === "surprise" ||
-    emote === "talk-request"
+    emote === "surprise"
   );
 }
 

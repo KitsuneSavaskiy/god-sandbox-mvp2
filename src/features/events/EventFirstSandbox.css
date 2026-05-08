@@ -342,6 +342,7 @@
   --resident-frame-height: 208px;
   --resident-frame-max-span: 1;
   --resident-display-scale: 1.5;
+  --resident-emote-top-inset: 0px;
   --resident-sheet-width: 1536px;
   --resident-sheet-height: 1872px;
   --resident-sheet-x-end: -1536px;
@@ -570,6 +571,13 @@
   text-align: center;
 }
 
+.event-first-sandbox__resident--sprite-ready .event-first-sandbox__emote {
+  bottom: calc(
+    (var(--resident-frame-height) - var(--resident-emote-top-inset)) *
+      var(--resident-display-scale) * var(--resident-scale) + 4px
+  );
+}
+
 button.event-first-sandbox__emote {
   cursor: pointer;
 }
@@ -665,7 +673,11 @@ button.event-first-sandbox__emote:disabled {
   animation: event-first-resident-sprite-motion 1.1s steps(var(--resident-sprite-frames)) infinite;
 }
 
-.event-first-sandbox__resident--motion-failed .event-first-sandbox__resident-sprite {
+.event-first-sandbox__resident--motion-failed:not(.event-first-sandbox__resident--failed-variable) .event-first-sandbox__resident-sprite {
+  animation: event-first-resident-sprite-motion 1.25s steps(var(--resident-sprite-frames)) infinite;
+}
+
+.event-first-sandbox__resident--motion-failed.event-first-sandbox__resident--failed-variable .event-first-sandbox__resident-sprite {
   animation: event-first-resident-sprite-failed-motion 1.25s step-end infinite;
 }
 
