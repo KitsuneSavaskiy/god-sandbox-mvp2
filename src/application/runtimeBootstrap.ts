@@ -1,4 +1,4 @@
-import { DEFAULT_CHARACTER_STATUS } from "../domain/character.js";
+import { DEFAULT_CHARACTER_STATUS, normalizeCharacterStatus } from "../domain/character.js";
 import { createWorldEvent } from "../domain/events.js";
 import type {
   Character,
@@ -78,7 +78,7 @@ function seedCharacter(id: string, displayName: string): Character {
       templateFieldValues: {},
     },
     state: {
-      status: { ...DEFAULT_CHARACTER_STATUS },
+      status: normalizeCharacterStatus(DEFAULT_CHARACTER_STATUS),
       ongoingEffectIds: [],
       recentEventIds: [],
     },

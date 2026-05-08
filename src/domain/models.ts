@@ -87,8 +87,16 @@ export type CharacterStatusBlock = {
   trustfulness: number;
   ambition: number;
   harmony: number;
+  faith: number;
   [key: string]: number;
 };
+
+export type FaithBand =
+  | "disbelieves"
+  | "uncertain"
+  | "senses_presence"
+  | "believes"
+  | "devoted";
 
 export type CharacterState = {
   status: CharacterStatusBlock;
