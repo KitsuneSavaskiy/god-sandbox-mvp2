@@ -141,6 +141,38 @@ export type EventTemplate = {
   principleProfile?: EventTemplatePrincipleProfile;
 };
 
+export type VoiceSentenceLength = "short" | "medium" | "long";
+export type VoiceEmotionalExpression = "reserved" | "natural" | "expressive";
+export type VoicePoliteness = "casual" | "polite" | "formal";
+export type VoiceSilenceUsage = "frequent" | "occasional" | "rare";
+
+export type SandboxDialogueExample = {
+  type: "daily" | "relationship" | "god_indirect_reaction";
+  context?: string;
+  text: string;
+};
+
+export type PassportDialogueExample = {
+  type: "first_encounter" | "memory_reference" | "general";
+  faithBandContext: FaithBand;
+  text: string;
+};
+
+export type VoiceProfile = {
+  firstPerson: string;
+  secondPersonToCharacters: string;
+  sentenceLength: VoiceSentenceLength;
+  emotionalExpression: VoiceEmotionalExpression;
+  politeness: VoicePoliteness;
+  speechPatterns: string[];
+  silenceUsage: VoiceSilenceUsage;
+  sandboxDialogueExamples: SandboxDialogueExample[];
+  passportDialogueExamples: PassportDialogueExample[];
+  doNotSay: string[];
+  doNotInvent: string[];
+  continuityRules: string[];
+};
+
 export type CharacterState = {
   status: CharacterStatusBlock;
   narrativeRole?: string;
