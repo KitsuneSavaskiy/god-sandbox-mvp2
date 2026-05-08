@@ -58,7 +58,38 @@ export const REQUIRED_EXTENDED_SHEET_MOTIONS = [
   "emote-surprised",
 ] as const satisfies readonly SpriteSheetMotionName[];
 
-export type AssetReadinessStatus = "ready" | "placeholder" | "rejected" | "missing";
+export type AssetReadinessStatus =
+  | "ready"
+  | "needs_review"
+  | "placeholder"
+  | "rejected"
+  | "missing";
+
+export type AssetReadyApproval = {
+  approvedBy: string;
+  approvedAt: string;
+  approvalRole: "PO" | "manual-reviewer";
+};
+
+export function promoteAssetToReady(input: {
+  currentStatus: AssetReadinessStatus;
+  review: AssetReadyApproval;
+}): "ready" {
+  if (input.currentStatus !== "needs_review") {
+    throw new Error(
+      `Cannot promote to ready from '${input.currentStatus}'. Asset must be in 'needs_review' state first.`
+    );
+  }
+  if (!input.review.approvedBy || !input.review.approvedAt) {
+    throw new Error("Cannot promote to ready without approvedBy and approvedAt.");
+  }
+  if (input.review.approvalRole !== "PO" && input.review.approvalRole !== "manual-reviewer") {
+    throw new Error(
+      `Invalid approvalRole '${String(input.review.approvalRole)}'. Must be 'PO' or 'manual-reviewer'.`,
+    );
+  }
+  return "ready";
+}
 
 export type AssetMissingReason =
   | "not-generated-yet"
