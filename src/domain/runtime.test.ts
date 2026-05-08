@@ -19,7 +19,7 @@ import {
 } from "../application/runtimeSelectors.js";
 import { applyIntervention } from "./interventions.js";
 import { generateWorldEvent } from "./events.js";
-import type { Character, CharacterRelation, SandboxSession, WorldEvent } from "./models.js";
+import type { Character, CharacterRelation, CharacterStatusBlock, SandboxSession, WorldEvent } from "./models.js";
 import { replaceActiveSlot } from "./session.js";
 import {
   applyInterventionService,
@@ -27,7 +27,11 @@ import {
   issuePassportService,
   issueSnapshotService,
 } from "../application/runtimeService.js";
-import { DEFAULT_CHARACTER_STATUS } from "./character.js";
+import {
+  DEFAULT_CHARACTER_STATUS,
+  normalizeCharacterStatus,
+  resolveFaithBand,
+} from "./character.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import { createWorldDirectoryLayout } from "../persistence/layout.js";
 import { createMigrationRegistry, CURRENT_SAVE_VERSION } from "../persistence/migrations.js";
@@ -933,6 +937,47 @@ function testInterventionResultEmotesRemainVisible(): void {
   assert.equal(isResidentMovementBlockingEmote("talk-request"), true);
 }
 
+function testFaithDomainModelDefaultsAndBands(): void {
+  assert.equal(DEFAULT_CHARACTER_STATUS.faith, 30);
+
+  const seedState = createSeedRuntimeWorld();
+  for (const character of seedState.characters.values()) {
+    assert.equal(character.state.status.faith, 30);
+  }
+
+  const legacyStatusWithoutFaith: Omit<CharacterStatusBlock, "faith"> = {
+    vitality: 41,
+    empathy: 42,
+    insight: 43,
+    courage: 44,
+    stress: 45,
+    trustfulness: 46,
+    ambition: 47,
+    harmony: 48,
+  };
+  const normalized = normalizeCharacterStatus(legacyStatusWithoutFaith);
+
+  assert.equal(normalized.vitality, 41);
+  assert.equal(normalized.faith, 30);
+
+  const faithBandBoundaries: Array<[number, ReturnType<typeof resolveFaithBand>]> = [
+    [0, "disbelieves"],
+    [19, "disbelieves"],
+    [20, "uncertain"],
+    [39, "uncertain"],
+    [40, "senses_presence"],
+    [59, "senses_presence"],
+    [60, "believes"],
+    [79, "believes"],
+    [80, "devoted"],
+    [100, "devoted"],
+  ];
+
+  for (const [faith, expectedBand] of faithBandBoundaries) {
+    assert.equal(resolveFaithBand(faith), expectedBand);
+  }
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -948,6 +993,7 @@ const tests: Array<[string, () => void]> = [
   ["invalid sprite metadata falls back to reviewing", testInvalidSpriteMetadataFallsBackToReviewing],
   ["resident sprite manifest read model", testResidentSpriteManifestReadModel],
   ["intervention result emotes remain visible", testInterventionResultEmotesRemainVisible],
+  ["faith domain model defaults and bands", testFaithDomainModelDefaultsAndBands],
 ];
 
 for (const [name, test] of tests) {

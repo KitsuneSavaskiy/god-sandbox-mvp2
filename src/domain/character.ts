@@ -1,4 +1,4 @@
-import type { Character, CharacterStatusBlock } from "./models.js";
+import type { Character, CharacterStatusBlock, FaithBand } from "./models.js";
 
 export const DEFAULT_CHARACTER_STATUS: CharacterStatusBlock = {
   vitality: 50,
@@ -9,6 +9,7 @@ export const DEFAULT_CHARACTER_STATUS: CharacterStatusBlock = {
   trustfulness: 50,
   ambition: 50,
   harmony: 50,
+  faith: 30,
 };
 
 export function cloneCharacter(character: Character): Character {
@@ -27,6 +28,36 @@ export function applyStatusDelta(
   }
 
   return next;
+}
+
+export function normalizeCharacterStatus(
+  raw: Partial<CharacterStatusBlock>,
+): CharacterStatusBlock {
+  return {
+    ...DEFAULT_CHARACTER_STATUS,
+    ...raw,
+    faith: clampStatus(raw.faith ?? DEFAULT_CHARACTER_STATUS.faith),
+  };
+}
+
+export function resolveFaithBand(faith: number): FaithBand {
+  if (faith < 20) {
+    return "disbelieves";
+  }
+
+  if (faith < 40) {
+    return "uncertain";
+  }
+
+  if (faith < 60) {
+    return "senses_presence";
+  }
+
+  if (faith < 80) {
+    return "believes";
+  }
+
+  return "devoted";
 }
 
 export function clampStatus(value: number): number {
