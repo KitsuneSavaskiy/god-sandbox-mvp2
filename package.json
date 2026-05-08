@@ -14,7 +14,9 @@
     "sprite:fit": "node tools/asset-pipeline/evaluate-sprite-frame-fit.mjs",
     "sidekick:intake": "node tools/sidekick/sidekick-intake.mjs",
     "sidekick:resident:hatch-pet": "node tools/sidekick/resident-hatch-pet-wrapper.mjs",
-    "sidekick:watch": "node tools/sidekick/job-watcher.mjs"
+    "sidekick:watch": "node tools/sidekick/job-watcher.mjs",
+    "security:git-boundary": "node tools/security/check-git-boundary.mjs --base origin/main",
+    "security:pr-text": "node tools/security/check-pr-text-boundary.mjs"
   },
   "dependencies": {
     "react": "latest",
