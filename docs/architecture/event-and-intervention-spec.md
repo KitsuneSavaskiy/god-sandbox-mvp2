@@ -139,6 +139,7 @@ interface InterventionRecord {
   - `1〜30`: 顔見知り程度
   - `31〜70`: 信頼関係
   - `71〜100`: 強い絆・深い信頼
+- `初期値 0` は新規 relation 作成時のデフォルト値である。seed world では、キャラクター同士に事前関係を持たせるため、0 以外の初期 relation score を明示してよい。例: `score: 12` は「顔見知り程度」であり、距離感発話（≤ -30）の強いトリガーではない。
 - relation score は高速参照のため current 値を materialize してよい。
 - ただし正本の導出経路は履歴側に置く。
   - event history
