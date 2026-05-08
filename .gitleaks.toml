@@ -1,0 +1,70 @@
+title = "GodSandbox gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key-base64"
+description = "Base64-encoded API key or secret (common rotation-evasion technique)"
+regex = '''(?i)(api[_-]?key|secret|token|password|credential)[^=\n]{0,20}=\s*['"]?[A-Za-z0-9+/]{40,}={0,2}['"]?'''
+severity = "HIGH"
+tags = ["secret", "encoded"]
+
+[[rules]]
+id = "hex-encoded-secret"
+description = "Hex-encoded secret or key (40+ hex chars near secret keyword)"
+regex = '''(?i)(api[_-]?key|secret|token|password)[^=\n]{0,20}=\s*['"]?[0-9a-fA-F]{40,}['"]?'''
+severity = "HIGH"
+tags = ["secret", "encoded"]
+
+[[rules]]
+id = "openai-sk-key"
+description = "OpenAI sk- API key"
+regex = '''sk-[A-Za-z0-9]{32,}'''
+severity = "CRITICAL"
+tags = ["openai", "api-key"]
+
+[[rules]]
+id = "github-pat-fine-grained"
+description = "GitHub fine-grained personal access token"
+regex = '''github_pat_[A-Za-z0-9_]{36,}'''
+severity = "CRITICAL"
+tags = ["github", "pat"]
+
+[[rules]]
+id = "github-pat-classic"
+description = "GitHub classic personal access token"
+regex = '''ghp_[A-Za-z0-9]{36,}'''
+severity = "CRITICAL"
+tags = ["github", "pat"]
+
+[[rules]]
+id = "github-oauth"
+description = "GitHub OAuth token"
+regex = '''gho_[A-Za-z0-9]{36,}'''
+severity = "CRITICAL"
+tags = ["github", "oauth"]
+
+[[rules]]
+id = "local-absolute-path-unix"
+description = "Unix absolute path to home directory (indicates local environment leak)"
+regex = '''/home/[a-zA-Z0-9_\-\.]+/[a-zA-Z0-9_\-\./]+'''
+severity = "MEDIUM"
+tags = ["local-path"]
+
+[[rules]]
+id = "local-absolute-path-macos"
+description = "macOS /Users/ absolute path (indicates local environment leak)"
+regex = '''/Users/[a-zA-Z0-9_\-\.]+/[a-zA-Z0-9_\-\./]+'''
+severity = "MEDIUM"
+tags = ["local-path"]
+
+[allowlist]
+description = "GodSandbox known false positives"
+regexes = [
+  # fileNameToken in passport spec — documented false positive (see ci allowlist commit 0c38c47)
+  '''fileNameToken''',
+  # Example paths in documentation
+  '''/home/\*\*''',
+  '''/Users/\*\*''',
+]
