@@ -373,13 +373,93 @@ export type DialoguePromptPack = {
   promptText: string;
 };
 
+export type PassportCharacterAssetRef = {
+  portraitAssetId: AssetId;
+  portraitPath?: string;
+  spriteSheetAssetId?: AssetId;
+  spriteSheetPath?: string;
+};
+
+export type PassportCharacterProfile = {
+  id: CharacterId;
+  name: string;
+  age?: number;
+  personalitySummary: string;
+  assetRef: PassportCharacterAssetRef;
+};
+
+export type PassportKeyEvent = {
+  eventId: string;
+  title: string;
+  interventionType?: "watch" | "help" | "trial";
+  outcome: "resolved" | "failed" | "ongoing";
+  characterReflection: string;
+};
+
+export type PassportRelationSummary = {
+  withCharacterId: CharacterId;
+  withCharacterName?: string;
+  relationDescription: string;
+};
+
+export type PassportLifeMemory = {
+  totalInterventions: number;
+  memorySummary: string;
+  keyEvents: PassportKeyEvent[];
+  relationSummaries: PassportRelationSummary[];
+};
+
+export type PassportGodRelationship = {
+  faithBand: FaithBand;
+  currentFaith: number;
+  faithVisibility: string;
+  faithChangeSummary: string;
+  interpretationOfGod: string;
+  firstEncounterOutsideWorld?: string;
+};
+
+export type PassportVoiceProfile = {
+  firstPerson: string;
+  speechPatterns: string[];
+  sentenceLength: VoiceSentenceLength;
+  emotionalExpression: VoiceEmotionalExpression;
+  sandboxDoNotSay: string[];
+  outsideWorldDoNotSay: string[];
+  doNotInvent: string[];
+  continuityRules: string[];
+  sandboxDialogueExamples: SandboxDialogueExample[];
+  passportDialogueExamples: PassportDialogueExample[];
+};
+
+export type InstructionReceptivityRule = {
+  faithBand: FaithBand;
+  generalStance: string;
+  complianceLevel: "high" | "moderate" | "cautious" | "skeptical";
+  refusalExample: string;
+};
+
+export type ExternalAiPromptBlock = {
+  systemPrompt: string;
+  firstEncounterLines: string[];
+  instructionReceptivity: InstructionReceptivityRule;
+  importantConstraints: string[];
+};
+
+export type PassportOutsideWorldPayload = {
+  character: PassportCharacterProfile;
+  lifeMemory: PassportLifeMemory;
+  godRelationship: PassportGodRelationship;
+  voiceProfile: PassportVoiceProfile;
+  externalAiPromptBlock: ExternalAiPromptBlock;
+};
+
 export type CharacterPassport = {
   id: string;
   snapshotId: string;
   schemaVersion: number;
   createdAt: string;
   fileNameToken: string;
-  display: Record<string, unknown>;
+  display: PassportOutsideWorldPayload;
   exportHints: {
     referencedCharacterFileId: CharacterId;
     referencedAssetIds: AssetId[];
