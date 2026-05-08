@@ -107,6 +107,40 @@ type PassportRelationSummary = {
 };
 ```
 
+### buildMemorySummary 関数
+
+`PassportLifeMemory` の `memorySummary` / `keyEvents` / `relationSummaries` を構築する補助関数。
+
+```ts
+function buildMemorySummary(input: {
+  events: WorldEvent[];          // status: "resolved" のもの。createdAt 降順でソート
+  relations: CharacterRelation[]; // |score| 降順でソート（tie-break: [characterAId, characterBId].sort().join("__") 昇順）
+  maxKeyEvents?: number;         // デフォルト 5
+}): {
+  memorySummary: string;
+  keyEvents: PassportKeyEvent[];
+  relationSummaries: PassportRelationSummary[];
+};
+```
+
+**フィールド名の注意:**
+- ソートキーは `event.createdAt`（`occurredAt` ではない）
+- relation のスコアは `relation.score`（`relationScore` ではない）
+
+### derivePassportDoNotSay 関数
+
+`sandboxDoNotSay` から `outsideWorldDoNotSay` を導出する補助関数。
+**各エントリは原子化されていること**（1つのエントリ = 1つの禁止概念）。
+
+```ts
+function derivePassportDoNotSay(sandboxDoNotSay: string[]): string[];
+```
+
+導出ルール:
+- `「あなた」` 呼びかけ禁止エントリは `outsideWorldDoNotSay` から除外する（Passport 後は OK）
+- 「目の前の相手としての「神様」」エントリも除外する（神との対話として扱うため）
+- ゲームUI関連禁止・一人称変更禁止・箱庭記憶改ざん禁止は維持する
+
 ### PassportVoiceProfile（送出版）
 
 VoiceProfile の外部公開サブセット。内部制約ではなく外部 AI への指示として整形する。

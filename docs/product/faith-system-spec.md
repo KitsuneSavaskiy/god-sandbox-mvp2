@@ -137,15 +137,21 @@ type FaithChangeTrigger =
   | "trial_success" | "trial_failure"
   | "player_memo_bonus" | "player_memo_penalty";
 
-// personality 修正なし、playerMemo 補正なしの基本変化量を返す
+type MemoGroup = "watch_trust" | "help_rescue" | "trial_growth";
+
+// trigger に対応する delta（変化量）のみを返す。clamp・personality修正・playerMemo補正なし。
+function resolveFaithDelta(trigger: FaithChangeTrigger): number;
+
+// currentFaith に trigger を適用した後の新しい faith 値（0〜100 clamped）を返す。
+// personality 修正なし、playerMemo 補正なし。
 function applyFaithChange(currentFaith: number, trigger: FaithChangeTrigger): number;
 
-// personality 修正と playerMemo 補正を含む実際の適用関数
+// personality 修正と playerMemo 補正を含む実際の適用関数。新しい faith 値（0〜100 clamped）を返す。
 function applyFaithChangeWithPersonality(
   character: Character,
   trigger: FaithChangeTrigger,
-  currentMemoGroup?: string | null,   // 今回 playerMemo のキーワードグループ
-  previousMemoGroup?: string | null   // 前回 playerMemo のキーワードグループ（補正判定用）
+  currentMemoGroup?: MemoGroup | null,   // 今回 playerMemo のキーワードグループ
+  previousMemoGroup?: MemoGroup | null   // 前回 playerMemo のキーワードグループ（補正判定用）
 ): number;
 ```
 

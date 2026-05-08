@@ -56,7 +56,9 @@
 ## 介入ルール
 
 - 介入 enum の正本は `watch | help | trial` とする。
-- 同じ event に複数回介入できる。
+- **MVP ルール: 1つの event に対して介入は1回のみ。** 介入を適用すると直ちに次の event へ進む。
+  - `applyFocusedEventInterventionCommand` は介入適用後に `generateCurrentEventService` を呼び出し、次の event を生成する。
+  - Codex 実装はこのパターンを維持すること。「同じ event への複数介入」は MVP スコープ外。
 - `watch` の resourceCost は `0` である。
 - `help` と `trial` は有限の god point を消費する。
 - resource 検証は persistence commit 前に application layer で行う。
@@ -132,6 +134,11 @@ interface InterventionRecord {
 
 ## relation 再計算ルール
 
+- relation score は `-100〜100` の範囲を取る整数。初期値は `0`（面識なし）。
+  - `0` 未満: 距離感・苦手意識あり
+  - `1〜30`: 顔見知り程度
+  - `31〜70`: 信頼関係
+  - `71〜100`: 強い絆・深い信頼
 - relation score は高速参照のため current 値を materialize してよい。
 - ただし正本の導出経路は履歴側に置く。
   - event history
