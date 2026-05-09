@@ -574,9 +574,15 @@
   animation-play-state: paused;
 }
 
+.event-first-sandbox__dialogue-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+}
+
 .event-first-sandbox__dialogue-bubble {
   position: absolute;
-  z-index: 9;
   max-width: min(220px, 48vw);
   padding: 8px 11px;
   border: 1px solid rgba(62, 74, 43, 0.18);
@@ -590,21 +596,23 @@
   font-weight: 800;
   line-height: 1.35;
   pointer-events: none;
-  transform: translate(-12%, -108%);
-  animation: event-first-dialogue-bubble-in 240ms ease both;
+  transform: translate(-50%, -108%);
+  animation:
+    event-first-dialogue-bubble-in 240ms ease both,
+    event-first-dialogue-bubble-out 360ms ease 3.8s forwards;
 }
 
 .event-first-sandbox__dialogue-bubble::after {
   position: absolute;
   bottom: -7px;
-  left: 18px;
+  left: 50%;
   width: 12px;
   height: 12px;
   border-right: 1px solid rgba(62, 74, 43, 0.16);
   border-bottom: 1px solid rgba(62, 74, 43, 0.16);
   background: rgba(255, 253, 244, 0.94);
   content: "";
-  transform: rotate(45deg);
+  transform: translateX(-50%) rotate(45deg);
 }
 
 .event-first-sandbox__emote {
@@ -1248,12 +1256,24 @@ button.event-first-sandbox__emote:disabled {
 @keyframes event-first-dialogue-bubble-in {
   from {
     opacity: 0;
-    transform: translate(-12%, -96%) scale(0.96);
+    transform: translate(-50%, -96%) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translate(-12%, -108%) scale(1);
+    transform: translate(-50%, -108%) scale(1);
+  }
+}
+
+@keyframes event-first-dialogue-bubble-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -108%) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translate(-50%, -112%) scale(0.98);
   }
 }
 
@@ -1300,15 +1320,21 @@ button.event-first-sandbox__emote:disabled {
 @media (prefers-reduced-motion: reduce) {
   .event-first-sandbox__world-backdrop-layer--current,
   .event-first-sandbox__world-backdrop-layer--previous,
-  .event-first-sandbox__clock-hand {
+  .event-first-sandbox__clock-hand,
+  .event-first-sandbox__dialogue-bubble {
     animation-duration: 1ms;
     animation-iteration-count: 1;
+    animation-delay: 0ms;
   }
 
   .event-first-sandbox__world-backdrop-layer,
   .event-first-sandbox__viewport,
   .event-first-sandbox__resident {
     transition-duration: 1ms;
+  }
+
+  .event-first-sandbox__dialogue-bubble {
+    animation: none;
   }
 }
 

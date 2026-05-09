@@ -374,6 +374,9 @@ export function EventFirstSandbox({
   const [observedDialogueBubbles, setObservedDialogueBubbles] = useState<
     ObservedDialogueBubble[]
   >([]);
+  const [pendingObservedDialogueBubbles, setPendingObservedDialogueBubbles] = useState<
+    ObservedDialogueBubble[]
+  >([]);
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
@@ -871,7 +874,10 @@ export function EventFirstSandbox({
     return activeCharacters;
   }
 
-  function queueObservedDialogue(trigger: DialogueTrigger, seed: string): void {
+  function createObservedDialogueBubbles(
+    trigger: DialogueTrigger,
+    seed: string,
+  ): ObservedDialogueBubble[] {
     const dialogueCharacters = resolveObservedDialogueCharacters(trigger);
     const candidates = createObservedDialogueCandidates({
       trigger,
@@ -884,14 +890,24 @@ export function EventFirstSandbox({
     });
     const visibleCandidates = selectVisibleObservedDialogueCandidates(candidates, 2);
     if (visibleCandidates.length === 0) {
-      return;
+      return [];
     }
 
-    const nextBubbles = visibleCandidates.map((candidate) => ({
+    return visibleCandidates.map((candidate) => ({
       id: candidate.id,
       characterId: candidate.characterId,
       text: candidate.text,
     }));
+  }
+
+  function queueObservedDialogue(trigger: DialogueTrigger, seed: string): void {
+    showObservedDialogueBubbles(createObservedDialogueBubbles(trigger, seed));
+  }
+
+  function showObservedDialogueBubbles(nextBubbles: ObservedDialogueBubble[]): void {
+    if (nextBubbles.length === 0) {
+      return;
+    }
 
     setObservedDialogueBubbles((current) => [...nextBubbles, ...current].slice(0, 2));
 
@@ -947,7 +963,9 @@ export function EventFirstSandbox({
     });
 
     onRuntimeStateChange(applied.state);
-    queueObservedDialogue("intervention_applied", `${currentEvent.id}-${type}`);
+    setPendingObservedDialogueBubbles(
+      createObservedDialogueBubbles("intervention_applied", `${currentEvent.id}-${type}`),
+    );
     setEventWindowOpen(true);
     setLatestOutcome(outcome);
     setSandboxStage("result");
@@ -969,6 +987,7 @@ export function EventFirstSandbox({
 
   function handleResultReviewed() {
     const nextEvent = selectCurrentEvent(runtimeState);
+    const pendingBubbles = pendingObservedDialogueBubbles;
     setStoryEntries((currentEntries) => [
       ...currentEntries,
       {
@@ -982,6 +1001,8 @@ export function EventFirstSandbox({
     ]);
     setLatestOutcome(null);
     setEventWindowOpen(false);
+    setPendingObservedDialogueBubbles([]);
+    showObservedDialogueBubbles(pendingBubbles);
     setSandboxStage("focused-event");
     setTutorialState((currentTutorial) =>
       advanceTutorialStep(currentTutorial, "result-reviewed"),
@@ -1200,23 +1221,29 @@ export function EventFirstSandbox({
             </button>
           </article>
         ))}
-        {observedDialogueBubbles.map((bubble) => {
-          const resident = activeResidents.find((item) => item.id === bubble.characterId);
-          if (!resident) {
-            return null;
-          }
+        <div
+          className="event-first-sandbox__dialogue-layer"
+          aria-live="polite"
+          aria-atomic="false"
+        >
+          {observedDialogueBubbles.map((bubble) => {
+            const resident = activeResidents.find((item) => item.id === bubble.characterId);
+            if (!resident) {
+              return null;
+            }
 
-          return (
-            <div
-              key={bubble.id}
-              className="event-first-sandbox__dialogue-bubble"
-              style={createDialogueBubblePlacementStyle(resident)}
-              aria-label={`${resident.displayName}のひとこと`}
-            >
-              <span>{bubble.text}</span>
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={bubble.id}
+                className="event-first-sandbox__dialogue-bubble"
+                style={createDialogueBubblePlacementStyle(resident, viewportSize.width)}
+                aria-label={`${resident.displayName}のひとこと`}
+              >
+                <span>{bubble.text}</span>
+              </div>
+            );
+          })}
+        </div>
         <div
           className={`event-first-sandbox__apostle-runner event-first-sandbox__apostle-runner--${
             apostleMotion.isMoving ? `moving-${apostleMotion.facing}` : "idle"
@@ -1777,10 +1804,23 @@ function resolveResidentSafeLeftPercent(
   );
 }
 
-function createDialogueBubblePlacementStyle(resident: ResidentViewModel): CSSProperties {
+function createDialogueBubblePlacementStyle(
+  resident: ResidentViewModel,
+  viewportWidth: number,
+): CSSProperties {
+  const estimatedBubbleWidth = viewportWidth > 0 ? Math.min(220, viewportWidth * 0.48) : 180;
+  const horizontalInsetPercent =
+    viewportWidth > 0
+      ? clamp(((estimatedBubbleWidth / 2 + 12) / viewportWidth) * 100, 12, 34)
+      : 18;
+
   return {
-    left: `${resident.movement.x}%`,
-    top: `${clamp(resident.movement.y - 7, 8, 86)}%`,
+    left: `${clamp(
+      resident.movement.x,
+      horizontalInsetPercent,
+      100 - horizontalInsetPercent,
+    )}%`,
+    top: `${clamp(resident.movement.y - 7, 12, 84)}%`,
   } as CSSProperties;
 }
 
