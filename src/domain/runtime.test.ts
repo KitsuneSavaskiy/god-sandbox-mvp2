@@ -28,6 +28,7 @@ import type {
   CharacterRelation,
   CharacterStatusBlock,
   EventTemplate,
+  FaithBand,
   FivePhase,
   SandboxSession,
   WorldEvent,
@@ -103,6 +104,15 @@ import {
   resolveResidentEmote,
   resolveResidentMotion,
 } from "../features/events/EventFirstSandboxEmotes.js";
+import {
+  hasSeenPassportConfirm,
+  markPassportConfirmSeen,
+} from "../features/passport/passportConfirmStorage.js";
+import {
+  FAITH_BAND_LABELS,
+  PASSPORT_CONFIRM_TEXTS,
+  PASSPORT_FORBIDDEN_WORDS,
+} from "../features/passport/passportUiText.js";
 
 type TestAssert = {
   deepEqual(actual: unknown, expected: unknown): void;
@@ -1744,6 +1754,41 @@ function testPassportOutsideWorldPayload(): void {
   assert.equal("interventionType" in eventsWithType[0], false);
 }
 
+function testPassportConfirmUi(): void {
+  const store = new Map<string, string>();
+  const mockStorage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
+    clear: () => {
+      store.clear();
+    },
+    get length() {
+      return store.size;
+    },
+    key: (i: number) => [...store.keys()][i] ?? null,
+  } as Storage;
+
+  assert.equal(hasSeenPassportConfirm(mockStorage), false);
+  markPassportConfirmSeen(mockStorage);
+  assert.equal(hasSeenPassportConfirm(mockStorage), true);
+  assert.equal(hasSeenPassportConfirm(mockStorage), true);
+
+  const allText = [...PASSPORT_CONFIRM_TEXTS.bodyLines, PASSPORT_CONFIRM_TEXTS.title].join(" ");
+  for (const word of PASSPORT_FORBIDDEN_WORDS) {
+    assert.equal(allText.includes(word), false);
+  }
+
+  const bands: FaithBand[] = ["disbelieves", "uncertain", "senses_presence", "believes", "devoted"];
+  for (const band of bands) {
+    assert.ok(FAITH_BAND_LABELS[band].length > 0);
+  }
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1767,6 +1812,7 @@ const tests: Array<[string, () => void]> = [
   ["validateGeneratedNarrativeCandidate", testValidateGeneratedNarrativeCandidate],
   ["dialogue authoring preview (PBI 4a)", testDialogueAuthoringPreview],
   ["passport outside world payload (PBI 5)", testPassportOutsideWorldPayload],
+  ["passport confirm UI (PBI 6)", testPassportConfirmUi],
 ];
 
 for (const [name, test] of tests) {
