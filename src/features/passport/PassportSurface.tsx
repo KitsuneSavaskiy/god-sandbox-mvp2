@@ -1,6 +1,10 @@
+import { useState } from "react";
 import type { CharacterPassport, CharacterSnapshot } from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button";
+import { PassportConfirmScreen } from "./PassportConfirmScreen.js";
+import { PassportJsonViewer } from "./PassportJsonViewer.js";
+import { hasSeenPassportConfirm, markPassportConfirmSeen } from "./passportConfirmStorage.js";
 import "./PassportSurface.css";
 
 type PassportSurfaceProps = {
@@ -8,13 +12,44 @@ type PassportSurfaceProps = {
   onIssuePassport: (snapshotId: string) => void;
 };
 
+type ConfirmPending = { snapshotId: string; characterName: string };
+
 export function PassportSurface({ state, onIssuePassport }: PassportSurfaceProps) {
+  const [confirmPending, setConfirmPending] = useState<ConfirmPending | null>(null);
+
   const snapshots = [...state.snapshots.values()].reverse();
   const passports = [...state.passports.values()].reverse();
   const issuedSnapshotIds = new Set(passports.map((passport) => passport.snapshotId));
 
+  function handleIssuePassport(snapshotId: string, characterName: string) {
+    if (!hasSeenPassportConfirm()) {
+      setConfirmPending({ snapshotId, characterName });
+    } else {
+      onIssuePassport(snapshotId);
+    }
+  }
+
+  function handleConfirm() {
+    if (!confirmPending) return;
+    markPassportConfirmSeen();
+    onIssuePassport(confirmPending.snapshotId);
+    setConfirmPending(null);
+  }
+
+  function handleCancel() {
+    setConfirmPending(null);
+  }
+
   return (
     <section className="passport-surface" aria-labelledby="passport-title">
+      {confirmPending && (
+        <PassportConfirmScreen
+          characterName={confirmPending.characterName}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
+
       <div>
         <p className="eyebrow">Step 2 / Passport</p>
         <h2 id="passport-title">Snapshotから単体キャラ Passport を発行する</h2>
@@ -32,7 +67,7 @@ export function PassportSurface({ state, onIssuePassport }: PassportSurfaceProps
                 key={snapshot.id}
                 snapshot={snapshot}
                 issued={issuedSnapshotIds.has(snapshot.id)}
-                onIssuePassport={onIssuePassport}
+                onIssuePassport={handleIssuePassport}
               />
             ))
           ) : (
@@ -60,7 +95,7 @@ function SnapshotPassportSource({
 }: {
   snapshot: CharacterSnapshot;
   issued: boolean;
-  onIssuePassport: (snapshotId: string) => void;
+  onIssuePassport: (snapshotId: string, characterName: string) => void;
 }) {
   return (
     <article className="passport-source">
@@ -70,7 +105,7 @@ function SnapshotPassportSource({
       <Button
         type="button"
         variant={issued ? "secondary" : "primary"}
-        onClick={() => onIssuePassport(snapshot.id)}
+        onClick={() => onIssuePassport(snapshot.id, snapshot.character.profile.displayName)}
       >
         {issued ? "もう一度発行" : "Passportを発行"}
       </Button>
@@ -81,9 +116,9 @@ function SnapshotPassportSource({
 function PassportCard({ passport }: { passport: CharacterPassport }) {
   return (
     <article className="passport-card">
-      <h4>{String(passport.display.character.name ?? "Unnamed")}</h4>
+      <h4>{passport.display.character.name}</h4>
       <code>{passport.fileNameToken}.json</code>
-      <pre className="passport-card__display">{JSON.stringify(passport.display, null, 2)}</pre>
+      <PassportJsonViewer passport={passport} />
     </article>
   );
 }
