@@ -28,36 +28,26 @@ These notes are short-lived and should be refreshed when the related PRs merge.
   - Invariants locked: faith hiding, dialogue handoff, observed dialogue runtime,
     passport boundary, AI observability.
 
-## Queue A: Active
+## Queue A: Active / Review Waiting
 
-### Codex next: PBI 4b-ui — Observed Dialogue Runtime UX Polish
+### Codex: PBI 4b-ui — Observed Dialogue Runtime UX Polish
 
-Status: ready to start after #281 merge.
+Status: PR #286 in review.
 
-Scope: visual polish for dialogue bubbles in EventFirstSandbox.
-Do not modify domain tests or smoke tests.
-
-Likely touched files:
-
+Scope:
 - `src/features/events/EventFirstSandbox.tsx`
 - `src/features/events/EventFirstSandbox.css`
-- `src/features/events/EventFirstSandboxEmotes.ts`
 
-Codex must not modify:
+Do not modify from docs lane.
 
-- `src/domain/runtime.test.ts`
-- `src/domain/dialogue.ts`
-- `src/ai/**`
+### Claude: PBI 8b — PO Playtest Kit + MVP Readiness Explainer
 
-### Claude next: PBI 8b — PO Playtest Kit + MVP Readiness Explainer
+Status: PR #285 in review.
 
-Status: in progress (docs/artifacts lane only).
-
-Scope: docs/operations/po-mvp-playtest-guide.md,
-docs/artifacts/po-mvp-readiness-explainer.html,
-docs/operations/pbi-next-queue.md (Current Coordination Notes only).
-
-Claude must not modify src/**.
+Scope:
+- `docs/operations/po-mvp-playtest-guide.md`
+- `docs/artifacts/po-mvp-readiness-explainer.html`
+- `docs/operations/pbi-next-queue.md`
 
 ## 2. Stable Next-PBI Definitions
 

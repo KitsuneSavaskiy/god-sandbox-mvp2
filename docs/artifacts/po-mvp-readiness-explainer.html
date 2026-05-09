@@ -460,36 +460,28 @@
 <h2>6. Observed Dialogue Runtime</h2>
 
 <div class="card">
-  <h3>3 種類の発話タイプ</h3>
+  <h3>現在の MVP 実装</h3>
   <table class="band-table">
-    <thead><tr><th>タイプ</th><th>内容</th><th>文字数</th></tr></thead>
+    <thead><tr><th>トリガー</th><th>ソース</th><th>発話対象</th></tr></thead>
     <tbody>
-      <tr><td>A: daily</td><td>日常発話（生活音）</td><td>5〜30 文字</td></tr>
-      <tr><td>B: relationship</td><td>キャラクター間の関係性発話</td><td>10〜30 文字</td></tr>
-      <tr><td>C: god_indirect_reaction</td><td>神の干渉への間接的反応</td><td>10〜35 文字</td></tr>
-    </tbody>
-  </table>
-
-  <h3>発話トリガー</h3>
-  <table class="band-table">
-    <thead><tr><th>トリガー</th><th>発話確率</th><th>Type C が選ばれる確率</th></tr></thead>
-    <tbody>
-      <tr><td>event_started / intervention_applied</td><td>80% 以上</td><td>50%</td></tr>
-      <tr><td>idle_timer</td><td>20%</td><td>0%</td></tr>
+      <tr><td>event_started</td><td>authored_fixture</td><td>イベント参加者のみ</td></tr>
+      <tr><td>intervention_applied</td><td>authored_fixture（神への間接反応）</td><td>イベント参加者のみ</td></tr>
+      <tr><td>idle_timer</td><td>authored_fixture（日常発話）</td><td>active residents から</td></tr>
     </tbody>
   </table>
 
   <h3>表示ルール</h3>
   <ul style="padding-left:18px; font-size:13px; margin-top:8px;">
     <li>同時表示最大 2 件</li>
-    <li>3〜5 秒でフェードアウト</li>
+    <li>数秒で自動的に消える</li>
+    <li><code>validateDialogue</code> を通過した候補のみ表示（禁止語・長さチェック済み）</li>
     <li><code>needs_review</code> 状態の候補は player-facing UI に出ない</li>
-    <li><code>validateDialogue</code> を通過した候補のみ表示</li>
+    <li>外部 LLM は呼ばない（authored_fixture のみ）</li>
   </ul>
 
   <div class="note" style="margin-top:12px;">
-    現在のソースは <code>authored_fixture</code>（人手で書いたテキスト）のみ。<br>
-    LLM リアルタイム統合は Sprint 10 以降。
+    現行 MVP は <strong>deterministic な authored_fixture</strong> による最小 runtime です。<br>
+    Type A/B/C の確率制御・relation-based dialogue・Ryo reaction service 接続・LLM runtime integration は将来拡張です。
   </div>
 </div>
 
