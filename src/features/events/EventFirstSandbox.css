@@ -463,6 +463,10 @@
 .event-first-sandbox__resident--motion-walk-right,
 .event-first-sandbox__resident--motion-walk-forward,
 .event-first-sandbox__resident--motion-walk-back,
+.event-first-sandbox__resident--motion-waving,
+.event-first-sandbox__resident--motion-jumping,
+.event-first-sandbox__resident--motion-waiting,
+.event-first-sandbox__resident--motion-review,
 .event-first-sandbox__resident--motion-emote-happy,
 .event-first-sandbox__resident--motion-emote-angry,
 .event-first-sandbox__resident--motion-emote-sad,
@@ -493,6 +497,22 @@
 
 .event-first-sandbox__resident--motion-walk-back {
   --resident-patrol-y: -16px;
+}
+
+.event-first-sandbox__resident--motion-waving,
+.event-first-sandbox__resident--motion-review {
+  --resident-patrol-y: -6px;
+  --resident-patrol-duration: 3.9s;
+}
+
+.event-first-sandbox__resident--motion-jumping {
+  --resident-patrol-y: -18px;
+  --resident-patrol-duration: 2.8s;
+}
+
+.event-first-sandbox__resident--motion-waiting {
+  --resident-patrol-y: -4px;
+  --resident-patrol-duration: 4.4s;
 }
 
 .event-first-sandbox__resident--motion-emote-happy {
@@ -720,6 +740,10 @@ button.event-first-sandbox__emote:disabled {
 .event-first-sandbox__resident--motion-walk-right .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-walk-forward .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-walk-back .event-first-sandbox__resident-sprite,
+.event-first-sandbox__resident--motion-waving .event-first-sandbox__resident-sprite,
+.event-first-sandbox__resident--motion-jumping .event-first-sandbox__resident-sprite,
+.event-first-sandbox__resident--motion-waiting .event-first-sandbox__resident-sprite,
+.event-first-sandbox__resident--motion-review .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-emote-happy .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-emote-angry .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--motion-emote-sad .event-first-sandbox__resident-sprite,

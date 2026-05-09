@@ -19,6 +19,10 @@ export type EmoteKind =
 export type ResidentMotionKey =
   | "idle"
   | "failed"
+  | "waving"
+  | "jumping"
+  | "waiting"
+  | "review"
   | "walk-up"
   | "walk-down"
   | "walk-left"

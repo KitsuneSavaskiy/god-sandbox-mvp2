@@ -6,23 +6,23 @@
     <title>Suzu PO Sprite Preview</title>
     <style>
       :root {
-        --sheet: url("/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png");
+        --sheet: url("/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png?v=cellfit2");
+        --grid-sheet: url("/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2-grid-review.png?v=cellfit2");
         --frame-width: 148px;
         --frame-height: 144px;
         --columns: 6;
         --rows: 14;
         --sheet-width: calc(var(--frame-width) * var(--columns));
         --sheet-height: calc(var(--frame-height) * var(--rows));
-        --preview-scale: 1.5;
+        --preview-scale: 1.45;
+        --strip-scale: 0.54;
+        --duration: 0.86s;
         color: #1f271d;
         background:
-          radial-gradient(circle at 16% 10%, rgba(169, 197, 118, 0.34), transparent 30rem),
-          linear-gradient(135deg, #f5f0df 0%, #e7f0e4 56%, #d0dec8 100%);
-        font-family:
-          "Yu Gothic UI",
-          "Hiragino Sans",
-          "Meiryo",
-          sans-serif;
+          radial-gradient(circle at 12% 8%, rgba(240, 214, 124, 0.3), transparent 26rem),
+          radial-gradient(circle at 88% 14%, rgba(117, 160, 113, 0.34), transparent 30rem),
+          linear-gradient(135deg, #f6f0df 0%, #e4efe2 55%, #cfdcc7 100%);
+        font-family: "Yu Gothic UI", "Hiragino Sans", "Meiryo", sans-serif;
       }
 
       * {
@@ -35,26 +35,31 @@
       }
 
       main {
-        width: min(1180px, calc(100% - 32px));
+        width: min(1240px, calc(100% - 28px));
         margin: 0 auto;
-        padding: 32px 0 48px;
+        padding: 28px 0 48px;
       }
 
       header {
         display: grid;
-        gap: 12px;
-        margin-bottom: 24px;
+        gap: 14px;
+        margin-bottom: 22px;
       }
 
       h1 {
         margin: 0;
-        font-size: clamp(28px, 5vw, 52px);
+        font-size: clamp(28px, 5vw, 54px);
         letter-spacing: -0.05em;
       }
 
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
       .lead {
-        max-width: 860px;
-        margin: 0;
+        max-width: 920px;
         color: #4f5a4a;
         line-height: 1.8;
       }
@@ -62,7 +67,7 @@
       .toolbar {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 10px;
         align-items: center;
       }
 
@@ -70,27 +75,38 @@
       .toolbar button {
         border: 1px solid rgba(51, 65, 42, 0.24);
         border-radius: 999px;
-        padding: 10px 16px;
+        padding: 10px 15px;
         color: #1f271d;
-        background: rgba(255, 255, 255, 0.66);
+        background: rgba(255, 255, 255, 0.72);
         box-shadow: 0 10px 28px rgba(67, 79, 54, 0.12);
         cursor: pointer;
         font: inherit;
         text-decoration: none;
       }
 
+      .toolbar button[aria-pressed="true"] {
+        background: #304029;
+        color: #f8f2df;
+      }
+
       .spec {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
         gap: 10px;
-        margin: 24px 0;
+        margin: 20px 0 24px;
+      }
+
+      .spec div,
+      .panel,
+      .motion-card {
+        border: 1px solid rgba(51, 65, 42, 0.16);
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow: 0 18px 40px rgba(67, 79, 54, 0.12);
       }
 
       .spec div {
-        border: 1px solid rgba(51, 65, 42, 0.16);
         border-radius: 18px;
         padding: 14px 16px;
-        background: rgba(255, 255, 255, 0.54);
       }
 
       .spec strong {
@@ -99,29 +115,102 @@
         color: #626c5d;
       }
 
-      .grid {
+      .review-layout {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        grid-template-columns: minmax(280px, 0.88fr) minmax(320px, 1.12fr);
         gap: 18px;
+        align-items: start;
+        margin-bottom: 22px;
+      }
+
+      .panel {
+        border-radius: 26px;
+        padding: 18px;
+      }
+
+      .panel h2 {
+        margin-bottom: 8px;
+        font-size: 20px;
+      }
+
+      .panel p,
+      .panel li {
+        color: #566152;
+        line-height: 1.65;
+      }
+
+      .check-list {
+        padding-left: 1.2em;
+      }
+
+      .sheet-preview {
+        max-height: 620px;
+        overflow: auto;
+        border-radius: 20px;
+        background:
+          repeating-conic-gradient(#f3f3f3 0 25%, #ffffff 0 50%) 50% / 24px 24px;
+      }
+
+      .sheet-preview img {
+        display: block;
+        width: 100%;
+        min-width: 560px;
+        height: auto;
+      }
+
+      .motion-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+        gap: 16px;
       }
 
       .motion-card {
         display: grid;
-        grid-template-columns: minmax(210px, max-content) 1fr;
-        gap: 14px;
-        align-items: center;
-        min-height: 220px;
-        border: 1px solid rgba(51, 65, 42, 0.16);
+        gap: 13px;
         border-radius: 24px;
         padding: 14px;
         background:
-          linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.46)),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.5)),
           repeating-linear-gradient(
             45deg,
-            rgba(85, 97, 72, 0.04) 0 8px,
+            rgba(85, 97, 72, 0.045) 0 8px,
             transparent 8px 16px
           );
-        box-shadow: 0 18px 40px rgba(67, 79, 54, 0.12);
+      }
+
+      .motion-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .motion-head h3 {
+        margin-bottom: 4px;
+        font-size: 18px;
+      }
+
+      .motion-head p {
+        margin-bottom: 0;
+        color: #5b6556;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .row-badge {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        padding: 6px 10px;
+        color: #f8f2df;
+        background: #304029;
+        font-size: 12px;
+      }
+
+      .motion-preview {
+        display: grid;
+        grid-template-columns: minmax(210px, max-content) 1fr;
+        gap: 12px;
+        align-items: center;
       }
 
       .sprite-box {
@@ -146,29 +235,49 @@
         background-repeat: no-repeat;
         background-size: var(--sheet-width) var(--sheet-height);
         background-position: 0 calc(var(--row) * var(--frame-height) * -1);
-        animation: play-row 0.86s steps(var(--motion-frames)) infinite;
+        animation: play-row var(--duration) steps(var(--motion-frames)) infinite;
         image-rendering: auto;
         filter: drop-shadow(0 10px 10px rgba(32, 46, 28, 0.24));
       }
 
-      .sprite--failed {
-        animation-duration: 1.25s;
+      .strip {
+        display: grid;
+        grid-template-columns: repeat(6, calc(var(--frame-width) * var(--strip-scale)));
+        gap: 5px;
+        align-content: start;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .strip-cell {
+        width: calc(var(--frame-width) * var(--strip-scale));
+        height: calc(var(--frame-height) * var(--strip-scale));
+        border: 1px solid rgba(73, 87, 63, 0.22);
+        border-radius: 10px;
+        overflow: hidden;
+        background:
+          repeating-conic-gradient(#eeeeee 0 25%, #ffffff 0 50%) 50% / 18px 18px;
+      }
+
+      .strip-sprite {
+        width: var(--frame-width);
+        height: var(--frame-height);
+        background-image: var(--sheet);
+        background-size: var(--sheet-width) var(--sheet-height);
+        background-repeat: no-repeat;
+        background-position:
+          calc(var(--frame) * var(--frame-width) * -1)
+          calc(var(--row) * var(--frame-height) * -1);
+        transform: scale(var(--strip-scale));
+        transform-origin: top left;
       }
 
       .paused .sprite {
         animation-play-state: paused;
       }
 
-      .motion-card h2 {
-        margin: 0 0 6px;
-        font-size: 18px;
-      }
-
-      .motion-card p {
-        margin: 0;
-        color: #5b6556;
-        line-height: 1.6;
-        font-size: 13px;
+      .slow {
+        --duration: 1.35s;
       }
 
       @keyframes play-row {
@@ -177,8 +286,34 @@
         }
 
         to {
-          background-position: calc(var(--frame-width) * var(--motion-frames) * -1)
+          background-position:
+            calc(var(--frame-width) * var(--motion-frames) * -1)
             calc(var(--row) * var(--frame-height) * -1);
+        }
+      }
+
+      @media (max-width: 760px) {
+        :root {
+          --preview-scale: 1.18;
+          --strip-scale: 0.48;
+        }
+
+        main {
+          width: min(100% - 18px, 1240px);
+          padding-top: 20px;
+        }
+
+        .review-layout,
+        .motion-preview {
+          grid-template-columns: 1fr;
+        }
+
+        .sprite-box {
+          justify-self: center;
+        }
+
+        .sheet-preview img {
+          min-width: 440px;
         }
       }
     </style>
@@ -188,14 +323,18 @@
       <header>
         <h1>Suzu PO Sprite Preview</h1>
         <p class="lead">
-          Suzuの1枚統合sprite sheetを、行ごとに同時再生する確認ページです。
-          この版は6列×14行の通常セル再生で、failed行も隣セルを2枚幅として扱いません。
+          SuzuのPO確認用ページです。左で確認ポイント、右でグリッド入り画像、
+          下で全14行のアニメーションと各6フレームを確認できます。
         </p>
         <div class="toolbar">
-          <button type="button" id="pauseButton">一時停止</button>
-          <a href="/sandbox?mode=manual-sweep">箱庭で見る</a>
-          <a href="/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png">
-            元PNGを開く
+          <button type="button" id="pauseButton" aria-pressed="false">一時停止</button>
+          <button type="button" id="speedButton" aria-pressed="false">ゆっくり再生</button>
+          <a href="/sandbox">箱庭で見る</a>
+          <a href="/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png?v=cellfit2">
+            透過PNG
+          </a>
+          <a href="/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2-grid-review.png?v=cellfit2">
+            グリッド画像
           </a>
         </div>
       </header>
@@ -205,54 +344,102 @@
         <div><strong>columns</strong>6 frames</div>
         <div><strong>rows</strong>14 rows</div>
         <div><strong>canvas</strong>888 x 2016 px</div>
+        <div><strong>確認</strong>全行通常6フレーム再生</div>
       </section>
 
-      <section class="grid" id="motionGrid" aria-label="motion preview grid"></section>
+      <section class="review-layout" aria-label="PO review overview">
+        <article class="panel">
+          <h2>PO確認ポイント</h2>
+          <ul class="check-list">
+            <li>各セル内に頭・胴・足が収まっているか。</li>
+            <li>足切れ、上半身切れ、行またぎ、列またぎがないか。</li>
+            <li>walk-left / walk-right / walk-up / walk-down の向きが自然か。</li>
+            <li>happy / angry / sad / surprised が見分けやすいか。</li>
+            <li>箱庭で見た時にSuzuらしさとサイズ感が保てているか。</li>
+          </ul>
+        </article>
+
+        <article class="panel">
+          <h2>グリッド確認画像</h2>
+          <p>赤線が1セルの境界です。クリック先のPNGでも拡大確認できます。</p>
+          <div class="sheet-preview">
+            <img
+              src="/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2-grid-review.png?v=cellfit2"
+              alt="Suzu sprite sheet with red cell grid lines"
+            />
+          </div>
+        </article>
+      </section>
+
+      <section class="motion-grid" id="motionGrid" aria-label="all Suzu sprite animations"></section>
     </main>
 
     <script>
       const motions = [
-        ["idle", 0, "待機。足元と頭がセル内に収まるかを見る。"],
-        ["walk-left", 1, "左歩き。横移動時に隣セルを拾わないかを見る。"],
-        ["walk-right", 2, "右歩き。横移動時に足が切れないかを見る。"],
-        ["waving", 3, "手振り。手と髪がセル外へ出ないかを見る。"],
-        ["jumping", 4, "ジャンプ。上下の余白が残るかを見る。"],
-        ["failed", 5, "失敗。Suzu版は6セルを通常再生し、2セル幅の特殊再生は使わない。", 6],
-        ["waiting", 6, "待機差分。idleより待っている感じに見えるかを見る。"],
-        ["review", 7, "確認。手元がセル内に収まるかを見る。"],
-        ["walk-up / walk-back", 8, "後ろ姿。walk-backもこの行を使う。"],
-        ["walk-down / walk-forward", 9, "正面歩き。walk-forwardもこの行を使う。"],
-        ["emote-happy", 10, "喜び。小さな効果は同じセル内なら可。"],
-        ["emote-angry", 11, "怒り。小さな効果は同じセル内なら可。"],
-        ["emote-sad", 12, "悲しみ。涙や記号がセル外へ出ないかを見る。"],
-        ["emote-surprised", 13, "驚き。怒りに見えないかを見る。"],
+        ["idle", 0, "待機。正面の基本姿勢。"],
+        ["walk-left", 1, "左歩き。横移動で足が切れないか確認。"],
+        ["walk-right", 2, "右歩き。横移動で隣セルを拾わないか確認。"],
+        ["waving", 3, "手振り。手と髪飾りがセル内に収まるか確認。"],
+        ["jumping", 4, "ジャンプ。上下余白と浮遊感を確認。"],
+        ["failed", 5, "失敗。倒れる前、倒れ途中、倒れた後の流れが読めるか確認。"],
+        ["waiting", 6, "待機差分。idleと違う待ち姿に見えるか確認。"],
+        ["review", 7, "確認。手元の本や姿勢がセル内に収まるか確認。"],
+        ["walk-up / walk-back", 8, "後ろ姿。奥へ歩く動きとして見えるか確認。"],
+        ["walk-down / walk-forward", 9, "正面歩き。手前へ歩く動きとして見えるか確認。"],
+        ["emote-happy", 10, "喜び。小さな効果が表情を助けているか確認。"],
+        ["emote-angry", 11, "怒り。怒り記号と表情が分かるか確認。"],
+        ["emote-sad", 12, "悲しみ。涙と表情が分かるか確認。"],
+        ["emote-surprised", 13, "驚き。怒りと誤読しないか確認。"],
       ];
 
       const grid = document.querySelector("#motionGrid");
-      for (const [name, row, note, motionFrames = 6] of motions) {
+      for (const [name, row, note] of motions) {
         const card = document.createElement("article");
         card.className = "motion-card";
-        const spriteClass = name === "failed" ? "sprite sprite--failed" : "sprite";
-        card.innerHTML = `
-          <div class="sprite-box">
-            <div class="sprite-frame">
-              <div class="${spriteClass}" style="--row: ${row}; --motion-frames: ${motionFrames};"></div>
+
+        const stripCells = Array.from(
+          { length: 6 },
+          (_, frame) => `
+            <div class="strip-cell" aria-label="${name} frame ${frame + 1}">
+              <div class="strip-sprite" style="--row: ${row}; --frame: ${frame};"></div>
             </div>
+          `,
+        ).join("");
+
+        card.innerHTML = `
+          <div class="motion-head">
+            <div>
+              <h3>${name}</h3>
+              <p>${note}</p>
+            </div>
+            <span class="row-badge">row ${row}</span>
           </div>
-          <div>
-            <h2>row ${row}: ${name}</h2>
-            <p>${note}</p>
+          <div class="motion-preview">
+            <div class="sprite-box">
+              <div class="sprite-frame">
+                <div class="sprite" style="--row: ${row}; --motion-frames: 6;"></div>
+              </div>
+            </div>
+            <div class="strip" aria-label="${name} frame strip">${stripCells}</div>
           </div>
         `;
         grid.append(card);
       }
 
-      const button = document.querySelector("#pauseButton");
-      button.addEventListener("click", () => {
+      const pauseButton = document.querySelector("#pauseButton");
+      pauseButton.addEventListener("click", () => {
         document.body.classList.toggle("paused");
-        button.textContent = document.body.classList.contains("paused")
-          ? "再生"
-          : "一時停止";
+        const paused = document.body.classList.contains("paused");
+        pauseButton.setAttribute("aria-pressed", String(paused));
+        pauseButton.textContent = paused ? "再生" : "一時停止";
+      });
+
+      const speedButton = document.querySelector("#speedButton");
+      speedButton.addEventListener("click", () => {
+        document.body.classList.toggle("slow");
+        const slow = document.body.classList.contains("slow");
+        speedButton.setAttribute("aria-pressed", String(slow));
+        speedButton.textContent = slow ? "通常速度" : "ゆっくり再生";
       });
     </script>
   </body>

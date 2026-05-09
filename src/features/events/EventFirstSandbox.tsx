@@ -73,6 +73,10 @@ export type ActiveResidentPreview = {
 };
 
 const EXTENDED_SHEET_MOTIONS = new Set<ResidentMotionKey>([
+  "waving",
+  "jumping",
+  "waiting",
+  "review",
   "walk-up",
   "walk-down",
   "walk-forward",
@@ -236,6 +240,7 @@ const RESIDENT_BOUNDS = { minX: 10, maxX: 82, minY: 28, maxY: RESIDENT_BOTTOM_PE
 const RESIDENT_BOTTOM_RETURN_Y = 92;
 const RESIDENT_BOTTOM_STRONG_RETURN_Y = RESIDENT_BOTTOM_PEEK_Y;
 const RESIDENT_PERSPECTIVE_RANGE = { minY: 12, maxY: RESIDENT_BOTTOM_PEEK_Y };
+const RESIDENT_VIEWPORT_EDGE_CLEARANCE_PX = 8;
 const MOVEMENT_TRANSITION_MS = 3200;
 const MOVEMENT_INTERVAL_MS = 5000;
 const AMBIENT_EMOTE_DURATION_MS = 2400;
@@ -363,6 +368,7 @@ export function EventFirstSandbox({
   const [residentMovements, setResidentMovements] = useState<ResidentMovementState[]>(
     RESIDENT_DEFAULT_POSITIONS.map((pos) => ({ ...pos, direction: null }))
   );
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [ambientResidentEmote, setAmbientResidentEmote] =
     useState<AmbientResidentEmote | null>(null);
   const [observedDialogueBubbles, setObservedDialogueBubbles] = useState<
@@ -441,10 +447,13 @@ export function EventFirstSandbox({
           y: RESIDENT_DEFAULT_POSITIONS[index]?.y ?? 50,
           direction: null,
         };
-        const motion =
-          latestOutcome?.interventionType === "trial" && isPrimary
-            ? "failed"
-            : resolveResidentMotion(emote, residentVisualPaused, movement.direction);
+        const motion = resolveSandboxResidentMotion({
+          emote,
+          isPrimary,
+          latestOutcome,
+          movementDirection: movement.direction,
+          residentVisualPaused,
+        });
         const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
           ? resolveResidentSpriteSheetMetadata(
               assetBundle?.spriteSheet.metadata,
@@ -593,6 +602,38 @@ export function EventFirstSandbox({
   useEffect(() => {
     residentMovementsRef.current = residentMovements;
   }, [residentMovements]);
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const updateViewportSize = () => {
+      const rect = viewport.getBoundingClientRect();
+      setViewportSize((current) =>
+        current.width === rect.width && current.height === rect.height
+          ? current
+          : { width: rect.width, height: rect.height },
+      );
+    };
+
+    updateViewportSize();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateViewportSize);
+      return () => {
+        window.removeEventListener("resize", updateViewportSize);
+      };
+    }
+
+    const resizeObserver = new ResizeObserver(updateViewportSize);
+    resizeObserver.observe(viewport);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (backgroundCyclePaused) {
@@ -1115,7 +1156,10 @@ export function EventFirstSandbox({
             )}
             data-resident-motion={resident.motion}
             data-resident-visual={resident.visualMode}
-            style={{ ...createResidentStyle(resident), ...createResidentPlacementStyle(resident) }}
+            style={{
+              ...createResidentStyle(resident),
+              ...createResidentPlacementStyle(resident, viewportSize.width),
+            }}
           >
             {resident.emote === "event-alert" ? (
               <button
@@ -1561,6 +1605,36 @@ function resolveResidentSpriteSheetMetadata(
   };
 }
 
+function resolveSandboxResidentMotion(input: {
+  emote: EmoteKind;
+  isPrimary: boolean;
+  latestOutcome: InterventionOutcome | null;
+  movementDirection: ResidentMovementState["direction"];
+  residentVisualPaused: boolean;
+}): ResidentMotionKey {
+  if (input.residentVisualPaused) {
+    return "waiting";
+  }
+
+  if (input.latestOutcome?.interventionType === "trial" && input.isPrimary) {
+    return "failed";
+  }
+
+  if (input.emote === "event-alert") {
+    return "review";
+  }
+
+  if (input.emote === "talk-request") {
+    return "waving";
+  }
+
+  return resolveResidentMotion(
+    input.emote,
+    input.residentVisualPaused,
+    input.movementDirection,
+  );
+}
+
 function isVariableWidthFailedResident(resident: ResidentViewModel): boolean {
   return resident.motion === "failed" && resident.spriteSheetMetadata?.frames === 5;
 }
@@ -1603,6 +1677,10 @@ function resolveResidentDisplayScale(metadata: ResidentSpriteMetadata | null): n
     return 1.5;
   }
 
+  if (metadata.frameWidth === 148 && metadata.frameHeight === 144 && metadata.columns === 6) {
+    return 1.0;
+  }
+
   if (metadata.frameWidth === 156 && metadata.frameHeight === 144 && metadata.columns === 4) {
     return 1.82;
   }
@@ -1642,16 +1720,61 @@ function resolveResidentEmoteTopInset(metadata: ResidentSpriteMetadata | null): 
   return 0;
 }
 
-function createResidentPlacementStyle(resident: ResidentViewModel): CSSProperties {
+function createResidentPlacementStyle(
+  resident: ResidentViewModel,
+  viewportWidth: number,
+): CSSProperties {
   const perspective = resolveResidentPerspective(resident.movement.y);
+  const safeLeft = resolveResidentSafeLeftPercent(
+    resident,
+    perspective.scale,
+    viewportWidth,
+  );
 
   return {
-    left: `${resident.movement.x}%`,
+    left: `${safeLeft}%`,
     top: `${resident.movement.y}%`,
     "--resident-scale": perspective.scale.toFixed(3),
     "--resident-shadow-scale": perspective.shadowScale.toFixed(3),
     zIndex: perspective.zIndex,
   } as CSSProperties;
+}
+
+function resolveResidentSafeLeftPercent(
+  resident: ResidentViewModel,
+  perspectiveScale: number,
+  viewportWidth: number,
+): number {
+  if (
+    viewportWidth <= 0 ||
+    resident.visualMode !== "sprite" ||
+    !resident.spriteSheetMetadata
+  ) {
+    return resident.movement.x;
+  }
+
+  const frameSpan = isVariableWidthFailedResident(resident) ? 2 : 1;
+  const displayScale = resolveResidentDisplayScale(resident.spriteSheetMetadata);
+  const baseWidth =
+    resident.spriteSheetMetadata.frameWidth * frameSpan * displayScale;
+  const scaleOverflow = Math.max(0, (baseWidth * perspectiveScale - baseWidth) / 2);
+  const minLeftPx = RESIDENT_VIEWPORT_EDGE_CLEARANCE_PX + scaleOverflow;
+  const maxLeftPx =
+    viewportWidth -
+    RESIDENT_VIEWPORT_EDGE_CLEARANCE_PX -
+    baseWidth -
+    scaleOverflow;
+
+  if (maxLeftPx <= minLeftPx) {
+    const centeredLeftPx = Math.max(0, (viewportWidth - baseWidth) / 2);
+    return clamp((centeredLeftPx / viewportWidth) * 100, 0, 100);
+  }
+
+  return clamp(
+    resident.movement.x,
+    (minLeftPx / viewportWidth) * 100,
+    (maxLeftPx / viewportWidth) * 100,
+  );
 }
 
 function createDialogueBubblePlacementStyle(resident: ResidentViewModel): CSSProperties {
