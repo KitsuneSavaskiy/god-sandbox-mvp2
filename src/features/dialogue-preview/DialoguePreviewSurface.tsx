@@ -104,15 +104,15 @@ export function DialoguePreviewSurface({ state }: Props) {
         <p className="eyebrow">発話プレビュー / Manual LLM Handoff</p>
         <h2 id="dialogue-preview-title">外部 LLM 経由の発話候補を育成 UI で確認する</h2>
         <p>
-          ゲーム内でAPIキーを使わず、ChatGPT / Codex にプロンプトを貼り付けて得た結果を
-          ここに貼り戻すことで、発話候補を育成UIで確認できます。
+          外部AIに依頼文をコピーして得た発話候補を、ここに貼り戻して確認できます。
+          GodSandbox から外部AIへの自動送信はありません。
         </p>
       </div>
 
       <div className="dialogue-preview__grid">
         <section className="dialogue-preview__panel" aria-label="プロンプト生成">
           <div className="dialogue-preview__step-heading">
-            <h3>Step 1 — プロンプトをコピー</h3>
+            <h3>Step 1 — 外部AIへの依頼文をコピー</h3>
             <button
               type="button"
               className="dialogue-preview__help-button"
@@ -125,8 +125,15 @@ export function DialoguePreviewSurface({ state }: Props) {
             </button>
           </div>
           <p className="dialogue-preview__hint">
-            現在の箱庭状態から生成したプロンプトです。ChatGPT や Codex に貼り付けてください。
-            信仰度の数値・スコア・五行値は含まれません。
+            この依頼文には、キャラクター名・口調・最近の出来事・関係性の手がかりが含まれます。
+            画面には内部値を表示しません。コピーした内容は、あなたが外部AIに貼り付けたときだけ読まれます。
+          </p>
+          <p className="dialogue-preview__hint dialogue-preview__hint--chatgpt">
+            ChatGPTで使う場合は、キャラクター名のProjectを作り、その中で新しいチャットを始めてください。
+            同じProjectにこの子の会話をまとめると、1つの人格として続けやすくなります。
+            {digest.activeCharacters.length > 1 && (
+              <>{" "}複数キャラクターが含まれる場合は、主役キャラクター名または箱庭名のProjectを使ってください。</>
+            )}
           </p>
           {guidanceOpen && (
             <aside
@@ -158,12 +165,9 @@ export function DialoguePreviewSurface({ state }: Props) {
               </video>
             </aside>
           )}
-          <pre className="dialogue-preview__prompt-box" aria-label="生成プロンプト">
-            {promptPack.promptText}
-          </pre>
           <div className="dialogue-preview__copy-row">
             <Button type="button" variant="primary" onClick={handleCopy}>
-              クリップボードにコピー
+              依頼文をコピー
             </Button>
             {copied && (
               <span className="dialogue-preview__copied-label" role="status">
@@ -171,6 +175,12 @@ export function DialoguePreviewSurface({ state }: Props) {
               </span>
             )}
           </div>
+          <details className="dialogue-preview__advanced-prompt">
+            <summary>コピー内容を確認する（開発者向け）</summary>
+            <pre className="dialogue-preview__prompt-box" aria-label="生成プロンプト">
+              {promptPack.promptText}
+            </pre>
+          </details>
         </section>
 
         <section className="dialogue-preview__panel" aria-label="LLM出力の貼り付け">
