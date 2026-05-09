@@ -76,7 +76,9 @@ import { generatePassportDisplay, buildMemorySummary, derivePassportDoNotSay } f
 import {
   buildDialogueWorldDigest,
   buildDialoguePromptPack,
+  createObservedDialogueCandidates,
   parseDialogueCandidatesFromText,
+  selectVisibleObservedDialogueCandidates,
   validateDialogue,
   type ParsedCandidateRaw,
 } from "./dialogue.js";
@@ -1622,6 +1624,12 @@ function testDialogueAuthoringPreview(): void {
   const withFaithGa = validateDialogue("信仰度が50になった");
   assert.equal(withFaithGa.ok, false);
 
+  const withFaithWord = validateDialogue("信仰が揺れている");
+  assert.equal(withFaithWord.ok, false);
+
+  const withFaithBandWord = validateDialogue("faithBand が変わった");
+  assert.equal(withFaithBandWord.ok, false);
+
   // needs_review DialogueCandidate is excluded from accepted filter
   const needsReviewCandidate: DialogueCandidate = {
     id: "llm-002",
@@ -1657,6 +1665,81 @@ function testDialogueAuthoringPreview(): void {
   };
   assert.equal(logEntry.trigger, "intervention_applied");
   assert.equal(logEntry.speakerDisplayName, "Garan");
+
+  // PBI 4b-min runtime slice: authored fixture only, accepted, validated, max 2.
+  const runtimeCandidates = createObservedDialogueCandidates({
+    trigger: "event_started",
+    characters: [...world.characters.values()],
+    event: events[0],
+    restrictEventParticipants: true,
+    now: "2026-05-08T00:00:00Z",
+    seed: "event-started-proof",
+    maxCandidates: 3,
+  });
+  assert.ok(runtimeCandidates.length > 0);
+  assert.ok(runtimeCandidates.length <= events[0].participantCharacterIds.length);
+  for (const candidate of runtimeCandidates) {
+    assert.ok(events[0].participantCharacterIds.includes(candidate.characterId));
+  }
+  for (const candidate of runtimeCandidates) {
+    assert.equal(candidate.source, "authored_fixture");
+    assert.equal(candidate.reviewStatus, "accepted");
+    assert.equal(validateDialogue(candidate.text).ok, true);
+    assert.equal(candidate.text.includes("信仰"), false);
+    assert.equal(candidate.text.includes("信仰度"), false);
+  }
+
+  const visibleRuntimeCandidates = selectVisibleObservedDialogueCandidates(
+    runtimeCandidates,
+    2,
+  );
+  assert.equal(visibleRuntimeCandidates.length, Math.min(2, runtimeCandidates.length));
+
+  const interventionCandidates = createObservedDialogueCandidates({
+    trigger: "intervention_applied",
+    characters: [...world.characters.values()],
+    event: events[0],
+    restrictEventParticipants: true,
+    now: "2026-05-08T00:00:01Z",
+    seed: "intervention-proof",
+  });
+  assert.ok(interventionCandidates.length > 0);
+  for (const candidate of interventionCandidates) {
+    assert.ok(events[0].participantCharacterIds.includes(candidate.characterId));
+  }
+  assert.equal(interventionCandidates[0].type, "god_indirect_reaction");
+
+  const idleActiveCandidates = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [...world.characters.values()],
+    event: events[0],
+    restrictEventParticipants: true,
+    now: "2026-05-08T00:00:02Z",
+    seed: "idle-active-proof",
+  });
+  assert.ok(idleActiveCandidates.length > 0);
+  assert.ok(
+    idleActiveCandidates.some((candidate) =>
+      [...world.characters.values()].some((character) => character.id === candidate.characterId),
+    ),
+  );
+
+  const idleCandidates = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [],
+    now: "2026-05-08T00:00:02Z",
+    seed: "no-candidate-proof",
+  });
+  assert.equal(idleCandidates.length, 0);
+
+  const negativeMaxCandidates = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [...world.characters.values()],
+    now: "2026-05-08T00:00:03Z",
+    seed: "negative-max-proof",
+    maxCandidates: -1,
+  });
+  assert.equal(negativeMaxCandidates.length, 0);
 }
 
 function testPassportOutsideWorldPayload(): void {
