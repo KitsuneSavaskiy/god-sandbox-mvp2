@@ -1981,6 +1981,318 @@ function testFaithExposureAndHandoffPrompt(): void {
   assert.ok(vResult.ok);
 }
 
+// ──────────────────────────────────────────────────────────────────
+// PBI 8a: MVP Acceptance Smoke Tests
+// ──────────────────────────────────────────────────────────────────
+
+function testFaithHidingSmokeTests(): void {
+  // 1. ChangeSet.patch 内部には faith 関連フィールドが存在してよい
+  const internalPatch = {
+    vitality: 2,
+    stress: -1,
+    faith: 5,
+    currentFaith: 35,
+    faithChange: {
+      characterId: "chr_a",
+      previousFaith: 30,
+      newFaith: 35,
+      delta: 5,
+      trigger: "help_success",
+      interventionId: "itv_001",
+    },
+  };
+  assert.ok("faith" in internalPatch);
+  assert.ok("faithChange" in internalPatch);
+
+  // 2. sandbox UI 表示用 formatter には internal faith 関連フィールドが出ない
+  const visible = createVisibleChangePatchForSandboxUi(internalPatch);
+  const visibleJson = JSON.stringify(visible);
+  assert.equal("faith" in visible, false);
+  assert.equal("faithChange" in visible, false);
+  assert.equal("currentFaith" in visible, false);
+  assert.equal(visibleJson.includes("previousFaith"), false);
+  assert.equal(visibleJson.includes("newFaith"), false);
+  assert.equal(visibleJson.includes("delta"), false);
+  assert.equal(visibleJson.includes("help_success"), false);
+  assert.equal(visibleJson.includes("信仰"), false);
+  assert.equal(visibleJson.includes("信仰度"), false);
+
+  // watch_success / trial_success も出ない
+  const watchPatch = { faith: 3, faithChange: { trigger: "watch_success", previousFaith: 20, newFaith: 23, delta: 3 } };
+  const trialPatch = { faith: 2, faithChange: { trigger: "trial_success", previousFaith: 23, newFaith: 25, delta: 2 } };
+  for (const p of [watchPatch, trialPatch]) {
+    const v = createVisibleChangePatchForSandboxUi(p);
+    const j = JSON.stringify(v);
+    assert.equal(j.includes("faith"), false);
+    assert.equal(j.includes("_success"), false);
+    assert.equal(j.includes("delta"), false);
+  }
+
+  // Non-faith fields remain visible
+  assert.ok("vitality" in visible);
+  assert.ok("stress" in visible);
+
+  // 3. faith-only patch の visible 結果は空
+  const faithOnlyPatch = {
+    faith: 5,
+    currentFaith: 35,
+    faithChange: { previousFaith: 30, newFaith: 35, delta: 5, trigger: "help_success" },
+  };
+  const visibleFaithOnly = createVisibleChangePatchForSandboxUi(faithOnlyPatch);
+  assert.equal(Object.keys(visibleFaithOnly).length, 0);
+
+  // 4. validateDialogue が以下を reject する
+  assert.equal(validateDialogue("信仰度が50になった").ok, false);
+  assert.equal(validateDialogue("信仰が揺れている").ok, false);
+  assert.equal(validateDialogue("faithBand が変わった").ok, false);
+  assert.equal(validateDialogue("画面を見て").ok, false);
+  assert.equal(validateDialogue("ステータスが上がった").ok, false);
+  assert.equal(validateDialogue("あなたのおかげだ").ok, false);
+  assert.equal(validateDialogue("神様ありがとう").ok, false);
+
+  // 有効な発話は通過する
+  assert.equal(validateDialogue("今日は風がやわらかいね").ok, true);
+  assert.equal(validateDialogue("木陰が気持ちよさそう。").ok, true);
+}
+
+function testDialogueHandoffSmokeTests(): void {
+  const ws = worldState();
+  const digest = buildDialogueWorldDigest(
+    ws.session,
+    ws.characters,
+    [...ws.relations.values()],
+    [...ws.events.values()],
+  );
+  const pack = buildDialoguePromptPack(digest);
+  const pt = pack.promptText;
+
+  // 1. buildDialoguePromptPack は必須フィールドを含む
+  assert.ok(pt.includes("Output a JSON array only"));
+  assert.ok(pt.includes("allowedSpeakers"));
+  assert.ok(pt.includes('"name"'));
+  assert.ok(pt.includes('"text"'));
+  assert.ok(pt.includes("divinePerceptionBand"));
+  assert.ok(pt.includes("Your actual response must contain 6 to 10 items"));
+
+  // 2. buildDialoguePromptPack は禁止フィールドを含まない
+  assert.equal(pt.includes("信仰度"), false);
+  assert.equal(pt.includes("信仰段階"), false);
+  assert.equal(pt.includes("ExactSpeakerName"), false);
+
+  const speakerNames = digest.activeCharacters.map((c) => c.name);
+  assert.ok(speakerNames.length > 0);
+  assert.ok(pt.includes(speakerNames[0]));
+
+  // 3. parseDialogueCandidatesFromText が known speaker を正しく parse する
+  const nameToIdMap = new Map<string, string>();
+  for (const c of ws.characters.values()) {
+    nameToIdMap.set(c.profile.displayName, c.id);
+  }
+  const knownLlmOutput = `[{"name":"${speakerNames[0]}","text":"風が、少し変わった気がする。"}]`;
+  const knownParsed = parseDialogueCandidatesFromText(knownLlmOutput, nameToIdMap, now);
+  assert.equal(knownParsed.length, 1);
+  assert.equal(knownParsed[0].rawSpeakerName, speakerNames[0]);
+  assert.ok(knownParsed[0].characterId !== null);
+  assert.equal(validateDialogue(knownParsed[0].text).ok, true);
+
+  // 5. unknown speaker → characterId === null
+  const unknownLlmOutput = `[{"name":"Unknown","text":"風が、少し変わった気がする。"}]`;
+  const unknownParsed = parseDialogueCandidatesFromText(unknownLlmOutput, nameToIdMap, now);
+  assert.equal(unknownParsed.length, 1);
+  assert.equal(unknownParsed[0].characterId, null);
+  // unknown speaker は accepted 候補になれない
+  const unknownAccepted = unknownParsed.filter(
+    (c) => c.characterId !== null,
+  );
+  assert.equal(unknownAccepted.length, 0);
+}
+
+function testObservedDialogueRuntimeSmokeTests(): void {
+  const charA = character("chr_a", "Aki");
+  const charB = character("chr_b", "Beni");
+  const charC = character("chr_c", "Caro");
+  const evt = event("evt_smoke");
+
+  // 1. event_started: authored_fixture / accepted / event participant のみ
+  const eventStartedCandidates = createObservedDialogueCandidates({
+    trigger: "event_started",
+    characters: [charA, charB, charC],
+    event: evt,
+    restrictEventParticipants: true,
+    now,
+    seed: "smoke-event-started",
+  });
+  assert.ok(eventStartedCandidates.length > 0);
+  for (const c of eventStartedCandidates) {
+    assert.equal(c.source, "authored_fixture");
+    assert.equal(c.reviewStatus, "accepted");
+    assert.ok(evt.participantCharacterIds.includes(c.characterId));
+  }
+
+  // 2. intervention_applied: god_indirect_reaction / event participant のみ
+  const interventionCandidates = createObservedDialogueCandidates({
+    trigger: "intervention_applied",
+    characters: [charA, charB, charC],
+    event: evt,
+    restrictEventParticipants: true,
+    now,
+    seed: "smoke-intervention",
+  });
+  assert.ok(interventionCandidates.length > 0);
+  for (const c of interventionCandidates) {
+    assert.equal(c.type, "god_indirect_reaction");
+    assert.ok(evt.participantCharacterIds.includes(c.characterId));
+  }
+
+  // 3. idle_timer: daily type / active residents から候補が出る
+  const idleCandidates = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [charA, charB, charC],
+    now,
+    seed: "smoke-idle",
+  });
+  assert.ok(idleCandidates.length > 0);
+  assert.equal(idleCandidates[0].type, "daily");
+
+  // 4. selectVisibleObservedDialogueCandidates: 最大2件 / invalid を除外
+  const allCandidates = createObservedDialogueCandidates({
+    trigger: "event_started",
+    characters: [charA, charB, charC],
+    event: evt,
+    restrictEventParticipants: false,
+    now,
+    seed: "smoke-visible",
+    maxCandidates: 10,
+  });
+  const visible = selectVisibleObservedDialogueCandidates(allCandidates, 2);
+  assert.ok(visible.length <= 2);
+
+  // needs_review は visible にならない
+  const needsReviewCandidate: DialogueCandidate = {
+    id: "dlg_smoke_needs_review",
+    characterId: charA.id,
+    text: "今日は風がやわらかいね",
+    type: "daily",
+    source: "external_llm_handoff",
+    reviewStatus: "needs_review",
+    createdAt: now,
+  };
+  const withNeedsReview = selectVisibleObservedDialogueCandidates(
+    [...allCandidates, needsReviewCandidate],
+    10,
+  );
+  assert.ok(withNeedsReview.every((c) => c.reviewStatus === "accepted"));
+
+  // invalid dialogue は visible にならない
+  const invalidCandidate: DialogueCandidate = {
+    id: "dlg_smoke_invalid",
+    characterId: charA.id,
+    text: "信仰が揺れている",
+    type: "daily",
+    source: "authored_fixture",
+    reviewStatus: "accepted",
+    createdAt: now,
+  };
+  const withInvalid = selectVisibleObservedDialogueCandidates(
+    [...allCandidates, invalidCandidate],
+    10,
+  );
+  assert.ok(withInvalid.every((c) => validateDialogue(c.text).ok));
+
+  // 5. characters: [] → 空配列 / 例外なし
+  const emptyResult = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [],
+    now,
+    seed: "smoke-empty",
+  });
+  assert.equal(emptyResult.length, 0);
+
+  // 6. maxCandidates: -1 でも例外を投げない
+  const negativeResult = createObservedDialogueCandidates({
+    trigger: "idle_timer",
+    characters: [charA, charB],
+    now,
+    seed: "smoke-negative",
+    maxCandidates: -1,
+  });
+  assert.equal(negativeResult.length, 0);
+
+  // 7. visible dialogue に内部値が出ない
+  const visibleTexts = visible.map((c) => c.text).join(" ");
+  assert.equal(visibleTexts.includes("faith"), false);
+  assert.equal(visibleTexts.includes("faithBand"), false);
+  assert.equal(visibleTexts.includes("信仰"), false);
+  assert.equal(visibleTexts.includes("信仰度"), false);
+  assert.equal(visibleTexts.includes("スコア"), false);
+  assert.equal(visibleTexts.includes("ステータス"), false);
+}
+
+function testPassportBoundarySmokeTests(): void {
+  // Use faith=73 (distinctive odd value; default is 30, avoids timestamp/common-number false negatives)
+  const ws = worldState();
+  const char = ws.characters.get("chr_a")!;
+  ws.characters.set("chr_a", {
+    ...char,
+    state: { ...char.state, status: { ...char.state.status, faith: 73 } },
+  });
+
+  const issuedSnapshot = issueSnapshotService(ws, {
+    characterId: "chr_a",
+    snapshotId: "snp_pbi8a_001",
+    now,
+    annotationTags: ["pbi8a-smoke"],
+  });
+
+  const issuedPassport = issuePassportService(issuedSnapshot.state, {
+    snapshotId: issuedSnapshot.snapshot.id,
+    passportId: "psp_pbi8a_001",
+    fileNameToken: "aki--pbi8a-001",
+    schemaVersion: 1,
+    now,
+  });
+
+  const display = issuedPassport.passport.display;
+
+  // 1. Passport JSON 内部に godRelationship.currentFaith が number として存在してよい
+  assert.ok(typeof display.godRelationship.currentFaith === "number");
+  assert.ok(display.godRelationship.currentFaith >= 0);
+
+  // 2. externalAiPromptBlock に "currentFaith" 文字列が出ない
+  const promptBlockJson = JSON.stringify(display.externalAiPromptBlock);
+  assert.equal(promptBlockJson.includes("currentFaith"), false);
+
+  // 3. externalAiPromptBlock.systemPrompt が存在し外部 AI で使える文章である
+  assert.ok(display.externalAiPromptBlock.systemPrompt.length > 50);
+
+  // 4. FAITH_BAND_LABELS は距離感表現になっている（直接的な信仰ラベルでない）
+  assert.equal(FAITH_BAND_LABELS.disbelieves, "まだ距離がある");
+  assert.equal(FAITH_BAND_LABELS.uncertain, "少し迷いがある");
+  assert.equal(FAITH_BAND_LABELS.senses_presence, "気配を感じている");
+  assert.equal(FAITH_BAND_LABELS.believes, "信頼が芽生えている");
+  assert.equal(FAITH_BAND_LABELS.devoted, "深く結びついている");
+
+  // 5. PassportConfirm user-facing text に禁止ワードが出ない
+  const allConfirmText = [
+    PASSPORT_CONFIRM_TEXTS.title,
+    ...PASSPORT_CONFIRM_TEXTS.bodyLines,
+    PASSPORT_CONFIRM_TEXTS.confirm,
+    PASSPORT_CONFIRM_TEXTS.cancel,
+  ].join(" ");
+  for (const word of PASSPORT_FORBIDDEN_WORDS) {
+    assert.equal(
+      allConfirmText.includes(word),
+      false,
+    );
+  }
+
+  // currentFaith の数値も externalAiPromptBlock 全体に出ない（faith=73 で確認）
+  const faithValue = display.godRelationship.currentFaith;
+  assert.equal(faithValue, 73); // distinctive value actually round-tripped through snapshot→passport
+  assert.equal(promptBlockJson.includes(String(faithValue)), false);
+  assert.equal(display.externalAiPromptBlock.systemPrompt.includes(String(faithValue)), false);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -2006,6 +2318,10 @@ const tests: Array<[string, () => void]> = [
   ["passport outside world payload (PBI 5)", testPassportOutsideWorldPayload],
   ["passport confirm UI (PBI 6)", testPassportConfirmUi],
   ["faith exposure and handoff prompt", testFaithExposureAndHandoffPrompt],
+  ["faith hiding smoke tests (PBI 8a)", testFaithHidingSmokeTests],
+  ["dialogue handoff smoke tests (PBI 8a)", testDialogueHandoffSmokeTests],
+  ["observed dialogue runtime smoke tests (PBI 8a)", testObservedDialogueRuntimeSmokeTests],
+  ["passport boundary smoke tests (PBI 8a)", testPassportBoundarySmokeTests],
 ];
 
 for (const [name, test] of tests) {

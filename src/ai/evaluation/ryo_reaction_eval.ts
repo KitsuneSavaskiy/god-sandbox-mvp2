@@ -693,3 +693,39 @@ const traceTestWorldState = buildWorldStateSummary(
   assert.notOk(sessionA.worldStateHash === sessionB.worldStateHash);
   ok("trace_logger: worldStateHash differs when faithBand/fearBand differ");
 }
+
+// ── PBI 8a: AI observability acceptance smoke tests ──────────────
+
+{
+  // JSON parse failure: schemaValid=false, outputGuardPassed=false
+  clearTraces();
+
+  const session = createRyoReactionSession(traceTestWorldState);
+  const result = parseAndTraceRyoReactionOutput(
+    "{ invalid json",
+    session,
+    "神が試練を与えた",
+  );
+
+  assert.notOk(result.ok);
+  const traces = getTraces();
+  assert.equal(traces.length, 1);
+  assert.equal(traces[0].schemaValid, false);
+  assert.equal(traces[0].outputGuardPassed, false);
+  assert.ok(traces[0].traceId.length > 0);
+  assert.equal(traces[0].promptVersion, "v1");
+
+  clearTraces();
+  ok("trace_logger: JSON parse failure records schemaValid=false, outputGuardPassed=false");
+}
+
+{
+  // worldStateHash changes when currentEventSummary changes
+  const sessionA = createRyoReactionSession(traceTestWorldState);
+  const sessionB = createRyoReactionSession({
+    ...traceTestWorldState,
+    currentEventSummary: "嵐の予感が漂っている",
+  });
+  assert.notOk(sessionA.worldStateHash === sessionB.worldStateHash);
+  ok("trace_logger: worldStateHash differs when currentEventSummary differs");
+}
