@@ -22,11 +22,11 @@ export const PASSPORT_CONFIRM_TEXTS = {
 } as const;
 
 export const FAITH_BAND_LABELS: Record<FaithBand, string> = {
-  disbelieves: "神の存在を信じていない",
-  uncertain: "半信半疑",
+  disbelieves: "まだ距離がある",
+  uncertain: "少し迷いがある",
   senses_presence: "気配を感じている",
-  believes: "神を信じている",
-  devoted: "深く信じている",
+  believes: "信頼が芽生えている",
+  devoted: "深く結びついている",
 };
 
 export const EXTERNAL_AI_TEXT_LABEL = "外のAIでこの子と話すための文章";

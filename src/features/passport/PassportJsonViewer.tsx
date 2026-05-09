@@ -53,7 +53,7 @@ export function PassportJsonViewer({ passport }: PassportJsonViewerProps) {
       <section className="pjv-section">
         <h5>神との距離感</h5>
         <dl className="pjv-dl">
-          <dt>信仰の状態</dt>
+          <dt>神との距離感</dt>
           <dd>{FAITH_BAND_LABELS[d.godRelationship.faithBand]}</dd>
           <dt>神をどう解釈しているか</dt>
           <dd>{d.godRelationship.interpretationOfGod}</dd>
