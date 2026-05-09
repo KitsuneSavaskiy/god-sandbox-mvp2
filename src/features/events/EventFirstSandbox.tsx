@@ -216,7 +216,7 @@ const DEFAULT_SANDBOX_BACKGROUND_PATH = "/art/world/backgrounds/world_spring_noo
 // The lower limit intentionally lets the wrapper move below the viewport so only
 // the top of the head can peek from the bottom edge.
 const RESIDENT_BOTTOM_PEEK_Y = 94;
-const RESIDENT_BOUNDS = { minX: -4, maxX: 94, minY: 28, maxY: RESIDENT_BOTTOM_PEEK_Y };
+const RESIDENT_BOUNDS = { minX: 10, maxX: 82, minY: 28, maxY: RESIDENT_BOTTOM_PEEK_Y };
 const RESIDENT_BOTTOM_RETURN_Y = 92;
 const RESIDENT_BOTTOM_STRONG_RETURN_Y = RESIDENT_BOTTOM_PEEK_Y;
 const RESIDENT_PERSPECTIVE_RANGE = { minY: 12, maxY: RESIDENT_BOTTOM_PEEK_Y };
@@ -916,7 +916,9 @@ export function EventFirstSandbox({
         const currentY = ((residentRect.top - viewportRect.top) / viewportHeight) * 100;
 
         return {
-          x: Number.isFinite(currentX) ? currentX : movement.x,
+          x: Number.isFinite(currentX)
+            ? clamp(currentX, RESIDENT_BOUNDS.minX, RESIDENT_BOUNDS.maxX)
+            : movement.x,
           y: Number.isFinite(currentY) ? currentY : movement.y,
           direction: null,
         };
