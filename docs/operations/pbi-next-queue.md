@@ -20,37 +20,44 @@ their dependencies.
 
 These notes are short-lived and should be refreshed when the related PRs merge.
 
-## Queue A: In Progress / Review Waiting
+## Recent Merges
 
-### PBI 6: Passport Confirm + JSON Viewer UI
+- #281 (Observed Dialogue Runtime) — merged to main.
+- #282 (PBI 8a MVP Acceptance Smoke Tests) — merged to main.
+  - 28 domain tests + 37 AI tests now in CI.
+  - Invariants locked: faith hiding, dialogue handoff, observed dialogue runtime,
+    passport boundary, AI observability.
 
-Status: review waiting.
+## Queue A: Active
 
-Depends on:
+### Codex next: PBI 4b-ui — Observed Dialogue Runtime UX Polish
 
-- PBI 5 Passport outside world payload.
+Status: ready to start after #281 merge.
 
-Expected area:
-
-- Passport confirmation UI.
-- Passport JSON viewer.
-- Copying external AI prompt block.
-
-Codex should not modify this area unless assigned.
-
-### Claude task: Faith UI Hiding + External LLM Dialogue Handoff Prompt Repair
-
-Status: in progress / review waiting.
+Scope: visual polish for dialogue bubbles in EventFirstSandbox.
+Do not modify domain tests or smoke tests.
 
 Likely touched files:
 
 - `src/features/events/EventFirstSandbox.tsx`
-- `src/domain/dialogue.ts`
-- `src/features/dialogue-preview/DialoguePreviewSurface.tsx`
-- related tests and CSS.
+- `src/features/events/EventFirstSandbox.css`
+- `src/features/events/EventFirstSandboxEmotes.ts`
 
-Codex must not start implementation that touches these files until this work is
-merged and the next branch is based on the updated `main`.
+Codex must not modify:
+
+- `src/domain/runtime.test.ts`
+- `src/domain/dialogue.ts`
+- `src/ai/**`
+
+### Claude next: PBI 8b — PO Playtest Kit + MVP Readiness Explainer
+
+Status: in progress (docs/artifacts lane only).
+
+Scope: docs/operations/po-mvp-playtest-guide.md,
+docs/artifacts/po-mvp-readiness-explainer.html,
+docs/operations/pbi-next-queue.md (Current Coordination Notes only).
+
+Claude must not modify src/**.
 
 ## 2. Stable Next-PBI Definitions
 
