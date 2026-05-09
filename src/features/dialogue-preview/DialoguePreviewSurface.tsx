@@ -17,11 +17,19 @@ type Props = {
   state: RuntimeWorldState;
 };
 
+const CHATGPT_PROJECT_GUIDE_VIDEO_PATH = "/guides/chatgpt-project-guide.mp4";
+
+function shouldOpenChatGptGuideByDefault(): boolean {
+  if (typeof window === "undefined") return false;
+  return new URLSearchParams(window.location.search).get("guide") === "chatgpt";
+}
+
 export function DialoguePreviewSurface({ state }: Props) {
   const [pasteText, setPasteText] = useState("");
   const [parsedCandidates, setParsedCandidates] = useState<ParsedCandidate[]>([]);
   const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  const [guidanceOpen, setGuidanceOpen] = useState(shouldOpenChatGptGuideByDefault);
 
   const nameToIdMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -103,11 +111,53 @@ export function DialoguePreviewSurface({ state }: Props) {
 
       <div className="dialogue-preview__grid">
         <section className="dialogue-preview__panel" aria-label="プロンプト生成">
-          <h3>Step 1 — プロンプトをコピー</h3>
+          <div className="dialogue-preview__step-heading">
+            <h3>Step 1 — プロンプトをコピー</h3>
+            <button
+              type="button"
+              className="dialogue-preview__help-button"
+              aria-label="ChatGPTプロジェクトで遊ぶ方法を見る"
+              aria-expanded={guidanceOpen}
+              aria-controls="dialogue-preview-chatgpt-guide"
+              onClick={() => setGuidanceOpen((open) => !open)}
+            >
+              ?
+            </button>
+          </div>
           <p className="dialogue-preview__hint">
             現在の箱庭状態から生成したプロンプトです。ChatGPT や Codex に貼り付けてください。
             信仰度の数値・スコア・五行値は含まれません。
           </p>
+          {guidanceOpen && (
+            <aside
+              id="dialogue-preview-chatgpt-guide"
+              className="dialogue-preview__guide"
+              aria-label="ChatGPTプロジェクトの使い方ガイド"
+            >
+              <div className="dialogue-preview__guide-copy">
+                <p className="dialogue-preview__guide-title">ChatGPTでキャラクターと会話する流れ</p>
+                <ol>
+                  <li>ChatGPTのプロジェクトを開きます。</li>
+                  <li>プロジェクトフォルダに、会話したいキャラ名のメモを入れます。</li>
+                  <li>この画面のプロンプトをコピーして、ChatGPTに貼り付けます。</li>
+                  <li>返ってきた発話候補を Step 2 に貼ると、GodSandbox側で確認できます。</li>
+                </ol>
+                <p>
+                  先にプロジェクトフォルダへキャラ名を入れておくと、ChatGPTが「誰と話すか」を
+                  見失いにくくなります。APIキーは使わず、手動でコピーして遊ぶ導線です。
+                </p>
+              </div>
+              <video
+                className="dialogue-preview__guide-video"
+                controls
+                preload="metadata"
+                aria-label="ChatGPTプロジェクトの使い方動画"
+              >
+                <source src={CHATGPT_PROJECT_GUIDE_VIDEO_PATH} type="video/mp4" />
+                このブラウザでは動画を表示できません。
+              </video>
+            </aside>
+          )}
           <pre className="dialogue-preview__prompt-box" aria-label="生成プロンプト">
             {promptPack.promptText}
           </pre>
