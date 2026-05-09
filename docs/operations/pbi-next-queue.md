@@ -171,14 +171,14 @@ These are intentionally deferred until the MVP loop is stable.
 PBI-CX-001 Codex Operating Bootstrap + Backlog Split
 
 ## Issue
-No issue, or Closes #...
+Closes #274
 
 ## Branch
 `docs/codex-operating-bootstrap`
 
 ## Changed files
 - `docs/operations/codex-operating-bootstrap.md`
-- `docs/product/pbi-next-queue.md`
+- `docs/operations/pbi-next-queue.md`
 
 ## Referenced docs
 - `AGENTS.md`
