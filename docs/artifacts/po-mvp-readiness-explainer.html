@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GodSandbox MVP Readiness — PO 判断用アーティファクト</title>
+<style>
+  :root {
+    --bg: #f8f7f4;
+    --card: #ffffff;
+    --border: #e2ddd8;
+    --text: #2c2826;
+    --muted: #7a736c;
+    --green: #2d6a4f;
+    --green-light: #d8f3dc;
+    --amber: #b5651d;
+    --amber-light: #fdf0e0;
+    --red: #9b2335;
+    --red-light: #fce8eb;
+    --blue: #1d4e89;
+    --blue-light: #dce8f8;
+    --purple: #5c3d8f;
+    --purple-light: #ede0f8;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+                 "Noto Sans JP", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 15px;
+    padding: 0 16px 60px;
+  }
+
+  header {
+    background: var(--text);
+    color: #fff;
+    padding: 28px 24px 24px;
+    margin: 0 -16px 32px;
+  }
+
+  header .artifact-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #bbb;
+    margin-bottom: 6px;
+  }
+
+  header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  header p { font-size: 13px; color: #ccc; }
+
+  .container { max-width: 760px; margin: 0 auto; }
+
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 36px 0 14px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  h3 { font-size: 14px; font-weight: 700; margin: 18px 0 8px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-bottom: 6px;
+  }
+
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-amber { background: var(--amber-light); color: var(--amber); }
+  .badge-blue  { background: var(--blue-light);  color: var(--blue);  }
+  .badge-purple{ background: var(--purple-light); color: var(--purple); }
+  .badge-red   { background: var(--red-light);   color: var(--red);   }
+
+  .ok   { color: var(--green); font-weight: 700; }
+  .warn { color: var(--amber); font-weight: 700; }
+  .ng   { color: var(--red);   font-weight: 700; }
+
+  .band-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 10px 0;
+  }
+
+  .band-table th {
+    background: var(--bg);
+    font-weight: 700;
+    padding: 7px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .band-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .band-table tr:last-child td { border-bottom: none; }
+
+  .flow {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+  }
+
+  .flow-step {
+    background: var(--blue-light);
+    color: var(--blue);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    position: relative;
+    min-width: 100px;
+    text-align: center;
+  }
+
+  .flow-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-size: 18px;
+    margin-top: 8px;
+  }
+
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .check-box {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .boundary-diagram {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+
+  .layer {
+    border: 1px solid;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .layer-ok     { border-color: var(--green); background: var(--green-light); }
+  .layer-amber  { border-color: var(--amber); background: var(--amber-light); }
+  .layer-blue   { border-color: var(--blue);  background: var(--blue-light);  }
+
+  .layer .layer-label {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+
+  .note {
+    background: var(--amber-light);
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    font-size: 13px;
+    margin: 10px 0;
+    color: var(--amber);
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <p class="artifact-label">PO 判断用アーティファクト — 仕様正本ではありません</p>
+    <h1>GodSandbox MVP Readiness Explainer</h1>
+    <p>PBI 1〜8a 完了後の状態まとめ。POが手動確認・次フェーズ判断に使う資料です。</p>
+  </div>
+</header>
+
+<div class="container">
+
+<!-- 1. MVPで体験できること -->
+<h2>1. MVP で体験できること</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <span class="badge badge-green">実装済み</span>
+    <h3>箱庭で生活している感</h3>
+    <p>キャラクターが idle や介入後に短いセリフを発する。ユーザーへの直接呼びかけはなく、「覗き見る」体験。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-green">実装済み</span>
+    <h3>神としての介入</h3>
+    <p>「見守る」「助ける」「試練」の 3 種類。GodPoints を消費。結果が状態に反映される。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-green">実装済み</span>
+    <h3>信仰の積み重ね</h3>
+    <p>介入を重ねるとキャラクターの「神への距離感」が変化する。数値はゲーム内部に保持。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-green">実装済み</span>
+    <h3>パスポート発行</h3>
+    <p>キャラクターのスナップショットから外部 AI 向け情報セットを生成。コピーして ChatGPT に渡せる。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-green">実装済み</span>
+    <h3>対話ハンドオフ</h3>
+    <p>外部 AI に渡す依頼文を生成してコピー。GodSandbox は外部 AI を直接呼ばない。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-amber">次フェーズ</span>
+    <h3>外部 AI との実対話</h3>
+    <p>Passport や依頼文を ChatGPT に貼り付けて会話する体験は PO の手動操作で確認可能。自動化は Sprint 10 以降。</p>
+  </div>
+</div>
+
+<!-- 2. 現在の安全境界 -->
+<h2>2. 現在の安全境界</h2>
+
+<div class="card">
+  <p class="section-label">絶対的な境界</p>
+  <div class="layer layer-ok">
+    <p class="layer-label">L1 — State Authority</p>
+    <p>AI（LLM）はゲーム状態を直接変更しない。テキスト提案のみ。状態更新はゲームロジックが決定する。</p>
+  </div>
+  <div class="layer layer-ok">
+    <p class="layer-label">L6 — Safety Guardrail</p>
+    <p>LLM 出力は必ず output_guard を通過する。「あなた」「神様」「プレイヤー」等の禁止語は自動ブロック。</p>
+  </div>
+  <div class="layer layer-ok">
+    <p class="layer-label">L5 — Memory / Lore Context</p>
+    <p>LLM に渡すコンテキストに信仰度の数値・五行内部値を含めない。記述的なバンド（文字列）のみ。</p>
+  </div>
+</div>
+
+<div class="note">
+  GodSandbox はゲーム本体から外部 AI API を直接呼び出しません。<br>
+  LLM との接続は PO が手動でコピー＆ペーストする設計です。
+</div>
+
+<!-- 3. Faith Boundary -->
+<h2>3. Faith（信仰度）Boundary</h2>
+
+<div class="card">
+  <p>信仰度は 0〜100 の内部数値です。以下のように扱われます：</p>
+
+  <table class="band-table">
+    <thead>
+      <tr>
+        <th>数値範囲</th>
+        <th>内部 faithBand</th>
+        <th>UI での表現（例）</th>
+        <th>状態</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0〜19</td>
+        <td><code>disbelieves</code></td>
+        <td>まだ距離がある</td>
+        <td><span class="ok">✓ OK</span></td>
+      </tr>
+      <tr>
+        <td>20〜39</td>
+        <td><code>uncertain</code></td>
+        <td>少し迷いがある</td>
+        <td><span class="ok">✓ OK</span></td>
+      </tr>
+      <tr>
+        <td>40〜59</td>
+        <td><code>senses_presence</code></td>
+        <td>気配を感じている</td>
+        <td><span class="ok">✓ OK</span></td>
+      </tr>
+      <tr>
+        <td>60〜79</td>
+        <td><code>believes</code></td>
+        <td>信頼が芽生えている</td>
+        <td><span class="ok">✓ OK</span></td>
+      </tr>
+      <tr>
+        <td>80〜100</td>
+        <td><code>devoted</code></td>
+        <td>深く結びついている</td>
+        <td><span class="ok">✓ OK</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>どこに出る / 出ない</h3>
+  <table class="band-table">
+    <thead>
+      <tr><th>場所</th><th>数値</th><th>faithBand (文字列)</th><th>日本語表現</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>箱庭 UI（プレイヤー向け）</td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ok">✓ 出てよい</span></td>
+      </tr>
+      <tr>
+        <td>Passport JSON 内部</td>
+        <td><span class="ok">✓ 含まれる</span></td>
+        <td><span class="ok">✓ 含まれる</span></td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td>externalAiPromptBlock</td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ok">✓ 出てよい</span></td>
+      </tr>
+      <tr>
+        <td>対話ハンドオフ依頼文</td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ok">✓ 出てよい</span></td>
+      </tr>
+      <tr>
+        <td>発話テキスト（observedDialogue）</td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td><span class="ng">✗ 出ない</span></td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 4. Dialogue Handoff Boundary -->
+<h2>4. Dialogue Handoff Boundary</h2>
+
+<div class="card">
+  <div class="flow">
+    <div class="flow-step">GodSandbox<br><small>依頼文生成</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">PO が<br>コピー</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">ChatGPT など<br><small>外部 AI</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">PO が<br>貼り付け</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">GodSandbox<br><small>候補を検証</small></div>
+  </div>
+
+  <h3>依頼文に含まれるもの / 含まれないもの</h3>
+  <table class="band-table">
+    <thead><tr><th>項目</th><th>含まれるか</th></tr></thead>
+    <tbody>
+      <tr><td>キャラクター名（許可された話者リスト）</td><td><span class="ok">✓ 含まれる</span></td></tr>
+      <tr><td>「JSON 配列で 6〜10 件返してください」の形式指定</td><td><span class="ok">✓ 含まれる</span></td></tr>
+      <tr><td>divinePerceptionBand（神への距離感：記述的表現）</td><td><span class="ok">✓ 含まれる</span></td></tr>
+      <tr><td>信仰度の数値（例：faith=73）</td><td><span class="ng">✗ 含まれない</span></td></tr>
+      <tr><td>信仰段階のキーワード（faithBand 等）</td><td><span class="ng">✗ 含まれない</span></td></tr>
+      <tr><td>五行内部値</td><td><span class="ng">✗ 含まれない</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>GodSandbox 側の検証</h3>
+  <p>LLM から返ってきた候補は：</p>
+  <ul style="padding-left:18px; margin-top:8px; font-size:13px;">
+    <li><code>validateDialogue</code> で禁止語・長さ・パターンを自動チェック</li>
+    <li>不明な話者（キャラクターリストにない名前）は <code>characterId=null</code> になり承認候補にならない</li>
+    <li>PO が「承認」ボタンを押した候補だけが表示ログに入る</li>
+  </ul>
+</div>
+
+<!-- 5. Passport Boundary -->
+<h2>5. Passport Boundary</h2>
+
+<div class="card">
+  <div class="boundary-diagram">
+    <p style="font-weight:700; margin-bottom:10px;">Passport JSON の構造</p>
+
+    <div class="layer layer-ok">
+      <p class="layer-label">godRelationship（内部）</p>
+      <p><code>currentFaith: 73</code>（数値として存在） &nbsp;|&nbsp; <code>faithBand: "believes"</code></p>
+      <p style="color:var(--green); font-size:12px; margin-top:4px;">✓ Passport JSON の内部には currentFaith が含まれる。これは正常。</p>
+    </div>
+
+    <div class="layer layer-blue" style="margin-top:8px;">
+      <p class="layer-label">externalAiPromptBlock（外部 AI 向け）</p>
+      <p><code>systemPrompt</code>: 「Ryo はこんな子です…気配を感じている」（日本語記述のみ）</p>
+      <p style="color:var(--blue); font-size:12px; margin-top:4px;">✓ 信仰度の数値 73 はここに出てこない。自動テストで保証済み。</p>
+    </div>
+  </div>
+
+  <h3>Passport 確認画面のルール</h3>
+  <ul style="padding-left:18px; font-size:13px;">
+    <li>初回のみ「含まれるもの／含まれないもの」の確認画面を表示</li>
+    <li>キャンセルでゲーム状態は変わらない（自動テストで保証済み）</li>
+    <li>禁止ワード（API、プロンプト、トークン、モデル、自動的に生成、システムプロンプト）は UI テキストに使わない</li>
+  </ul>
+</div>
+
+<!-- 6. Observed Dialogue Runtime -->
+<h2>6. Observed Dialogue Runtime</h2>
+
+<div class="card">
+  <h3>現在の MVP 実装</h3>
+  <table class="band-table">
+    <thead><tr><th>トリガー</th><th>ソース</th><th>発話対象</th></tr></thead>
+    <tbody>
+      <tr><td>event_started</td><td>authored_fixture</td><td>イベント参加者のみ</td></tr>
+      <tr><td>intervention_applied</td><td>authored_fixture（神への間接反応）</td><td>イベント参加者のみ</td></tr>
+      <tr><td>idle_timer</td><td>authored_fixture（日常発話）</td><td>active residents から</td></tr>
+    </tbody>
+  </table>
+
+  <h3>表示ルール</h3>
+  <ul style="padding-left:18px; font-size:13px; margin-top:8px;">
+    <li>同時表示最大 2 件</li>
+    <li>数秒で自動的に消える</li>
+    <li><code>validateDialogue</code> を通過した候補のみ表示（禁止語・長さチェック済み）</li>
+    <li><code>needs_review</code> 状態の候補は player-facing UI に出ない</li>
+    <li>外部 LLM は呼ばない（authored_fixture のみ）</li>
+  </ul>
+
+  <div class="note" style="margin-top:12px;">
+    現行 MVP は <strong>deterministic な authored_fixture</strong> による最小 runtime です。<br>
+    Type A/B/C の確率制御・relation-based dialogue・Ryo reaction service 接続・LLM runtime integration は将来拡張です。
+  </div>
+</div>
+
+<!-- 7. AI Observability -->
+<h2>7. AI Observability（Layer 8）</h2>
+
+<div class="card">
+  <p>Ryo Reaction Service（AI が Ryo の表情・台詞を生成する機能）では、各呼び出しをトレースログに記録します。</p>
+
+  <h3>記録される情報</h3>
+  <table class="band-table">
+    <thead><tr><th>フィールド</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td>traceId</td><td>呼び出しの一意 ID（タイムスタンプベース）</td></tr>
+      <tr><td>schemaValid</td><td>LLM 出力がスキーマを通過したか</td></tr>
+      <tr><td>outputGuardPassed</td><td>output_guard（禁止語チェック）を通過したか</td></tr>
+      <tr><td>promptVersion</td><td>使用したプロンプトのバージョン（v1 等）</td></tr>
+      <tr><td>worldStateHash</td><td>入力となった世界状態のハッシュ（内部数値は含まない）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>失敗パターンと対応</h3>
+  <table class="band-table">
+    <thead><tr><th>状況</th><th>schemaValid</th><th>outputGuardPassed</th></tr></thead>
+    <tbody>
+      <tr><td>正常出力</td><td><span class="ok">true</span></td><td><span class="ok">true</span></td></tr>
+      <tr><td>禁止語（あなた等）が含まれる</td><td><span class="ok">true</span></td><td><span class="ng">false</span></td></tr>
+      <tr><td>スキーマ違反（型エラー等）</td><td><span class="ng">false</span></td><td><span class="ng">false</span></td></tr>
+      <tr><td>JSON パース失敗</td><td><span class="ng">false</span></td><td><span class="ng">false</span></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 8. PO 手動テストチェックリスト -->
+<h2>8. PO 手動テストチェックリスト</h2>
+
+<div class="card">
+  <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">
+    自動テスト（CI）でカバーできない体験品質の確認項目です。
+    詳細な手順は <code>docs/operations/po-mvp-playtest-guide.md</code> を参照してください。
+  </p>
+
+  <ul class="checklist">
+    <li><span class="check-box"></span>箱庭画面が開き、キャラクターが表示される</li>
+    <li><span class="check-box"></span>待機中に観察型発話が出る（idle_timer）</li>
+    <li><span class="check-box"></span>発話が 3〜5 秒で消える</li>
+    <li><span class="check-box"></span>発話に「あなた」「プレイヤー」「神様」が含まれない</li>
+    <li><span class="check-box"></span>発話に「信仰度:XX」「faith: XX」等の数値が含まれない</li>
+    <li><span class="check-box"></span>「見守る」「助ける」「試練」の介入が機能する</li>
+    <li><span class="check-box"></span>介入後に発話または状態変化が起きる</li>
+    <li><span class="check-box"></span>信仰度の数値が箱庭 UI のどこにも表示されない</li>
+    <li><span class="check-box"></span>依頼文コピーボタンが機能する</li>
+    <li><span class="check-box"></span>コピーした依頼文に信仰数値が含まれない</li>
+    <li><span class="check-box"></span>Passport が発行できる</li>
+    <li><span class="check-box"></span>Passport 確認画面（初回）が表示される</li>
+    <li><span class="check-box"></span>確認キャンセルでゲーム状態が変わらない</li>
+    <li><span class="check-box"></span>Passport の externalAiPromptBlock に信仰数値が含まれない</li>
+    <li><span class="check-box"></span>Passport の systemPrompt をコピーして ChatGPT に貼ると、キャラクターらしく振る舞う</li>
+  </ul>
+</div>
+
+<!-- 9. 次に強化すべきこと -->
+<h2>9. 次に強化すべきこと</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <span class="badge badge-amber">Sprint 10 候補</span>
+    <h3>Observed Dialogue UX Polish</h3>
+    <p>吹き出しのアニメーション、表示タイミング、フェードアウトの自然さを改善。Codex 担当。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-amber">Sprint 10 候補</span>
+    <h3>WorldPrinciple テンプレートタギング</h3>
+    <p>イベントテンプレートに五行タグを付与し、faith-aware なイベント選択を実現。PBI 7。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-purple">将来フェーズ</span>
+    <h3>LLM リアルタイム統合</h3>
+    <p>authored_fixture に加えて、ゲーム内から LLM を呼び出す仕組み。セマンティックキャッシュ含む。</p>
+  </div>
+  <div class="card">
+    <span class="badge badge-purple">将来フェーズ</span>
+    <h3>RAG / 自律エージェント</h3>
+    <p>キャラクターが自律的に行動・記憶を参照するレイヤー。MVP ループ安定後。</p>
+  </div>
+</div>
+
+<div class="note">
+  PBI 8a（#282）で 28 件の domain smoke tests と 37 件の AI tests が CI に固定されました。<br>
+  新機能追加時はこれらのテストが全通過することを確認してから merge してください。
+</div>
+
+</div><!-- /.container -->
+
+<footer>
+  <p>GodSandbox PO 判断用アーティファクト — 仕様正本ではありません</p>
+  <p style="margin-top:4px;">正本: docs/product/faith-system-spec.md / observed-dialogue-spec.md / passport-outside-world-spec.md</p>
+  <p style="margin-top:4px;">生成: Claude (PBI 8b docs lane)</p>
+</footer>
+
+</body>
+</html>
