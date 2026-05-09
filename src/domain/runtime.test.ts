@@ -1596,6 +1596,32 @@ function testDialogueAuthoringPreview(): void {
   const normalText = validateDialogue("今日は風がやわらかいね");
   assert.equal(normalText.ok, true);
 
+  // min 5文字チェック
+  const tooShort = validateDialogue("今日");
+  assert.equal(tooShort.ok, false);
+  if (!tooShort.ok) assert.ok(tooShort.violations.some((v) => v.includes("文字数不足")));
+
+  const fiveChars = validateDialogue("今日は晴れ");
+  assert.equal(fiveChars.ok, true);
+
+  // UI用語チェック
+  const withSave = validateDialogue("セーブしてから行く");
+  assert.equal(withSave.ok, false);
+
+  const withStatus = validateDialogue("ステータスが変わった");
+  assert.equal(withStatus.ok, false);
+
+  // 好感度/友好度 numeric pattern
+  const withKansendo = validateDialogue("好感度が60になった");
+  assert.equal(withKansendo.ok, false);
+
+  const withYukodo = validateDialogue("友好度は30だよ");
+  assert.equal(withYukodo.ok, false);
+
+  // 信仰度パターン拡張（が/は も検出）
+  const withFaithGa = validateDialogue("信仰度が50になった");
+  assert.equal(withFaithGa.ok, false);
+
   // needs_review DialogueCandidate is excluded from accepted filter
   const needsReviewCandidate: DialogueCandidate = {
     id: "llm-002",
