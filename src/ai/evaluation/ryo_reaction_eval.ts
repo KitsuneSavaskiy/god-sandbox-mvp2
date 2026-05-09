@@ -5,7 +5,12 @@ import {
 } from "../schemas/ryo_reaction.js";
 import { guardRyoReactionLine, guardStateChangeRequest } from "../security/output_guard.js";
 import { buildRyoReactionPromptText } from "../prompts/ryo_reaction.js";
-import { parseRyoReactionOutput } from "../services/ryo_reaction_service.js";
+import {
+  parseRyoReactionOutput,
+  createRyoReactionSession,
+  parseAndTraceRyoReactionOutput,
+} from "../services/ryo_reaction_service.js";
+import { getTraces, clearTraces } from "../observability/trace_logger.js";
 import {
   buildWorldStateSummary,
   resolveFearBand,
@@ -563,4 +568,87 @@ const minimalSession = {
   const json = JSON.stringify(summary);
   assert.notOk(json.includes("wood: 0.7"), "five-phase internal value must be sanitized from event summary");
   ok("world_state_summary: sanitizes five-phase values from event summaries");
+}
+
+// --- trace_logger: createRyoReactionSession + parseAndTraceRyoReactionOutput ---
+
+{
+  clearTraces();
+
+  const worldState = buildWorldStateSummary(
+    minimalCharacter,
+    { ...minimalSession, worldStatusTags: ["平和"] },
+    [
+      {
+        id: "evt_trace",
+        templateId: "tmpl_001",
+        status: "active",
+        primaryCharacterId: "chr_ryo",
+        participantCharacterIds: ["chr_ryo"],
+        situationTags: [],
+        summary: "穏やかな日常が続いている",
+        createdAt: "2026-05-08T00:00:00.000Z",
+        updatedAt: "2026-05-08T00:00:00.000Z",
+      },
+    ],
+  );
+
+  const session = createRyoReactionSession(worldState);
+  assert.ok(session.traceId.length > 0);
+  assert.ok(session.worldStateHash.length > 0);
+  assert.equal(session.promptVersion, "v1");
+
+  const divineAction = "神が静かに見守っている";
+  const result = parseAndTraceRyoReactionOutput(
+    JSON.stringify({
+      expression: "normal",
+      line: "静かに、感じる。",
+      intensity: 0.4,
+      tags: ["calm"],
+      state_change_request: null,
+    }),
+    session,
+    divineAction,
+  );
+
+  assert.ok(result.ok);
+
+  const traces = getTraces();
+  assert.equal(traces.length, 1);
+  assert.equal(traces[0].traceId, session.traceId);
+  assert.equal(traces[0].promptId, "ryo_reaction");
+  assert.equal(traces[0].promptVersion, "v1");
+  assert.equal(traces[0].schemaValid, true);
+  assert.equal(traces[0].outputGuardPassed, true);
+  assert.equal(traces[0].divineAction, divineAction);
+  assert.equal(traces[0].worldStateHash, session.worldStateHash);
+
+  clearTraces();
+  ok("trace_logger: parseAndTraceRyoReactionOutput records full trace with schemaValid/outputGuardPassed");
+}
+
+{
+  clearTraces();
+
+  const worldState = buildWorldStateSummary(minimalCharacter, minimalSession, []);
+  const session = createRyoReactionSession(worldState);
+  parseAndTraceRyoReactionOutput(
+    JSON.stringify({
+      expression: "joy",
+      line: "あなたのおかげで助かった。",
+      intensity: 0.8,
+      tags: ["gratitude"],
+      state_change_request: null,
+    }),
+    session,
+    "神が祝福を与えた",
+  );
+
+  const traces = getTraces();
+  assert.equal(traces.length, 1);
+  assert.equal(traces[0].schemaValid, false);
+  assert.equal(traces[0].outputGuardPassed, false);
+
+  clearTraces();
+  ok("trace_logger: failed output guard records schemaValid=false, outputGuardPassed=false");
 }

@@ -140,6 +140,21 @@ src/ai/schemas/ryo_reaction.ts
 現在の世界状態から LLM へ渡すプロンプトを構築する。
 GodSandbox MVP2 では API キーをゲーム内に持たず、Manual Handoff（PO が ChatGPT/Codex に手動で貼り付け）を採用している。
 
+### src/domain/dialogue.ts との関係
+
+`src/domain/dialogue.ts` は Sprint 9-2 以前から存在する「複数キャラクター対話候補」生成系統であり、
+`src/ai/` の 9 層構造の外側にある。
+この系統は **Layer 1（State Authority）の原則**（AI はテキストを提案するだけ、状態変更しない）を守っているが、
+Layer 2〜8 の Registry / Schema / Guardrail / Trace を経由しない。
+
+| 項目 | `src/domain/dialogue.ts` | `src/ai/ryo_reaction` |
+|---|---|---|
+| 対象 | 複数キャラ対話候補 | Ryo 単体リアクション |
+| 出力スキーマ | なし（テキスト行） | `RyoReactionOutput`（JSON Schema） |
+| ガードレール | `validateGeneratedNarrativeCandidate` | L6 `output_guard.ts` |
+| Trace | なし | L8 `trace_logger.ts` |
+| 将来方針 | Sprint 10 以降に L2–L8 へ移行予定 | 現在の 9 層準拠実装 |
+
 ---
 
 ## Layer 5: Memory / Lore Context
