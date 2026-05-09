@@ -27,18 +27,10 @@ These notes are short-lived and should be refreshed when the related PRs merge.
   - 28 domain tests + 37 AI tests now in CI.
   - Invariants locked: faith hiding, dialogue handoff, observed dialogue runtime,
     passport boundary, AI observability.
+- #286 (PBI 4b-ui Observed Dialogue UX Polish) — merged to main.
+  - EventFirstSandbox dialogue bubble visibility improved.
 
-## Queue A: Active / Review Waiting
-
-### Codex: PBI 4b-ui — Observed Dialogue Runtime UX Polish
-
-Status: PR #286 in review.
-
-Scope:
-- `src/features/events/EventFirstSandbox.tsx`
-- `src/features/events/EventFirstSandbox.css`
-
-Do not modify from docs lane.
+## Queue A: Review Waiting
 
 ### Claude: PBI 8b — PO Playtest Kit + MVP Readiness Explainer
 
