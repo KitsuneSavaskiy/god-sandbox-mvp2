@@ -14,8 +14,11 @@ import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js
 
 const FORBIDDEN_DIRECT_ADDRESS = ["あなた", "プレイヤー"];
 const FORBIDDEN_GOD_DIRECT = ["神様"];
+const FORBIDDEN_UI_TERMS = ["画面", "ボタン", "セーブ", "ステータス", "UI"];
 const GAME_MECHANIC_PATTERNS = [
-  /信仰度\s*[:：]\s*\d+/,
+  /信仰度\s*(?:が|は|[:：])\s*\d+/,
+  /好感度\s*(?:が|は|[:：])\s*\d+/,
+  /友好度\s*(?:が|は|[:：])\s*\d+/,
   /スコア\s*[:：]\s*\d+/,
   /score\s*[:：]\s*\d+/i,
 ];
@@ -199,6 +202,10 @@ export function buildDialoguePromptPack(digest: DialogueWorldDigest): DialoguePr
 export function validateDialogue(text: string): DialogueValidationResult {
   const violations: string[] = [];
 
+  if (text.length < 5) {
+    violations.push(`文字数不足: ${text.length}文字（最低5文字）`);
+  }
+
   if (text.length > 40) {
     violations.push(`文字数超過: ${text.length}文字（上限40文字）`);
   }
@@ -212,6 +219,12 @@ export function validateDialogue(text: string): DialogueValidationResult {
   for (const word of FORBIDDEN_GOD_DIRECT) {
     if (text.includes(word)) {
       violations.push(`直接呼びかけ禁止: 「${word}」を含む`);
+    }
+  }
+
+  for (const term of FORBIDDEN_UI_TERMS) {
+    if (text.includes(term)) {
+      violations.push(`UI用語禁止: 「${term}」を含む`);
     }
   }
 
