@@ -2229,13 +2229,15 @@ function testObservedDialogueRuntimeSmokeTests(): void {
 }
 
 function testPassportBoundarySmokeTests(): void {
-  const afterIntervention = applyInterventionService(worldState(), {
-    type: "help",
-    now,
-    idSeed: "pbi8a-passport-smoke",
-  }).state;
+  // Use faith=73 (distinctive odd value; default is 30, avoids timestamp/common-number false negatives)
+  const ws = worldState();
+  const char = ws.characters.get("chr_a")!;
+  ws.characters.set("chr_a", {
+    ...char,
+    state: { ...char.state, status: { ...char.state.status, faith: 73 } },
+  });
 
-  const issuedSnapshot = issueSnapshotService(afterIntervention, {
+  const issuedSnapshot = issueSnapshotService(ws, {
     characterId: "chr_a",
     snapshotId: "snp_pbi8a_001",
     now,
@@ -2284,10 +2286,11 @@ function testPassportBoundarySmokeTests(): void {
     );
   }
 
-  // currentFaith の数値も externalAiPromptBlock に直接出ない
+  // currentFaith の数値も externalAiPromptBlock 全体に出ない（faith=73 で確認）
   const faithValue = display.godRelationship.currentFaith;
-  const promptText = display.externalAiPromptBlock.systemPrompt;
-  assert.equal(promptText.includes(String(faithValue)), false);
+  assert.equal(faithValue, 73); // distinctive value actually round-tripped through snapshot→passport
+  assert.equal(promptBlockJson.includes(String(faithValue)), false);
+  assert.equal(display.externalAiPromptBlock.systemPrompt.includes(String(faithValue)), false);
 }
 
 const tests: Array<[string, () => void]> = [
