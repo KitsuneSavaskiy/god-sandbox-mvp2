@@ -1842,12 +1842,17 @@ function testFaithExposureAndHandoffPrompt(): void {
   assert.ok(pt.includes('"text"'));
   assert.ok(pt.includes("allowedSpeakers"));
   assert.ok(pt.includes("divinePerceptionBand"));
+  assert.ok(pt.includes("Your actual response must contain 6 to 10 items"));
+  assert.ok(pt.includes("Do not copy the placeholder strings"));
 
   // Must NOT contain Japanese faith labels
   assert.equal(pt.includes("信仰度"), false);
   assert.equal(pt.includes("信仰段階"), false);
 
-  // Must have at least one active speaker name
+  // Must NOT contain placeholder speaker name
+  assert.equal(pt.includes("ExactSpeakerName"), false);
+
+  // Must have at least one active speaker name (from allowedSpeakers in example)
   const speakerNames = digest.activeCharacters.map((c) => c.name);
   assert.ok(speakerNames.length > 0);
   assert.ok(pt.includes(speakerNames[0]));
