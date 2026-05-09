@@ -1,10 +1,24 @@
 # PBI Next Queue
 
+Status: working queue, not a canonical product specification.
+
+This document tracks short-term implementation order and dependencies.
+Canonical specifications remain in:
+
+- `docs/product/mvp-implementation-plan.md`
+- `docs/product/faith-system-spec.md`
+- `docs/product/observed-dialogue-spec.md`
+- `docs/product/passport-outside-world-spec.md`
+
 ## Purpose
 
 This queue keeps Codex work out of Claude's active faith UI hiding and
 external LLM dialogue handoff repair work. It records the next safe PBIs and
 their dependencies.
+
+## 1. Current Coordination Notes
+
+These notes are short-lived and should be refreshed when the related PRs merge.
 
 ## Queue A: In Progress / Review Waiting
 
@@ -37,6 +51,10 @@ Likely touched files:
 
 Codex must not start implementation that touches these files until this work is
 merged and the next branch is based on the updated `main`.
+
+## 2. Stable Next-PBI Definitions
+
+These definitions should remain useful after the current PR numbers become stale.
 
 ## Queue B: Codex Work After Claude Task
 
@@ -134,6 +152,8 @@ Important constraints:
 - Do not expose internal five-phase values in UI, Passport, or event logs.
 - Keep generated event display player-safe.
 - Keep behavior deterministic.
+
+## 3. Parking Lot
 
 ## Queue C: Later
 

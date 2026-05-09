@@ -62,6 +62,29 @@ Follow these rules strictly:
 - Report only changed files, summary, tests, blockers, and PR body draft.
 - For docs-only work, do not run UI checks unless the PBI explicitly asks.
 
+## Required Output Format
+
+Before editing, use this format only:
+
+```md
+### Plan
+- Branch:
+- Expected files:
+- Files not touched:
+- Commands:
+```
+
+After editing, use this format only:
+
+```md
+### Result
+- Changed files:
+- Summary:
+- Tests:
+- Blockers:
+- PR body draft:
+```
+
 ## Scope Checklist
 
 Before editing:
@@ -86,6 +109,18 @@ Use GitHub PR files or `gh pr diff --name-only` as the source of truth.
 - Check whether another agent is touching the same feature surface.
 - If overlap exists, stop and report the PR number and overlapping files.
 - Do not resolve another agent's conflicts unless explicitly assigned.
+
+Common high-conflict areas:
+
+- Dialogue handoff work:
+  - `src/domain/dialogue.ts`
+  - `src/features/dialogue-preview/**`
+  - `src/features/events/EventFirstSandbox.tsx`
+  - `src/domain/runtime.test.ts`
+- Passport UI work:
+  - `src/features/passport/**`
+  - `src/domain/passport.ts`
+  - `src/domain/snapshots.ts`
 
 ## Short PR Body Template
 
