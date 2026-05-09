@@ -16,7 +16,16 @@ import {
   selectCurrentEvent,
   selectObservationPreset,
 } from "../../application/runtimeSelectors.js";
-import type { CharacterId, InterventionKind, WorldEvent } from "../../domain/models.js";
+import {
+  createObservedDialogueCandidates,
+  selectVisibleObservedDialogueCandidates,
+} from "../../domain/dialogue.js";
+import type {
+  CharacterId,
+  DialogueTrigger,
+  InterventionKind,
+  WorldEvent,
+} from "../../domain/models.js";
 import type { RuntimeWorldState } from "../../state/runtimeState.js";
 import { Button } from "../../ui/Button.js";
 import type { StoryLogEntry } from "../story/StoryLogPanel.js";
@@ -127,6 +136,12 @@ type ResidentMovementState = {
 };
 type ResidentMoveDirection = NonNullable<ResidentMovementState["direction"]>;
 
+type ObservedDialogueBubble = {
+  id: string;
+  characterId: CharacterId;
+  text: string;
+};
+
 const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
 type SandboxDayPhase = (typeof sandboxDayPhases)[number];
 const sandboxSeasons = ["spring", "summer", "autumn", "winter"] as const;
@@ -229,6 +244,8 @@ const RESIDENT_VIEWPORT_EDGE_CLEARANCE_PX = 8;
 const MOVEMENT_TRANSITION_MS = 3200;
 const MOVEMENT_INTERVAL_MS = 5000;
 const AMBIENT_EMOTE_DURATION_MS = 2400;
+const OBSERVED_DIALOGUE_DURATION_MS = 4200;
+const OBSERVED_DIALOGUE_IDLE_DELAY_MS = 6200;
 const RESIDENT_MOVE_STEP: Record<ResidentMoveDirection, [number, number]> = {
   left: [-14, 0],
   right: [14, 0],
@@ -354,6 +371,9 @@ export function EventFirstSandbox({
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [ambientResidentEmote, setAmbientResidentEmote] =
     useState<AmbientResidentEmote | null>(null);
+  const [observedDialogueBubbles, setObservedDialogueBubbles] = useState<
+    ObservedDialogueBubble[]
+  >([]);
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
@@ -364,6 +384,8 @@ export function EventFirstSandbox({
   const residentNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const previousBackgroundRef = useRef<SandboxBackgroundState | null>(null);
   const backgroundFadeTimeoutRef = useRef<number | null>(null);
+  const observedDialogueTimeoutsRef = useRef<Set<number>>(new Set());
+  const lastObservedDialogueEventIdRef = useRef<string | null>(null);
   const [previousSandboxBackground, setPreviousSandboxBackground] =
     useState<SandboxBackgroundState | null>(null);
 
@@ -535,6 +557,39 @@ export function EventFirstSandbox({
     },
     [],
   );
+
+  useEffect(
+    () => () => {
+      observedDialogueTimeoutsRef.current.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      observedDialogueTimeoutsRef.current.clear();
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (sandboxPaused || lastObservedDialogueEventIdRef.current === currentEvent.id) {
+      return;
+    }
+
+    lastObservedDialogueEventIdRef.current = currentEvent.id;
+    queueObservedDialogue("event_started", currentEvent.id);
+  }, [currentEvent.id, sandboxPaused]);
+
+  useEffect(() => {
+    if (sandboxPaused) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      queueObservedDialogue("idle_timer", `${currentEvent.id}-idle`);
+    }, OBSERVED_DIALOGUE_IDLE_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [currentEvent.id, sandboxPaused, activeCharacters.length]);
 
   useEffect(() => {
     apostleMotionRef.current = apostleMotion;
@@ -807,6 +862,53 @@ export function EventFirstSandbox({
     };
   }, [activeCharacters.length, sandboxPaused]);
 
+  function resolveObservedDialogueCharacters(trigger: DialogueTrigger) {
+    if (trigger === "event_started" || trigger === "intervention_applied") {
+      const participantIds = new Set(currentEvent.participantCharacterIds);
+      return activeCharacters.filter((character) => participantIds.has(character.id));
+    }
+
+    return activeCharacters;
+  }
+
+  function queueObservedDialogue(trigger: DialogueTrigger, seed: string): void {
+    const dialogueCharacters = resolveObservedDialogueCharacters(trigger);
+    const candidates = createObservedDialogueCandidates({
+      trigger,
+      characters: dialogueCharacters,
+      event: currentEvent,
+      restrictEventParticipants: trigger === "event_started" || trigger === "intervention_applied",
+      now: createTimestamp(storyEntries.length + 1),
+      seed,
+      maxCandidates: 2,
+    });
+    const visibleCandidates = selectVisibleObservedDialogueCandidates(candidates, 2);
+    if (visibleCandidates.length === 0) {
+      return;
+    }
+
+    const nextBubbles = visibleCandidates.map((candidate) => ({
+      id: candidate.id,
+      characterId: candidate.characterId,
+      text: candidate.text,
+    }));
+
+    setObservedDialogueBubbles((current) => [...nextBubbles, ...current].slice(0, 2));
+
+    nextBubbles.forEach((bubble, index) => {
+      const timeoutId = window.setTimeout(
+        () => {
+          observedDialogueTimeoutsRef.current.delete(timeoutId);
+          setObservedDialogueBubbles((current) =>
+            current.filter((item) => item.id !== bubble.id),
+          );
+        },
+        OBSERVED_DIALOGUE_DURATION_MS + index * 350,
+      );
+      observedDialogueTimeoutsRef.current.add(timeoutId);
+    });
+  }
+
   function handleTutorialContinue() {
     setTutorialState((current) => advanceTutorialStep(current, "continue"));
   }
@@ -845,6 +947,7 @@ export function EventFirstSandbox({
     });
 
     onRuntimeStateChange(applied.state);
+    queueObservedDialogue("intervention_applied", `${currentEvent.id}-${type}`);
     setEventWindowOpen(true);
     setLatestOutcome(outcome);
     setSandboxStage("result");
@@ -1097,6 +1200,23 @@ export function EventFirstSandbox({
             </button>
           </article>
         ))}
+        {observedDialogueBubbles.map((bubble) => {
+          const resident = activeResidents.find((item) => item.id === bubble.characterId);
+          if (!resident) {
+            return null;
+          }
+
+          return (
+            <div
+              key={bubble.id}
+              className="event-first-sandbox__dialogue-bubble"
+              style={createDialogueBubblePlacementStyle(resident)}
+              aria-label={`${resident.displayName}のひとこと`}
+            >
+              <span>{bubble.text}</span>
+            </div>
+          );
+        })}
         <div
           className={`event-first-sandbox__apostle-runner event-first-sandbox__apostle-runner--${
             apostleMotion.isMoving ? `moving-${apostleMotion.facing}` : "idle"
@@ -1655,6 +1775,13 @@ function resolveResidentSafeLeftPercent(
     (minLeftPx / viewportWidth) * 100,
     (maxLeftPx / viewportWidth) * 100,
   );
+}
+
+function createDialogueBubblePlacementStyle(resident: ResidentViewModel): CSSProperties {
+  return {
+    left: `${resident.movement.x}%`,
+    top: `${clamp(resident.movement.y - 7, 8, 86)}%`,
+  } as CSSProperties;
 }
 
 function resolveResidentPerspective(y: number): {

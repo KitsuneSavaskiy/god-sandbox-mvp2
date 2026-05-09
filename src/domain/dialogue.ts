@@ -2,6 +2,8 @@ import type {
   CharacterId,
   Character,
   CharacterRelation,
+  DialogueCandidate,
+  DialogueTrigger,
   DialoguePromptPack,
   DialogueValidationResult,
   DialogueWorldDigest,
@@ -14,7 +16,17 @@ import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js
 
 const FORBIDDEN_DIRECT_ADDRESS = ["あなた", "プレイヤー"];
 const FORBIDDEN_GOD_DIRECT = ["神様"];
-const FORBIDDEN_UI_TERMS = ["画面", "ボタン", "セーブ", "ステータス", "UI"];
+const FORBIDDEN_UI_TERMS = [
+  "画面",
+  "ボタン",
+  "セーブ",
+  "ステータス",
+  "UI",
+  "信仰",
+  "信仰度",
+  "faith",
+  "faithBand",
+];
 const GAME_MECHANIC_PATTERNS = [
   /信仰度\s*(?:が|は|[:：])\s*\d+/,
   /好感度\s*(?:が|は|[:：])\s*\d+/,
@@ -22,6 +34,37 @@ const GAME_MECHANIC_PATTERNS = [
   /スコア\s*[:：]\s*\d+/,
   /score\s*[:：]\s*\d+/i,
 ];
+const OBSERVED_DIALOGUE_MAX_VISIBLE = 2;
+const OBSERVED_DIALOGUE_FIXTURES: Record<
+  Extract<DialogueTrigger, "event_started" | "intervention_applied" | "idle_timer">,
+  readonly string[]
+> = {
+  event_started: [
+    "風が、少しざわついたね。",
+    "あれ、何か聞こえた。",
+    "広場の空気が変わった。",
+  ],
+  intervention_applied: [
+    "さっきの光、まだ残ってる。",
+    "胸が少しあたたかい。",
+    "今なら、もう少し歩けそう。",
+  ],
+  idle_timer: [
+    "今日は少し、歩いてみたいな。",
+    "木陰が気持ちよさそう。",
+    "水の音、落ち着くね。",
+  ],
+};
+
+export type ObservedDialogueRuntimeInput = {
+  trigger: DialogueTrigger;
+  characters: Character[];
+  event?: WorldEvent;
+  restrictEventParticipants?: boolean;
+  now: string;
+  seed: string;
+  maxCandidates?: number;
+};
 
 export function buildDialogueWorldDigest(
   session: SandboxSession,
@@ -245,6 +288,61 @@ export function validateDialogue(text: string): DialogueValidationResult {
   return { ok: true };
 }
 
+export function createObservedDialogueCandidates(
+  input: ObservedDialogueRuntimeInput,
+): DialogueCandidate[] {
+  const fixtureTrigger = isObservedDialogueFixtureTrigger(input.trigger)
+    ? input.trigger
+    : "idle_timer";
+  const lines = OBSERVED_DIALOGUE_FIXTURES[fixtureTrigger];
+  const characters = resolveObservedDialogueCharacters(input, fixtureTrigger);
+
+  if (characters.length === 0 || lines.length === 0) {
+    return [];
+  }
+
+  const baseHash = createDialogueHash(
+    `${input.seed}:${input.trigger}:${input.event?.id ?? "no-event"}`,
+  );
+  const requestedCount = input.maxCandidates ?? OBSERVED_DIALOGUE_MAX_VISIBLE;
+  const count = Math.min(Math.max(0, requestedCount), characters.length);
+
+  return Array.from({ length: count }).flatMap((_, index) => {
+    const character = characters[(baseHash + index) % characters.length];
+    const text = lines[(baseHash + index) % lines.length];
+    if (!character || !text || !validateDialogue(text).ok) {
+      return [];
+    }
+
+    return [
+      {
+        id: `dlg_${fixtureTrigger}_${input.event?.id ?? "idle"}_${character.id}_${index}`,
+        characterId: character.id,
+        text,
+        type:
+          fixtureTrigger === "intervention_applied"
+            ? "god_indirect_reaction"
+            : "daily",
+        source: "authored_fixture",
+        reviewStatus: "accepted",
+        targetCharacterId:
+          fixtureTrigger === "intervention_applied" ? input.event?.primaryCharacterId : undefined,
+        createdAt: input.now,
+      } satisfies DialogueCandidate,
+    ];
+  });
+}
+
+export function selectVisibleObservedDialogueCandidates(
+  candidates: DialogueCandidate[],
+  maxVisible = OBSERVED_DIALOGUE_MAX_VISIBLE,
+): DialogueCandidate[] {
+  return candidates
+    .filter((candidate) => candidate.reviewStatus === "accepted")
+    .filter((candidate) => validateDialogue(candidate.text).ok)
+    .slice(0, Math.max(0, maxVisible));
+}
+
 export type ParsedCandidateRaw = {
   id: string;
   rawSpeakerName: string;
@@ -334,4 +432,38 @@ function describeRelation(score: number): string {
   if (score >= 5) return "普通の関係にある";
   if (score >= -5) return "やや距離がある";
   return "複雑な関係にある";
+}
+
+function isObservedDialogueFixtureTrigger(
+  trigger: DialogueTrigger,
+): trigger is Extract<DialogueTrigger, "event_started" | "intervention_applied" | "idle_timer"> {
+  return (
+    trigger === "event_started" ||
+    trigger === "intervention_applied" ||
+    trigger === "idle_timer"
+  );
+}
+
+function createDialogueHash(input: string): number {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    hash = (hash * 31 + input.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function resolveObservedDialogueCharacters(
+  input: ObservedDialogueRuntimeInput,
+  trigger: Extract<DialogueTrigger, "event_started" | "intervention_applied" | "idle_timer">,
+): Character[] {
+  if (
+    input.restrictEventParticipants &&
+    input.event &&
+    (trigger === "event_started" || trigger === "intervention_applied")
+  ) {
+    const participantIds = new Set(input.event.participantCharacterIds);
+    return input.characters.filter((character) => participantIds.has(character.id));
+  }
+
+  return input.characters;
 }
