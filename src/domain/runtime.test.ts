@@ -113,6 +113,7 @@ import {
   PASSPORT_CONFIRM_TEXTS,
   PASSPORT_FORBIDDEN_WORDS,
 } from "../features/passport/passportUiText.js";
+import { createVisibleChangePatchForSandboxUi } from "../features/events/interventionOutcomeViewModel.js";
 
 type TestAssert = {
   deepEqual(actual: unknown, expected: unknown): void;
@@ -1789,6 +1790,83 @@ function testPassportConfirmUi(): void {
   }
 }
 
+function testFaithExposureAndHandoffPrompt(): void {
+  // --- Goal 2: faith patch filter ---
+  const mixedPatch = {
+    vitality: 2,
+    stress: -1,
+    faith: 4,
+    faithChange: {
+      characterId: "chr_ryo",
+      previousFaith: 30,
+      newFaith: 34,
+      delta: 4,
+      trigger: "help_success",
+      interventionId: "itv_001",
+    },
+  };
+
+  const visible = createVisibleChangePatchForSandboxUi(mixedPatch);
+  assert.equal("faith" in visible, false);
+  assert.equal("faithChange" in visible, false);
+  assert.ok("vitality" in visible);
+  assert.ok("stress" in visible);
+
+  const visibleJson = JSON.stringify(visible);
+  assert.equal(visibleJson.includes("faith"), false);
+  assert.equal(visibleJson.includes("30"), false);
+  assert.equal(visibleJson.includes("34"), false);
+  assert.equal(visibleJson.includes("help_success"), false);
+
+  const faithOnlyPatch: Record<string, unknown> = {
+    faith: 4,
+    faithChange: { previousFaith: 30, newFaith: 34, delta: 4 },
+  };
+  const visibleFaithOnly = createVisibleChangePatchForSandboxUi(faithOnlyPatch);
+  assert.equal(Object.keys(visibleFaithOnly).length, 0);
+
+  // --- Goal 4 & 5: handoff prompt structure ---
+  const ws = worldState();
+  const digest = buildDialogueWorldDigest(
+    ws.session,
+    ws.characters,
+    [...ws.relations.values()],
+    [...ws.events.values()],
+  );
+  const pack = buildDialoguePromptPack(digest);
+  const pt = pack.promptText;
+
+  // Must contain
+  assert.ok(pt.includes("Output a JSON array only"));
+  assert.ok(pt.includes('"name"'));
+  assert.ok(pt.includes('"text"'));
+  assert.ok(pt.includes("allowedSpeakers"));
+  assert.ok(pt.includes("divinePerceptionBand"));
+
+  // Must NOT contain Japanese faith labels
+  assert.equal(pt.includes("信仰度"), false);
+  assert.equal(pt.includes("信仰段階"), false);
+
+  // Must have at least one active speaker name
+  const speakerNames = digest.activeCharacters.map((c) => c.name);
+  assert.ok(speakerNames.length > 0);
+  assert.ok(pt.includes(speakerNames[0]));
+
+  // --- Goal 5: parser round-trip ---
+  const nameToIdMap = new Map<string, string>();
+  for (const c of ws.characters.values()) {
+    nameToIdMap.set(c.profile.displayName, c.id);
+  }
+  const firstSpeaker = speakerNames[0];
+  const simulatedLlmOutput = `[{"name":"${firstSpeaker}","text":"風が、少し変わった気がする。"}]`;
+  const parsed = parseDialogueCandidatesFromText(simulatedLlmOutput, nameToIdMap, now);
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].rawSpeakerName, firstSpeaker);
+  assert.ok(parsed[0].characterId !== null);
+  const vResult = validateDialogue(parsed[0].text);
+  assert.ok(vResult.ok);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -1813,6 +1891,7 @@ const tests: Array<[string, () => void]> = [
   ["dialogue authoring preview (PBI 4a)", testDialogueAuthoringPreview],
   ["passport outside world payload (PBI 5)", testPassportOutsideWorldPayload],
   ["passport confirm UI (PBI 6)", testPassportConfirmUi],
+  ["faith exposure and handoff prompt", testFaithExposureAndHandoffPrompt],
 ];
 
 for (const [name, test] of tests) {

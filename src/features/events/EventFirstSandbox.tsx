@@ -30,6 +30,7 @@ import {
   type SandboxExperienceStage,
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
+import { createVisibleChangePatchForSandboxUi } from "./interventionOutcomeViewModel.js";
 import {
   createNextAmbientResidentEmote,
   isResidentMovementBlockingEmote,
@@ -1564,9 +1565,11 @@ function describeChangeSet(
 ): string {
   const character = appliedState.characters.get(characterId);
   const label = character?.profile.displayName ?? characterId;
-  const delta = Object.entries(patch)
+  const visiblePatch = createVisibleChangePatchForSandboxUi(patch);
+  const delta = Object.entries(visiblePatch)
     .map(([key, value]) => `${key} ${Number(value) > 0 ? "+" : ""}${value}`)
     .join(", ");
+  if (!delta) return `${label}: 内面に小さな変化が残りました`;
   return `${label}: ${delta}`;
 }
 
