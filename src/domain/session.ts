@@ -39,7 +39,7 @@ export function assertSandboxSessionInvariants(session: SandboxSession): void {
   }
 }
 
-export function createSandboxSession(input: SandboxSession): SandboxSession {
+function createSandboxSession(input: SandboxSession): SandboxSession {
   assertSandboxSessionInvariants(input);
   return structuredClone(input) as SandboxSession;
 }
