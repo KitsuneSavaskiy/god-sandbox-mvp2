@@ -12,7 +12,7 @@ const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
 const RYO_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png";
 const GARAN_PO_PREVIEW_COMBINED_SHEET_PATH =
-  "art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png";
+  "art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21.png";
 const SUZU_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png";
 

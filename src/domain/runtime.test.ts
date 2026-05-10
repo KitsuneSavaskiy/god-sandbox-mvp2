@@ -734,7 +734,7 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[3]?.spriteSheet.ready, true);
   assert.equal(
     activeAssetBundles[1]?.spriteSheet.path,
-    "/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png",
+    "/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21.png",
   );
   assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.frameWidth, 118);
   assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.frameHeight, 136);
