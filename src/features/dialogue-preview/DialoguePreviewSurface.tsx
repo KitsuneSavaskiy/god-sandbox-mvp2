@@ -27,7 +27,6 @@ function shouldOpenChatGptGuideByDefault(): boolean {
 export function DialoguePreviewSurface({ state }: Props) {
   const [pasteText, setPasteText] = useState("");
   const [parsedCandidates, setParsedCandidates] = useState<ParsedCandidate[]>([]);
-  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [guidanceOpen, setGuidanceOpen] = useState(shouldOpenChatGptGuideByDefault);
 
@@ -73,24 +72,14 @@ export function DialoguePreviewSurface({ state }: Props) {
           : validateDialogue(raw.text),
     }));
     setParsedCandidates(withValidation);
-    setAcceptedIds(new Set());
-  }
-
-  function handleAccept(id: string) {
-    setAcceptedIds((prev) => new Set([...prev, id]));
-  }
-
-  function handleReject(id: string) {
-    setParsedCandidates((prev) => prev.filter((c) => c.id !== id));
-    setAcceptedIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
   }
 
   const acceptedCandidates = parsedCandidates.filter(
-    (c) => acceptedIds.has(c.id) && c.validation.ok && c.characterId !== null,
+    (c) => c.validation.ok && c.characterId !== null,
+  );
+
+  const invalidCandidates = parsedCandidates.filter(
+    (c) => !c.validation.ok || c.characterId === null,
   );
 
   function resolveDisplayName(candidate: ParsedCandidate): string {
@@ -112,7 +101,7 @@ export function DialoguePreviewSurface({ state }: Props) {
       <div className="dialogue-preview__grid">
         <section className="dialogue-preview__panel" aria-label="プロンプト生成">
           <div className="dialogue-preview__step-heading">
-            <h3>Step 1 — JSON発話候補を作る依頼文をコピー</h3>
+            <h3>Step 1 — プロンプトをコピー</h3>
             <button
               type="button"
               className="dialogue-preview__help-button"
@@ -161,9 +150,12 @@ export function DialoguePreviewSurface({ state }: Props) {
               </video>
             </aside>
           )}
+          <p className="dialogue-preview__hint">
+            コピーしたプロンプトを外部AIに貼ると、GodSandboxに戻せるJSON形式のテキストが作成されるので、それをStep2に張り付けてください。
+          </p>
           <div className="dialogue-preview__copy-row">
             <Button type="button" variant="primary" onClick={handleCopy}>
-              JSON発話候補を作る依頼文をコピー
+              コピーする
             </Button>
             {copied && (
               <span className="dialogue-preview__copied-label" role="status">
@@ -171,9 +163,6 @@ export function DialoguePreviewSurface({ state }: Props) {
               </span>
             )}
           </div>
-          <p className="dialogue-preview__hint">
-            コピーした依頼文を外部AIに貼ると、GodSandboxに戻せるJSON形式の発話候補が返る想定です。
-          </p>
           <details className="dialogue-preview__advanced-prompt">
             <summary>コピー内容を確認する（開発者向け）</summary>
             <pre className="dialogue-preview__prompt-box" aria-label="生成プロンプト">
@@ -184,84 +173,82 @@ export function DialoguePreviewSurface({ state }: Props) {
 
         <section className="dialogue-preview__panel" aria-label="LLM出力の貼り付け">
           <h3>Step 2 — LLM の出力を貼り付けて検証</h3>
-          <p className="dialogue-preview__hint">
-            「名前：発話文」形式（1行1発話）、または JSON 配列を貼り付けてください。
-          </p>
           <textarea
             className="dialogue-preview__paste-area"
             aria-label="LLM出力の貼り付け欄"
-            placeholder={"Ryo：今日はいい天気だな\nSuzu：そうね、散歩したい気分"}
+            placeholder={'[\n  { "name": "Ryo", "text": "今日はいい天気だな" },\n  { "name": "Suzu", "text": "そうね、散歩したい気分" }\n]'}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
           />
           <Button type="button" variant="primary" onClick={handleParse}>
-            解析して検証
+            取り込む
           </Button>
 
           {parsedCandidates.length > 0 && (
             <div className="dialogue-preview__candidate-list" aria-label="解析結果">
-              {parsedCandidates.map((candidate) => {
-                const isAccepted = acceptedIds.has(candidate.id);
-                const isValid = candidate.validation.ok;
-                return (
-                  <article
-                    key={candidate.id}
-                    className={`dialogue-preview__candidate${!isValid ? " dialogue-preview__candidate--invalid" : ""}`}
-                  >
-                    <p className="dialogue-preview__candidate-speaker">
-                      {resolveDisplayName(candidate)}
-                    </p>
-                    <p className="dialogue-preview__candidate-text">{candidate.text}</p>
-                    {!isValid && (
-                      <ul className="dialogue-preview__violation">
-                        {candidate.validation.violations.map((v, i) => (
-                          <li key={i}>{v}</li>
-                        ))}
-                      </ul>
-                    )}
-                    {!isAccepted && (
-                      <div className="dialogue-preview__candidate-actions">
-                        <Button
-                          type="button"
-                          variant={isValid ? "primary" : "secondary"}
-                          disabled={!isValid}
-                          onClick={() => handleAccept(candidate.id)}
-                        >
-                          承認
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          onClick={() => handleReject(candidate.id)}
-                        >
-                          却下
-                        </Button>
-                      </div>
-                    )}
-                    {isAccepted && (
-                      <p className="dialogue-preview__candidate-speaker">✓ 承認済み</p>
-                    )}
-                  </article>
-                );
-              })}
+              {parsedCandidates.length > 0 && (
+                <p className="dialogue-preview__hint">
+                  {acceptedCandidates.length}件取り込みました
+                  {invalidCandidates.length > 0 && `（${invalidCandidates.length}件は検証NG）`}
+                </p>
+              )}
+              {invalidCandidates.map((candidate) => (
+                <article
+                  key={candidate.id}
+                  className="dialogue-preview__candidate dialogue-preview__candidate--invalid"
+                >
+                  <p className="dialogue-preview__candidate-speaker">
+                    {resolveDisplayName(candidate)}
+                  </p>
+                  <p className="dialogue-preview__candidate-text">{candidate.text}</p>
+                  <ul className="dialogue-preview__violation">
+                    {!candidate.validation.ok && candidate.validation.violations.map((v: string, i: number) => (
+                      <li key={i}>{v}</li>
+                    ))}
+                  </ul>
+                </article>
+              ))}
             </div>
           )}
         </section>
       </div>
 
       <section className="dialogue-preview__panel" aria-label="発話ログプレビュー">
-        <h3>Step 3 — 承認済み発話ログ（2ch 形式）</h3>
+        <h3>Step 3 — 取り込み済み発話ログ</h3>
         {acceptedCandidates.length > 0 ? (
           <div className="dialogue-preview__log" role="log" aria-live="polite">
-            {acceptedCandidates.map((candidate) => (
-              <p key={candidate.id} className="dialogue-preview__log-entry">
-                {resolveDisplayName(candidate)}：{candidate.text}
-              </p>
-            ))}
+            {acceptedCandidates.map((candidate, index) => {
+              const postNumber = index + 1;
+              return (
+                <div
+                  key={candidate.id}
+                  id={`post-${postNumber}`}
+                  className="dialogue-preview__post"
+                >
+                  <div className="dialogue-preview__post-header">
+                    <span className="dialogue-preview__post-number">{postNumber}</span>
+                    <span className="dialogue-preview__post-name">
+                      {resolveDisplayName(candidate)}
+                    </span>
+                  </div>
+                  <p className="dialogue-preview__post-text">
+                    {candidate.replyTo != null && candidate.replyTo <= acceptedCandidates.length && (
+                      <a
+                        href={`#post-${candidate.replyTo}`}
+                        className="dialogue-preview__anchor"
+                      >
+                        &gt;&gt;{candidate.replyTo}
+                      </a>
+                    )}
+                    {candidate.replyTo != null ? " " : ""}{candidate.text}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="dialogue-preview__empty-note">
-            発話候補を解析して「承認」すると、ここにログが表示されます。
+            LLM出力を取り込むと、ここにログが表示されます。
           </p>
         )}
       </section>

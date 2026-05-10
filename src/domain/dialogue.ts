@@ -165,9 +165,10 @@ export function buildDialoguePromptPack(digest: DialogueWorldDigest): DialoguePr
     "",
     "OUTPUT CONTRACT:",
     "- Return 6 to 10 candidates.",
-    "- Each candidate must be an object with exactly these keys:",
+    "- Each candidate must be an object with these keys:",
     '  - "name": one exact string from allowedSpeakers',
     '  - "text": one Japanese ambient dialogue line, 5 to 40 characters',
+    '  - "replyTo": optional integer. If this line responds to a specific earlier line in this exchange, set replyTo to that line\'s 1-based position in the returned array. Omit if not a reply.',
     "- No other keys are allowed.",
     "",
     "You are generating candidate ambient dialogue lines for characters living inside a sandbox world.",
@@ -315,6 +316,7 @@ export type ParsedCandidateRaw = {
   rawSpeakerName: string;
   characterId: string | null;
   text: string;
+  replyTo?: number;
   type: "daily" | "relationship" | "god_indirect_reaction";
   source: "external_llm_handoff";
   reviewStatus: "needs_review";
@@ -339,12 +341,18 @@ export function parseDialogueCandidatesFromText(
           const text = String(obj["text"] ?? obj["content"] ?? "").trim();
           if (!rawSpeakerName || !text) return [];
           const characterId = nameToIdMap.get(rawSpeakerName) ?? null;
+          const replyToRaw = obj["replyTo"];
+          const replyTo =
+            typeof replyToRaw === "number" && replyToRaw >= 1
+              ? Math.floor(replyToRaw)
+              : undefined;
           return [
             {
               id: `cand_llm_${now}_${i}`,
               rawSpeakerName,
               characterId,
               text,
+              replyTo,
               type: "daily" as const,
               source: "external_llm_handoff" as const,
               reviewStatus: "needs_review" as const,
