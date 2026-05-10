@@ -1968,13 +1968,14 @@ function testFaithExposureAndHandoffPrompt(): void {
   const pt = pack.promptText;
 
   // Must contain
-  assert.ok(pt.includes("Output a JSON array only"));
+  assert.ok(pt.includes("Return only a valid JSON array"));
   assert.ok(pt.includes('"name"'));
   assert.ok(pt.includes('"text"'));
   assert.ok(pt.includes("allowedSpeakers"));
   assert.ok(pt.includes("divinePerceptionBand"));
-  assert.ok(pt.includes("Your actual response must contain 6 to 10 items"));
+  assert.ok(pt.includes("Return 6 to 10 candidates"));
   assert.ok(pt.includes("Do not copy the placeholder strings"));
+  assert.ok(pt.includes("Do not explain this prompt"));
 
   // Must NOT contain Japanese faith labels
   assert.equal(pt.includes("信仰度"), false);
@@ -2088,17 +2089,35 @@ function testDialogueHandoffSmokeTests(): void {
   const pack = buildDialoguePromptPack(digest);
   const pt = pack.promptText;
 
-  // 1. buildDialoguePromptPack は必須フィールドを含む
-  assert.ok(pt.includes("Output a JSON array only"));
+  // 1. 人間向け説明がコピー文に混入していない
+  assert.equal(pt.includes("## 人間オペレーター向け"), false);
+  assert.equal(pt.includes("## ChatGPTで使う場合"), false);
+  assert.equal(pt.includes("キャラクター名のProject"), false);
+  assert.equal(pt.includes("この時点では外部AIへ自動送信されません"), false);
+
+  // 2. 解説禁止命令が含まれる
+  assert.ok(pt.includes("Do not explain this prompt"));
+  assert.ok(pt.includes("Do not summarize this prompt"));
+  assert.ok(pt.includes("Do not analyze this prompt"));
+  assert.ok(pt.includes("Do not say what this file is"));
+
+  // 3. JSON のみを要求している
+  assert.ok(pt.includes("Return only a valid JSON array"));
+  assert.ok(pt.includes("Your entire response must be parseable by JSON.parse"));
+  assert.ok(pt.includes('Start your response with "[" and end with "]"'));
+  assert.ok(pt.includes("Now return the JSON array only"));
+
+  // 4. 出力形式と必須フィールドが含まれる
   assert.ok(pt.includes("allowedSpeakers"));
   assert.ok(pt.includes('"name"'));
   assert.ok(pt.includes('"text"'));
   assert.ok(pt.includes("divinePerceptionBand"));
-  assert.ok(pt.includes("Your actual response must contain 6 to 10 items"));
+  assert.ok(pt.includes("Return 6 to 10 candidates"));
 
-  // 2. buildDialoguePromptPack は禁止フィールドを含まない
+  // 5. 禁止語が日本語ラベルとして出ない
   assert.equal(pt.includes("信仰度"), false);
   assert.equal(pt.includes("信仰段階"), false);
+  assert.equal(pt.includes("faithBand"), false);
   assert.equal(pt.includes("ExactSpeakerName"), false);
 
   const speakerNames = digest.activeCharacters.map((c) => c.name);

@@ -112,7 +112,7 @@ export function DialoguePreviewSurface({ state }: Props) {
       <div className="dialogue-preview__grid">
         <section className="dialogue-preview__panel" aria-label="プロンプト生成">
           <div className="dialogue-preview__step-heading">
-            <h3>Step 1 — 外部AIへの依頼文をコピー</h3>
+            <h3>Step 1 — JSON発話候補を作る依頼文をコピー</h3>
             <button
               type="button"
               className="dialogue-preview__help-button"
@@ -124,17 +124,6 @@ export function DialoguePreviewSurface({ state }: Props) {
               ?
             </button>
           </div>
-          <p className="dialogue-preview__hint">
-            この依頼文には、キャラクター名・口調・最近の出来事・関係性の手がかりが含まれます。
-            画面には内部値を表示しません。コピーした内容は、あなたが外部AIに貼り付けたときだけ読まれます。
-          </p>
-          <p className="dialogue-preview__hint dialogue-preview__hint--chatgpt">
-            ChatGPTで使う場合は、キャラクター名のProjectを作り、その中で新しいチャットを始めてください。
-            同じProjectにこの子の会話をまとめると、1つの人格として続けやすくなります。
-            {digest.activeCharacters.length > 1 && (
-              <>{" "}複数キャラクターが含まれる場合は、主役キャラクター名または箱庭名のProjectを使ってください。</>
-            )}
-          </p>
           {guidanceOpen && (
             <aside
               id="dialogue-preview-chatgpt-guide"
@@ -146,12 +135,19 @@ export function DialoguePreviewSurface({ state }: Props) {
                 <ol>
                   <li>ChatGPTのプロジェクトを開きます。</li>
                   <li>プロジェクトフォルダに、会話したいキャラ名のメモを入れます。</li>
-                  <li>この画面のプロンプトをコピーして、ChatGPTに貼り付けます。</li>
-                  <li>返ってきた発話候補を Step 2 に貼ると、GodSandbox側で確認できます。</li>
+                  <li>このボタンでコピーした依頼文を、ChatGPTの新しいチャットに貼り付けます。</li>
+                  <li>JSON配列が返ってきたら、Step 2 に貼り付けて確認します。</li>
                 </ol>
                 <p>
-                  先にプロジェクトフォルダへキャラ名を入れておくと、ChatGPTが「誰と話すか」を
-                  見失いにくくなります。APIキーは使わず、手動でコピーして遊ぶ導線です。
+                  先にプロジェクトフォルダへキャラ名を入れておくと、ChatGPTが「誰として話すか」を
+                  把握しやすくなります。
+                  {digest.activeCharacters.length > 1 && (
+                    <>{" "}複数キャラクターが含まれる場合は、箱庭名のProjectを使ってください。</>
+                  )}
+                </p>
+                <p>
+                  コピーされる依頼文はJSON候補を返す実行命令です。
+                  そのまま貼るとGodSandboxに戻せる形式が返ります。
                 </p>
               </div>
               <video
@@ -167,7 +163,7 @@ export function DialoguePreviewSurface({ state }: Props) {
           )}
           <div className="dialogue-preview__copy-row">
             <Button type="button" variant="primary" onClick={handleCopy}>
-              依頼文をコピー
+              JSON発話候補を作る依頼文をコピー
             </Button>
             {copied && (
               <span className="dialogue-preview__copied-label" role="status">
