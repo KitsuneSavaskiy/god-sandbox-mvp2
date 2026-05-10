@@ -6,7 +6,7 @@
     <title>Garan PO Sprite Preview</title>
     <style>
       :root {
-        --sheet: url("/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png");
+        --sheet: url("/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21.png");
         --frame-width: 118px;
         --frame-height: 136px;
         --columns: 7;
@@ -105,6 +105,29 @@
         gap: 18px;
       }
 
+      .sheet-review {
+        display: grid;
+        gap: 12px;
+        margin: 24px 0;
+        border: 1px solid rgba(63, 46, 30, 0.16);
+        border-radius: 24px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .sheet-review h2,
+      .sheet-review p {
+        margin: 0;
+      }
+
+      .sheet-review img {
+        display: block;
+        width: min(100%, 826px);
+        height: auto;
+        border-radius: 14px;
+        background: #111;
+      }
+
       .motion-card {
         display: grid;
         grid-template-columns: minmax(220px, max-content) 1fr;
@@ -194,8 +217,11 @@
         <div class="toolbar">
           <button type="button" id="pauseButton">一時停止</button>
           <a href="/sandbox?mode=manual-sweep">箱庭で見る</a>
-          <a href="/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v20.png">
+          <a href="/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21.png">
             元PNGを開く
+          </a>
+          <a href="/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21-grid-review.png">
+            グリッド付きPNGを開く
           </a>
         </div>
       </header>
@@ -205,6 +231,15 @@
         <div><strong>columns</strong>7 frames</div>
         <div><strong>rows</strong>14 rows</div>
         <div><strong>canvas</strong>826 x 1904 px</div>
+      </section>
+
+      <section class="sheet-review" aria-label="grid review sheet">
+        <h2>セル境界つき確認画像</h2>
+        <p>PO確認用に、各コマの118 x 136セルが分かる赤いグリッドを重ねています。</p>
+        <img
+          src="/art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21-grid-review.png"
+          alt="Garan sprite sheet with red cell grid lines"
+        />
       </section>
 
       <section class="grid" id="motionGrid" aria-label="motion preview grid"></section>

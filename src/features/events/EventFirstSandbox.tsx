@@ -1647,6 +1647,12 @@ function resolveSandboxResidentMotion(input: {
     return "failed";
   }
 
+  const hasUiSignalEmote =
+    input.emote === "event-alert" || input.emote === "talk-request";
+  if (input.movementDirection !== null && hasUiSignalEmote) {
+    return resolveResidentMotion(null, input.residentVisualPaused, input.movementDirection);
+  }
+
   if (input.emote === "event-alert") {
     return "review";
   }
