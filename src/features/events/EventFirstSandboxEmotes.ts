@@ -94,6 +94,17 @@ export function resolveDisplayedResidentEmote(
   return ambientEmote.emote;
 }
 
+export function resolveVisibleResidentEmote(input: {
+  emote: EmoteKind;
+  dialogueBubbleVisible: boolean;
+}): EmoteKind {
+  if (input.dialogueBubbleVisible && input.emote === "talk-request") {
+    return null;
+  }
+
+  return input.emote;
+}
+
 export function createNextAmbientResidentEmote(
   previousResidentIndex: number,
   residentCount: number,

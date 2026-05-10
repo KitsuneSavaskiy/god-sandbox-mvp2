@@ -577,7 +577,7 @@
 .event-first-sandbox__dialogue-layer {
   position: absolute;
   inset: 0;
-  z-index: 9;
+  z-index: 80;
   pointer-events: none;
 }
 
@@ -617,6 +617,7 @@
 
 .event-first-sandbox__emote {
   position: absolute;
+  z-index: 2;
   left: 50%;
   bottom: calc(100% + 10px);
   transform: translateX(-50%);
@@ -669,6 +670,17 @@ button.event-first-sandbox__emote:disabled {
   cursor: default;
 }
 
+.event-first-sandbox__resident-anchor {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  transform: scale(var(--resident-scale)) rotate(var(--resident-tilt));
+  transform-origin: center bottom;
+  transition:
+    transform 3.2s ease,
+    filter 180ms ease;
+}
+
 .event-first-sandbox__resident-card {
   appearance: none;
   position: relative;
@@ -683,11 +695,6 @@ button.event-first-sandbox__emote:disabled {
   color: inherit;
   cursor: pointer;
   font: inherit;
-  transform: scale(var(--resident-scale)) rotate(var(--resident-tilt));
-  transform-origin: center bottom;
-  transition:
-    transform 3.2s ease,
-    filter 180ms ease;
 }
 
 .event-first-sandbox__resident-figure {
@@ -759,6 +766,7 @@ button.event-first-sandbox__emote:disabled {
   animation: event-first-resident-sprite-motion 0.72s steps(var(--resident-sprite-frames)) infinite;
 }
 
+.event-first-sandbox__resident--paused .event-first-sandbox__resident-anchor,
 .event-first-sandbox__resident--paused .event-first-sandbox__resident-card,
 .event-first-sandbox__resident--paused .event-first-sandbox__resident-sprite,
 .event-first-sandbox__resident--paused .event-first-sandbox__emote {
@@ -804,8 +812,8 @@ button.event-first-sandbox__emote:disabled {
   outline: none;
 }
 
-.event-first-sandbox__resident--two .event-first-sandbox__resident-card,
-.event-first-sandbox__resident--four .event-first-sandbox__resident-card {
+.event-first-sandbox__resident--two .event-first-sandbox__resident-anchor,
+.event-first-sandbox__resident--four .event-first-sandbox__resident-anchor {
   --resident-tilt: 0.7deg;
 }
 

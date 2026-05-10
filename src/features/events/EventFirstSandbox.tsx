@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -46,6 +47,7 @@ import {
   resolveDisplayedResidentEmote,
   resolveResidentEmote,
   resolveResidentMotion,
+  resolveVisibleResidentEmote,
   type AmbientResidentEmote,
   type EmoteKind,
   type ResidentMotionKey,
@@ -140,6 +142,11 @@ type ObservedDialogueBubble = {
   id: string;
   characterId: CharacterId;
   text: string;
+};
+
+type DialogueAnchorPlacement = {
+  left: number;
+  top: number;
 };
 
 const sandboxDayPhases = ["morning", "noon", "evening", "night"] as const;
@@ -374,9 +381,9 @@ export function EventFirstSandbox({
   const [observedDialogueBubbles, setObservedDialogueBubbles] = useState<
     ObservedDialogueBubble[]
   >([]);
-  const [pendingObservedDialogueBubbles, setPendingObservedDialogueBubbles] = useState<
-    ObservedDialogueBubble[]
-  >([]);
+  const [dialogueAnchorPlacements, setDialogueAnchorPlacements] = useState<
+    Record<string, DialogueAnchorPlacement>
+  >({});
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
@@ -389,6 +396,7 @@ export function EventFirstSandbox({
   const backgroundFadeTimeoutRef = useRef<number | null>(null);
   const observedDialogueTimeoutsRef = useRef<Set<number>>(new Set());
   const lastObservedDialogueEventIdRef = useRef<string | null>(null);
+  const observedDialogueIdleSequenceRef = useRef(0);
   const [previousSandboxBackground, setPreviousSandboxBackground] =
     useState<SandboxBackgroundState | null>(null);
 
@@ -511,6 +519,7 @@ export function EventFirstSandbox({
 
   const primaryResident = activeResidents.find((resident) => resident.isPrimary);
   const primaryResidentId = primaryResident?.id ?? activeResidents[0]?.id;
+  const dialogueBubbleVisible = observedDialogueBubbles.length > 0;
   const activeResidentEmoteSignature = useMemo(
     () =>
       activeResidents
@@ -585,12 +594,29 @@ export function EventFirstSandbox({
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      queueObservedDialogue("idle_timer", `${currentEvent.id}-idle`);
-    }, OBSERVED_DIALOGUE_IDLE_DELAY_MS);
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const scheduleIdleDialogue = () => {
+      timeoutId = window.setTimeout(() => {
+        if (cancelled) {
+          return;
+        }
+
+        const idleSeed = `${currentEvent.id}-idle-${observedDialogueIdleSequenceRef.current}`;
+        observedDialogueIdleSequenceRef.current += 1;
+        queueObservedDialogue("idle_timer", idleSeed);
+        scheduleIdleDialogue();
+      }, OBSERVED_DIALOGUE_IDLE_DELAY_MS);
+    };
+
+    scheduleIdleDialogue();
 
     return () => {
-      window.clearTimeout(timeoutId);
+      cancelled = true;
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
     };
   }, [currentEvent.id, sandboxPaused, activeCharacters.length]);
 
@@ -605,6 +631,48 @@ export function EventFirstSandbox({
   useEffect(() => {
     residentMovementsRef.current = residentMovements;
   }, [residentMovements]);
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    if (viewportRect.width <= 0 || viewportRect.height <= 0) {
+      return;
+    }
+
+    const nextPlacements: Record<string, DialogueAnchorPlacement> = {};
+    activeResidents.forEach((resident) => {
+      const residentNode = residentNodeRefs.current[resident.id];
+      const figureNode = residentNode?.querySelector<HTMLElement>(
+        ".event-first-sandbox__resident-figure",
+      );
+      const anchorNode = figureNode ?? residentNode;
+      if (!anchorNode) {
+        return;
+      }
+
+      const anchorRect = anchorNode.getBoundingClientRect();
+      nextPlacements[resident.id] = {
+        left: clamp(
+          ((anchorRect.left + anchorRect.width / 2 - viewportRect.left) /
+            viewportRect.width) *
+            100,
+          8,
+          92,
+        ),
+        top: clamp(((anchorRect.top - viewportRect.top) / viewportRect.height) * 100, 8, 84),
+      };
+    });
+
+    setDialogueAnchorPlacements((current) =>
+      areDialogueAnchorPlacementsEqual(current, nextPlacements)
+        ? current
+        : nextPlacements,
+    );
+  }, [activeResidents, viewportSize.width, viewportSize.height]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -963,9 +1031,11 @@ export function EventFirstSandbox({
     });
 
     onRuntimeStateChange(applied.state);
-    setPendingObservedDialogueBubbles(
-      createObservedDialogueBubbles("intervention_applied", `${currentEvent.id}-${type}`),
+    const interventionBubbles = createObservedDialogueBubbles(
+      "intervention_applied",
+      `${currentEvent.id}-${type}`,
     );
+    showObservedDialogueBubbles(interventionBubbles);
     setEventWindowOpen(true);
     setLatestOutcome(outcome);
     setSandboxStage("result");
@@ -987,7 +1057,6 @@ export function EventFirstSandbox({
 
   function handleResultReviewed() {
     const nextEvent = selectCurrentEvent(runtimeState);
-    const pendingBubbles = pendingObservedDialogueBubbles;
     setStoryEntries((currentEntries) => [
       ...currentEntries,
       {
@@ -1001,8 +1070,6 @@ export function EventFirstSandbox({
     ]);
     setLatestOutcome(null);
     setEventWindowOpen(false);
-    setPendingObservedDialogueBubbles([]);
-    showObservedDialogueBubbles(pendingBubbles);
     setSandboxStage("focused-event");
     setTutorialState((currentTutorial) =>
       advanceTutorialStep(currentTutorial, "result-reviewed"),
@@ -1152,75 +1219,84 @@ export function EventFirstSandbox({
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
 
-        {activeResidents.map((resident) => (
-          <article
-            key={resident.id}
-            ref={(node) => {
-              residentNodeRefs.current[resident.id] = node;
-            }}
-            className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
-              resident.spriteSheetPath
-                ? "event-first-sandbox__resident--sprite-ready"
-                : "event-first-sandbox__resident--sprite-fallback"
-            } ${
-              isVariableWidthFailedResident(resident)
-                ? "event-first-sandbox__resident--failed-variable"
-                : ""
-            } ${
-              sandboxPaused ? "event-first-sandbox__resident--position-frozen" : ""
-            } ${
-              residentVisualPaused ? "event-first-sandbox__resident--paused" : ""
-            }`}
-            data-resident-depth={resident.depthClassName.replace(
-              "event-first-sandbox__resident--depth-",
-              "",
-            )}
-            data-resident-motion={resident.motion}
-            data-resident-visual={resident.visualMode}
-            style={{
-              ...createResidentStyle(resident),
-              ...createResidentPlacementStyle(resident, viewportSize.width),
-            }}
-          >
-            {resident.emote === "event-alert" ? (
-              <button
-                type="button"
-                className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
-                aria-label="イベント子画面を開く"
-                aria-haspopup="dialog"
-                aria-expanded={eventWindowOpen || latestOutcome !== null}
-                disabled={eventWindowOpen || latestOutcome !== null}
-                onClick={handleEventAlertBubbleClick}
-              >
-                {emoteLabels[resident.emote]}
-              </button>
-            ) : resident.emote ? (
-              <span
-                className={`event-first-sandbox__emote event-first-sandbox__emote--${resident.emote}`}
-              >
-                {emoteLabels[resident.emote]}
-              </span>
-            ) : null}
-            <button
-              type="button"
-              className="event-first-sandbox__resident-card"
-              aria-label={`${resident.displayName}の詳細を開く`}
-              onClick={(event) => handleResidentClick(event, resident.id)}
+        {activeResidents.map((resident) => {
+          const visibleEmote = resolveVisibleResidentEmote({
+            emote: resident.emote,
+            dialogueBubbleVisible,
+          });
+
+          return (
+            <article
+              key={resident.id}
+              ref={(node) => {
+                residentNodeRefs.current[resident.id] = node;
+              }}
+              className={`event-first-sandbox__resident event-first-sandbox__resident--clickable ${resident.positionClassName} ${resident.depthClassName} event-first-sandbox__resident--visual-${resident.visualMode} event-first-sandbox__resident--motion-${resident.motion} ${
+                resident.spriteSheetPath
+                  ? "event-first-sandbox__resident--sprite-ready"
+                  : "event-first-sandbox__resident--sprite-fallback"
+              } ${
+                isVariableWidthFailedResident(resident)
+                  ? "event-first-sandbox__resident--failed-variable"
+                  : ""
+              } ${
+                sandboxPaused ? "event-first-sandbox__resident--position-frozen" : ""
+              } ${
+                residentVisualPaused ? "event-first-sandbox__resident--paused" : ""
+              }`}
+              data-resident-depth={resident.depthClassName.replace(
+                "event-first-sandbox__resident--depth-",
+                "",
+              )}
+              data-resident-motion={resident.motion}
+              data-resident-visual={resident.visualMode}
+              style={{
+                ...createResidentStyle(resident),
+                ...createResidentPlacementStyle(resident, viewportSize.width),
+              }}
             >
-              <div className="event-first-sandbox__resident-figure" aria-hidden="true">
-                {resident.spriteSheetPath ? (
-                  <span className="event-first-sandbox__resident-sprite" />
-                ) : resident.portraitPath ? (
-                  <img src={resident.portraitPath} alt="" />
-                ) : resident.iconPath ? (
-                  <img src={resident.iconPath} alt="" />
-                ) : (
-                  <span className="event-first-sandbox__resident-placeholder" />
-                )}
+              <div className="event-first-sandbox__resident-anchor">
+                {visibleEmote === "event-alert" ? (
+                  <button
+                    type="button"
+                    className={`event-first-sandbox__emote event-first-sandbox__emote--${visibleEmote}`}
+                    aria-label="イベント子画面を開く"
+                    aria-haspopup="dialog"
+                    aria-expanded={eventWindowOpen || latestOutcome !== null}
+                    disabled={eventWindowOpen || latestOutcome !== null}
+                    onClick={handleEventAlertBubbleClick}
+                  >
+                    {emoteLabels[visibleEmote]}
+                  </button>
+                ) : visibleEmote ? (
+                  <span
+                    className={`event-first-sandbox__emote event-first-sandbox__emote--${visibleEmote}`}
+                  >
+                    {emoteLabels[visibleEmote]}
+                  </span>
+                ) : null}
+                <button
+                  type="button"
+                  className="event-first-sandbox__resident-card"
+                  aria-label={`${resident.displayName}の詳細を開く`}
+                  onClick={(event) => handleResidentClick(event, resident.id)}
+                >
+                  <div className="event-first-sandbox__resident-figure" aria-hidden="true">
+                    {resident.spriteSheetPath ? (
+                      <span className="event-first-sandbox__resident-sprite" />
+                    ) : resident.portraitPath ? (
+                      <img src={resident.portraitPath} alt="" />
+                    ) : resident.iconPath ? (
+                      <img src={resident.iconPath} alt="" />
+                    ) : (
+                      <span className="event-first-sandbox__resident-placeholder" />
+                    )}
+                  </div>
+                </button>
               </div>
-            </button>
-          </article>
-        ))}
+            </article>
+          );
+        })}
         <div
           className="event-first-sandbox__dialogue-layer"
           aria-live="polite"
@@ -1236,7 +1312,11 @@ export function EventFirstSandbox({
               <div
                 key={bubble.id}
                 className="event-first-sandbox__dialogue-bubble"
-                style={createDialogueBubblePlacementStyle(resident, viewportSize.width)}
+                style={createDialogueBubblePlacementStyle(
+                  resident,
+                  viewportSize,
+                  dialogueAnchorPlacements[resident.id],
+                )}
                 aria-label={`${resident.displayName}のひとこと`}
               >
                 <span>{bubble.text}</span>
@@ -1812,22 +1892,104 @@ function resolveResidentSafeLeftPercent(
 
 function createDialogueBubblePlacementStyle(
   resident: ResidentViewModel,
-  viewportWidth: number,
+  viewportSize: { width: number; height: number },
+  placement?: DialogueAnchorPlacement,
 ): CSSProperties {
-  const estimatedBubbleWidth = viewportWidth > 0 ? Math.min(220, viewportWidth * 0.48) : 180;
-  const horizontalInsetPercent =
-    viewportWidth > 0
-      ? clamp(((estimatedBubbleWidth / 2 + 12) / viewportWidth) * 100, 12, 34)
-      : 18;
+  if (placement) {
+    const horizontalInsetPercent = resolveDialogueBubbleHorizontalInsetPercent(
+      viewportSize.width,
+    );
+
+    return {
+      left: `${clamp(placement.left, horizontalInsetPercent, 100 - horizontalInsetPercent)}%`,
+      top: `${clamp(placement.top, 8, 84)}%`,
+    } as CSSProperties;
+  }
+
+  const perspective = resolveResidentPerspective(resident.movement.y);
+  const safeLeft = resolveResidentSafeLeftPercent(
+    resident,
+    perspective.scale,
+    viewportSize.width,
+  );
+  const visualWidth = resolveResidentVisualWidthPx(resident, perspective.scale);
+  const visualCenterOffset =
+    viewportSize.width > 0 ? (visualWidth / 2 / viewportSize.width) * 100 : 0;
+  const headInset = resolveResidentHeadInsetPercent(
+    resident,
+    perspective.scale,
+    viewportSize.height,
+  );
+  const horizontalInsetPercent = resolveDialogueBubbleHorizontalInsetPercent(
+    viewportSize.width,
+  );
 
   return {
     left: `${clamp(
-      resident.movement.x,
+      safeLeft + visualCenterOffset,
       horizontalInsetPercent,
       100 - horizontalInsetPercent,
     )}%`,
-    top: `${clamp(resident.movement.y - 7, 12, 84)}%`,
+    top: `${clamp(resident.movement.y + headInset, 8, 84)}%`,
   } as CSSProperties;
+}
+
+function resolveDialogueBubbleHorizontalInsetPercent(viewportWidth: number): number {
+  const estimatedBubbleWidth = viewportWidth > 0 ? Math.min(220, viewportWidth * 0.48) : 180;
+  return viewportWidth > 0
+    ? clamp(((estimatedBubbleWidth / 2 + 12) / viewportWidth) * 100, 12, 34)
+    : 18;
+}
+
+function resolveResidentVisualWidthPx(
+  resident: ResidentViewModel,
+  perspectiveScale: number,
+): number {
+  const metadata = resident.spriteSheetMetadata;
+  if (!metadata) {
+    return 96 * perspectiveScale;
+  }
+
+  const frameSpan = isVariableWidthFailedResident(resident) ? 2 : 1;
+  return metadata.frameWidth * frameSpan * resolveResidentDisplayScale(metadata) * perspectiveScale;
+}
+
+function resolveResidentHeadInsetPercent(
+  resident: ResidentViewModel,
+  perspectiveScale: number,
+  viewportHeight: number,
+): number {
+  const metadata = resident.spriteSheetMetadata;
+  if (!metadata || viewportHeight <= 0) {
+    return 0;
+  }
+
+  const insetPx =
+    resolveResidentEmoteTopInset(metadata) *
+    resolveResidentDisplayScale(metadata) *
+    perspectiveScale;
+  return (insetPx / viewportHeight) * 100;
+}
+
+function areDialogueAnchorPlacementsEqual(
+  current: Record<string, DialogueAnchorPlacement>,
+  next: Record<string, DialogueAnchorPlacement>,
+): boolean {
+  const currentKeys = Object.keys(current);
+  const nextKeys = Object.keys(next);
+  if (currentKeys.length !== nextKeys.length) {
+    return false;
+  }
+
+  return nextKeys.every((key) => {
+    const currentPlacement = current[key];
+    const nextPlacement = next[key];
+    return (
+      currentPlacement !== undefined &&
+      Math.abs(currentPlacement.left - nextPlacement.left) < 0.2 &&
+      Math.abs(currentPlacement.top - nextPlacement.top) < 0.2
+    );
+  });
 }
 
 function resolveResidentPerspective(y: number): {
