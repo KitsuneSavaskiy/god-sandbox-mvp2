@@ -171,6 +171,9 @@ export function DialoguePreviewSurface({ state }: Props) {
               </span>
             )}
           </div>
+          <p className="dialogue-preview__hint">
+            コピーした依頼文を外部AIに貼ると、GodSandboxに戻せるJSON形式の発話候補が返る想定です。
+          </p>
           <details className="dialogue-preview__advanced-prompt">
             <summary>コピー内容を確認する（開発者向け）</summary>
             <pre className="dialogue-preview__prompt-box" aria-label="生成プロンプト">

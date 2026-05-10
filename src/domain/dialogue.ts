@@ -189,13 +189,17 @@ export function buildDialoguePromptPack(digest: DialogueWorldDigest): DialoguePr
     "VALID RESPONSE EXAMPLE:",
     exampleJson,
     "",
+    "The example above shows the object shape only.",
+    "Your actual response must contain 6 to 10 items.",
+    "Do not return only the example items.",
+    "",
     "Do not copy the placeholder strings.",
     "Use actual names from allowedSpeakers.",
     "",
     "WORLD_CONTEXT:",
     worldContextJson,
     "",
-    "Now return the JSON array only.",
+    "Now return the JSON array only, with 6 to 10 items.",
   ].join("\n");
 
   return {

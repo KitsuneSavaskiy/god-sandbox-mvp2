@@ -2113,6 +2113,9 @@ function testDialogueHandoffSmokeTests(): void {
   assert.ok(pt.includes('"text"'));
   assert.ok(pt.includes("divinePerceptionBand"));
   assert.ok(pt.includes("Return 6 to 10 candidates"));
+  assert.ok(pt.includes("Your actual response must contain 6 to 10 items"));
+  assert.ok(pt.includes("Do not return only the example items"));
+  assert.ok(pt.includes("Now return the JSON array only, with 6 to 10 items"));
 
   // 5. 禁止語が日本語ラベルとして出ない
   assert.equal(pt.includes("信仰度"), false);
