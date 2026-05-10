@@ -105,6 +105,7 @@ import {
   isResidentMovementBlockingEmote,
   resolveResidentEmote,
   resolveResidentMotion,
+  resolveVisibleResidentEmote,
 } from "../features/events/EventFirstSandboxEmotes.js";
 import {
   hasSeenPassportConfirm,
@@ -1068,6 +1069,27 @@ function testInterventionResultEmotesRemainVisible(): void {
   assert.equal(resolveResidentMotion("talk-request", false, "right"), "walk-right");
   assert.equal(isResidentMovementBlockingEmote("event-alert"), false);
   assert.equal(isResidentMovementBlockingEmote("talk-request"), false);
+  assert.equal(
+    resolveVisibleResidentEmote({
+      emote: "talk-request",
+      dialogueBubbleVisible: true,
+    }),
+    null,
+  );
+  assert.equal(
+    resolveVisibleResidentEmote({
+      emote: "event-alert",
+      dialogueBubbleVisible: true,
+    }),
+    "event-alert",
+  );
+  assert.equal(
+    resolveVisibleResidentEmote({
+      emote: "talk-request",
+      dialogueBubbleVisible: false,
+    }),
+    "talk-request",
+  );
 }
 
 function testFaithDomainModelDefaultsAndBands(): void {
