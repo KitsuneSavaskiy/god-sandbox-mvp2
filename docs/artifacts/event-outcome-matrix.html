@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Outcome Matrix — GodSandbox PBI 9a</title>
+<style>
+  :root {
+    --bg: #faf9f7;
+    --card: #ffffff;
+    --border: #e2ddd8;
+    --accent: #7c6f5b;
+    --success: #3d7a5c;
+    --failure: #8b3a3a;
+    --success-bg: #f0f7f3;
+    --failure-bg: #fdf0f0;
+    --tag-bg: #f0ede8;
+    --tag-text: #5c5145;
+    --text: #2c2822;
+    --muted: #8a8078;
+    --special: #5a4a7a;
+    --special-bg: #f5f0fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 32px 20px;
+    line-height: 1.6;
+  }
+  .header {
+    max-width: 900px;
+    margin: 0 auto 40px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px;
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+  .meta { color: var(--muted); font-size: 0.85rem; }
+  .meta span { margin-right: 16px; }
+  .summary-table {
+    max-width: 900px;
+    margin: 0 auto 48px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .summary-table th {
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .summary-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .summary-table tr:nth-child(even) td { background: #faf8f6; }
+  .section-title {
+    max-width: 900px;
+    margin: 0 auto 24px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    border-left: 4px solid var(--accent);
+    padding-left: 10px;
+  }
+  .card {
+    max-width: 900px;
+    margin: 0 auto 32px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card-header {
+    padding: 16px 20px;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .card-header.special { background: var(--special); }
+  .event-name { font-size: 1.1rem; font-weight: 700; }
+  .template-id {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    opacity: 0.85;
+    background: rgba(255,255,255,0.15);
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+  .card-body { padding: 0; }
+  .card-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-row:last-child { border-bottom: none; }
+  .card-label {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: #faf8f6;
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 12px;
+  }
+  .card-value { padding: 10px 16px; font-size: 0.87rem; }
+  .outcome-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+  .outcome-block {
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+  .outcome-block.success {
+    background: var(--success-bg);
+    border-right: 1px solid var(--border);
+  }
+  .outcome-block.failure { background: var(--failure-bg); }
+  .outcome-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+  .outcome-label.success { color: var(--success); }
+  .outcome-label.failure { color: var(--failure); }
+  .outcome-summary {
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-size: 0.83rem;
+  }
+  .delta-list { list-style: none; }
+  .delta-list li { font-size: 0.82rem; margin-bottom: 2px; }
+  .delta-list li::before { content: "→ "; color: var(--muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag {
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+  .tag.special { background: var(--special-bg); color: var(--special); }
+  .note {
+    font-size: 0.82rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .badge-rare {
+    background: #f5a623;
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .badge-chain {
+    background: var(--special);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .divider {
+    max-width: 900px;
+    margin: 0 auto 32px;
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Event Outcome Matrix</h1>
+  <div class="meta">
+    <span>PBI 9a-spec</span>
+    <span>GodSandbox MVP</span>
+    <span>Updated: 2026-05-10</span>
+    <span>Owner: Claude / Event Design lane</span>
+  </div>
+</div>
+
+<div class="section-title">Overview — 7 Event Templates</div>
+
+<table class="summary-table">
+  <thead>
+    <tr>
+      <th>templateId</th>
+      <th>displayName</th>
+      <th>participants</th>
+      <th>threshold</th>
+      <th>chained</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>moving-stone</code></td>
+      <td>謎の動く石</td>
+      <td>1</td>
+      <td>11</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>shrine-prayer-wish</code></td>
+      <td>お参りと願い</td>
+      <td>1</td>
+      <td>11</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>strange-grass-found</code></td>
+      <td>変な草を拾う</td>
+      <td>1</td>
+      <td>11</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>shared-nap-place</code></td>
+      <td>同じ場所で昼寝</td>
+      <td>2</td>
+      <td>11</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>mysterious-footprints</code></td>
+      <td>謎の足あと</td>
+      <td>1</td>
+      <td>11</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>legendary-big-fish</code></td>
+      <td>伝説の大きな魚</td>
+      <td>1</td>
+      <td>13 (rare)</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>shrine-fox-offering</code></td>
+      <td>祠の油揚げ</td>
+      <td>1</td>
+      <td>11</td>
+      <td>fox-shrine-visitor（3回成功後）</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider">
+<div class="section-title">Event Details</div>
+
+<!-- 1. moving-stone -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">謎の動く石</span>
+    <span class="template-id">moving-stone</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">mystery</span>
+          <span class="tag">observation</span>
+          <span class="tag">recurring</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（primaryCharacter）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>positionKey</code>: 毎発生時に変化するキー（例: "north-shrine", "east-rock"）<br>
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>: 介入後に書き込む
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: water / polarity: yin / principleRole: separate</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 観察して移動パターンに気づく<br>
+        <strong>help</strong>: 石のそばに道具や印を置く<br>
+        <strong>trial</strong>: キャラに追跡させる
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">石がまた違う場所にある。誰も動かしていないはずなのに。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 石が動く前の気配に気づいた。/ 失敗: 石はまた別の場所に移っていた。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「石が動く前の気配に気づいた」</div>
+            <ul class="delta-list">
+              <li>insight +2</li>
+              <li>stress -1</li>
+              <li>worldStatusTags: <code>moving-stone-pattern-noticed</code></li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「石はまた別の場所に移っていた」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+              <li>insight +1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. shrine-prayer-wish -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">お参りと願い</span>
+    <span class="template-id">shrine-prayer-wish</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">shrine</span>
+          <span class="tag">inner-life</span>
+          <span class="tag">prayer</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（primaryCharacter が shrine へ向かう）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: fire / polarity: yin / principleRole: bind</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 願いを見守る<br>
+        <strong>help</strong>: 小さな兆しを与える<br>
+        <strong>trial</strong>: 願いに向き合う小さな試練を与える
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">祠の前に立ち、何かを祈ろうとしている。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 願いを言葉にできた。/ 失敗: 願いはまとまらなかったが、気持ちは残った。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「願いを言葉にできた」</div>
+            <ul class="delta-list">
+              <li>harmony +2</li>
+              <li>empathy +1</li>
+              <li>faith delta: 既存 faith system に委譲</li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「願いはまとまらなかったが、気持ちは残った」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+              <li>empathy +1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. strange-grass-found -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">変な草を拾う</span>
+    <span class="template-id">strange-grass-found</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">nature</span>
+          <span class="tag">curiosity</span>
+          <span class="tag">discovery</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（primaryCharacter が謎の草を拾う）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>grassIdentified</code>: boolean（success 時 true）<br>
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: wood / polarity: yang / principleRole: circulate</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 触らず観察させる<br>
+        <strong>help</strong>: 安全な使い方へ導く<br>
+        <strong>trial</strong>: 好奇心を試す
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">見たことのない草を拾った。どんな匂いがするのだろう。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 草の扱い方が分かった。/ 失敗: 草の匂いで少しふらついた。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「草の扱い方が分かった」</div>
+            <ul class="delta-list">
+              <li>insight +2</li>
+              <li>vitality +1</li>
+              <li>structuredPayload.grassIdentified = true</li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「草の匂いで少しふらついた」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+              <li>vitality -1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. shared-nap-place -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">同じ場所で昼寝</span>
+    <span class="template-id">shared-nap-place</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">daily-life</span>
+          <span class="tag">relationship</span>
+          <span class="tag">multi-character</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">2名（primaryCharacter + participantCharacters[0]）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: earth / polarity: yin / principleRole: bind</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: そっと見守る<br>
+        <strong>help</strong>: 風や木陰を整える<br>
+        <strong>trial</strong>: 物音や虫など小さな乱れを起こす
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">2人が同じ場所でうとうとしている。穏やかな昼下がり。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 2人は穏やかに同じ時間を過ごした。/ 失敗: 片方が先に起きて、少し気まずくなった。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「2人は穏やかに同じ時間を過ごした」</div>
+            <ul class="delta-list">
+              <li>stress -2</li>
+              <li>harmony +1</li>
+              <li>relation（2人間）: small positive</li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「片方が先に起きて、少し気まずくなった」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+              <li>relation: 変化なし または small negative</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. mysterious-footprints -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">謎の足あと</span>
+    <span class="template-id">mysterious-footprints</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">mystery</span>
+          <span class="tag">investigation</span>
+          <span class="tag">plaza</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（location = plaza で発生）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: metal / polarity: yang / principleRole: reveal</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 足あとを観察する<br>
+        <strong>help</strong>: 足あとが消えないようにする<br>
+        <strong>trial</strong>: 調査の勇気を試す
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">広場に奇妙な足あとが残っている。誰のものだろう。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 足あとがどこへ向かうか分かった。/ 失敗: 足あとは途中で消えていた。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「足あとがどこへ向かうか分かった」</div>
+            <ul class="delta-list">
+              <li>insight +2</li>
+              <li>courage +1</li>
+              <li>worldStatusTags: <code>footprints-trail-found</code></li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「足あとは途中で消えていた」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+              <li>insight +1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. legendary-big-fish -->
+<div class="card">
+  <div class="card-header">
+    <span class="event-name">伝説の大きな魚</span>
+    <span class="template-id">legendary-big-fish</span>
+    <span class="badge-rare">RARE</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">rare</span>
+          <span class="tag">river</span>
+          <span class="tag">pond</span>
+          <span class="tag">legend</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（location = river または pond、低確率で発生）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">threshold</div>
+      <div class="card-value"><strong>13</strong>（通常11より高い。rare event なので「見た」こと自体が特別）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: water / polarity: yang / principleRole: separate</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 魚影を見守る<br>
+        <strong>help</strong>: 水面を静める<br>
+        <strong>trial</strong>: 捕まえるか見送るかを試す
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">設計注意</div>
+      <div class="card-value">
+        <span class="note">捕獲イベントにはしない。MVPでは「見た / 見失った」に留める。</span>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">水面の奥に、巨大な影が見える気がする。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">成功: 大きな魚の姿をはっきり見た。/ 失敗: 水面が揺れ、魚影は消えた。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「大きな魚の姿をはっきり見た」</div>
+            <ul class="delta-list">
+              <li>insight +2</li>
+              <li>harmony +2</li>
+              <li>worldStatusTags: <code>legendary-fish-seen</code></li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「水面が揺れ、魚影は消えた」</div>
+            <ul class="delta-list">
+              <li>stress +1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. shrine-fox-offering -->
+<div class="card">
+  <div class="card-header special">
+    <span class="event-name">祠の油揚げ</span>
+    <span class="template-id">shrine-fox-offering</span>
+    <span class="badge-chain">ACCUMULATIVE</span>
+  </div>
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">situationTags</div>
+      <div class="card-value">
+        <div class="tags">
+          <span class="tag">shrine</span>
+          <span class="tag">offering</span>
+          <span class="tag special">accumulative</span>
+          <span class="tag special">chain-trigger</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">participants</div>
+      <div class="card-value">1名（不定期発生）</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">structuredPayload</div>
+      <div class="card-value">
+        <code>offeringCollected</code>: boolean（success 時 true）<br>
+        <code>offeringCount</code>: number（セッション通算の成功回数、UIには数値として表示しない）<br>
+        <code>outcome</code>, <code>judgement</code>, <code>outcomeSummary</code>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">principleProfile</div>
+      <div class="card-value">dominantPhase: wood / polarity: yin / principleRole: circulate</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">推奨介入</div>
+      <div class="card-value">
+        <strong>watch</strong>: 誰が置いたか見守る<br>
+        <strong>help</strong>: 油揚げを守る<br>
+        <strong>trial</strong>: 持ち去られるか試す
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">蓄積ルール</div>
+      <div class="card-value">
+        success ごとに <code>offeringCount +1</code>。<br>
+        <code>offeringCount >= 3</code> になったとき chained event: <code>fox-shrine-visitor</code> を発生。<br>
+        failure では count は増えない。<br>
+        <span class="note">count の数値は UI に強調表示しない。「祠に気配が濃くなっている」等の自然言語で表す。</span>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">Sprint 9 scope</div>
+      <div class="card-value">
+        <span class="note">
+          Sprint 9 では template 追加・success/failure summary・offeringCollected の書き込みまで。<br>
+          fox-shrine-visitor chained event の発生ロジックと UI は次 PBI に委譲。<br>
+          ただし型・コードコメントで将来の chain 接続を示す。
+        </span>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_started<br>dialogue intent</div>
+      <div class="card-value">祠のそばに、また油揚げが置いてある。</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">event_resolved<br>dialogue intent</div>
+      <div class="card-value">
+        成功（count &lt; 3）: 「祠の気配が少し濃くなった」<br>
+        成功（count >= 3）: 「祠の前で、何かが動いた気がする」<br>
+        失敗: 「油揚げはいつのまにか消えていた」
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">outcome</div>
+      <div class="card-value" style="padding: 0;">
+        <div class="outcome-grid">
+          <div class="outcome-block success">
+            <div class="outcome-label success">SUCCESS</div>
+            <div class="outcome-summary">「祠の気配が少し濃くなった」</div>
+            <ul class="delta-list">
+              <li>structuredPayload.offeringCollected = true</li>
+              <li>offeringCount +1</li>
+              <li>harmony +1</li>
+              <li>insight +1</li>
+              <li>count >= 3 で chained event: fox-shrine-visitor</li>
+            </ul>
+          </div>
+          <div class="outcome-block failure">
+            <div class="outcome-label failure">FAILURE</div>
+            <div class="outcome-summary">「油揚げはいつのまにか消えていた」</div>
+            <ul class="delta-list">
+              <li>structuredPayload.offeringCollected = false</li>
+              <li>offeringCount 変化なし</li>
+              <li>stress +1</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">chained event</div>
+      <div class="card-value">
+        <code>fox-shrine-visitor</code>（templateId）<br>
+        <span class="note">Sprint 9 では予約のみ。template 定義と chain 条件のコメントを残す。実装は次 PBI。</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<div class="section-title">Dice Resolution Summary</div>
+<div class="card">
+  <div class="card-body">
+    <div class="card-row">
+      <div class="card-label">formula</div>
+      <div class="card-value"><code>total = rollD20(seed) + modifier</code><br>threshold default: <strong>11</strong>（legendary-big-fish のみ <strong>13</strong>）<br>total >= threshold → success</div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">modifier rules</div>
+      <div class="card-value">
+        <table style="border-collapse:collapse;font-size:0.85rem;width:100%">
+          <thead>
+            <tr style="background:#f0ede8">
+              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">条件</th>
+              <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">modifier</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:5px 10px;border-bottom:1px solid var(--border)">watch かつ insight >= 60</td><td style="padding:5px 10px;border-bottom:1px solid var(--border)">+2</td></tr>
+            <tr><td style="padding:5px 10px;border-bottom:1px solid var(--border)">help かつ (empathy >= 60 または harmony >= 60)</td><td style="padding:5px 10px;border-bottom:1px solid var(--border)">+1</td></tr>
+            <tr><td style="padding:5px 10px;border-bottom:1px solid var(--border)">trial かつ courage >= 60</td><td style="padding:5px 10px;border-bottom:1px solid var(--border)">+2</td></tr>
+            <tr><td style="padding:5px 10px">stress >= 70（介入種別問わず）</td><td style="padding:5px 10px">-1</td></tr>
+          </tbody>
+        </table>
+        <p style="margin-top:8px;font-size:0.8rem;color:var(--muted)">Could（Sprint 9 では任意）: principleProfile と character の implicit phase が合う場合に +1</p>
+      </div>
+    </div>
+    <div class="card-row">
+      <div class="card-label">不採用</div>
+      <div class="card-value"><span class="note">fumble / critical / greatSuccess は Sprint 9 外。成功/失敗の2択のみ。</span></div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
