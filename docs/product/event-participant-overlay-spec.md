@@ -23,10 +23,10 @@
 |---|---|
 | event background | `preauthored_event_art`（`eventArt.ts` の既存 mapping） |
 | participant layer | `participant_overlay_art`（別レイヤー、背景と合成） |
-| キャラ素材 | 既存の portrait アセット（`assetBundle.portrait`）を流用 |
+| キャラ素材 | overlay 専用 neutral-body 画像（`public/art/characters/defaults/{slug}/overlays/event-participant/neutral-body.png`）。既存 portrait は制作時の reference にとどめ、runtime overlay では neutral-body を使う |
 | 最大参加人数 | 4名 |
 | キャラ焼き込み | **しない**。背景画像とキャラ画像を別レイヤーで合成 |
-| キャラ画像 | 背景透過済み（PNG portrait） |
+| キャラ画像 | 背景透過済み（PNG neutral-body） |
 | キャラ背景 | 白背景・単色背景・別背景を持たせない |
 
 ### レイヤー構造
@@ -135,6 +135,18 @@ type EventParticipantOverlaySlot =
 - duration: 200〜300ms（開くより短め）
 - easing: `ease-in`
 
+#### Exiting state（実装要件）
+
+event window close を受けてもコンポーネントを即 unmount してはならない。side-out アニメーションの duration（200〜300ms）が完了するまで **exiting 状態を保持**し、アニメーション終了後に DOM から除去する。
+
+```
+close イベント受信
+  → overlay を "exiting" 状態に移行（side-out CSS 適用）
+  → 200〜300ms 後に unmount / DOM 除去
+```
+
+`prefers-reduced-motion: reduce` 時はアニメーションなし。即 unmount で可。
+
 ### 5-3. `prefers-reduced-motion` 対応
 
 `@media (prefers-reduced-motion: reduce)` では、side-in / side-out のトランスレーション animation を適用しない（透明度のみ、または即座に表示）。
@@ -152,7 +164,7 @@ type EventParticipantOverlaySlot =
 | タイミング | 動作 |
 |---|---|
 | event window open | 参加キャラを side-in で表示 |
-| event window close | 参加キャラを side-out で非表示 |
+| event window close | "exiting" 状態に移行 → side-out アニメーション（200〜300ms）→ unmount |
 | templateId 変化（次イベント生成） | overlay を更新（slide-out → slide-in） |
 | event art が fallback のとき | participant overlay は通常通り表示 |
 | participant portrait が未準備 | fallback silhouette を表示、または非表示 |
@@ -175,7 +187,7 @@ export type EventParticipantOverlayViewModel = {
   displayName: string;
   role: "primary" | "supporting";
   slot: EventParticipantOverlaySlot;
-  src: string | null;       // portrait path（null の場合は fallback を使う）
+  src: string | null;       // participant overlay neutral-body path（null の場合は fallback を使う）
   fallbackSrc: string;      // fallback silhouette path
   alt: string;
 };
@@ -195,22 +207,25 @@ const SLOT_ORDER_BY_COUNT: Record<number, EventParticipantOverlaySlot[]> = {
 // primaryCharacterId always gets the first slot (left-front)
 ```
 
-### 7-3. Portrait ソース
+### 7-3. Neutral-body ソース
 
-`CharacterAssetBundle.portrait` の `ready === true && path != null` の場合にパスを使用する。それ以外は `fallbackSrc`（fallback silhouette）を表示する。
+overlay 専用の neutral-body アセットが `ready === true && path != null` の場合にパスを使用する。それ以外は `fallbackSrc`（fallback silhouette）を表示する。
+
+パス規約: `public/art/characters/defaults/{slug}/overlays/event-participant/neutral-body.png`
 
 ```ts
-const src = assetBundle?.portrait.ready && assetBundle.portrait.path
-  ? assetBundle.portrait.path
+const src = assetBundle?.overlayNeutralBody?.ready && assetBundle.overlayNeutralBody.path
+  ? assetBundle.overlayNeutralBody.path
   : null;
+// overlayNeutralBody フィールドは PBI 9e-assets で CharacterAssetBundle に追加する
 ```
 
 ### 7-4. Fallback silhouette
 
-- assetId: `participant-overlay-fallback-silhouette`
-- proposedPath: `public/art/participants/_fallback/silhouette.svg`
+- assetId: `fallback-event-participant-silhouette`
+- proposedPath: `public/art/characters/defaults/_fallback/overlays/event-participant/silhouette.png`
 - 実画像は asset 準備 PBI（PBI 9e-assets）で用意する
-- MVP 実装時は portrait が準備できているキャラのみ表示し、なければ非表示で可
+- MVP 実装時は neutral-body が準備できているキャラのみ表示し、なければ非表示で可
 
 ---
 
@@ -247,7 +262,7 @@ const src = assetBundle?.portrait.ready && assetBundle.portrait.path
 | 5 | `prefers-reduced-motion: reduce` 時にアニメーションが発生しない |
 | 6 | 介入ボタンが overlay で隠れない |
 | 7 | result modal が overlay より前面に表示される（z-index 担保） |
-| 8 | portrait 未準備キャラは fallback silhouette または非表示になる |
+| 8 | neutral-body 未準備キャラは fallback silhouette または非表示になる |
 | 9 | event art が fallback でも participant overlay は表示される |
 | 10 | templateId 変化（次イベント）で overlay が更新される |
 | 11 | UI に faith / relation score / 五行内部値が表示されない |
@@ -259,8 +274,9 @@ const src = assetBundle?.portrait.ready && assetBundle.portrait.path
 
 ### PBI 9e-assets
 
-- fallback silhouette svg を用意する（`public/art/participants/_fallback/silhouette.svg`）
-- 7イベントキャラ分の透過 PNG portrait を整備する
+- fallback silhouette png を用意する（`public/art/characters/defaults/_fallback/overlays/event-participant/silhouette.png`）
+- 7キャラ分の overlay 専用 neutral-body 画像を整備する（`public/art/characters/defaults/{slug}/overlays/event-participant/neutral-body.png`）
+- `CharacterAssetBundle` に `overlayNeutralBody` フィールドを追加する
 
 ### PBI 9e-ui（実装 PBI）
 
