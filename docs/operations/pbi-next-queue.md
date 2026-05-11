@@ -20,6 +20,21 @@ their dependencies.
 
 These notes are short-lived and should be refreshed when the related PRs merge.
 
+## Active: PBI 9a — Event Outcome System (2026-05-10)
+
+Two parallel lanes:
+
+- **Claude / PBI 9a-spec**: `docs/product/event-outcome-system-spec.md` + `docs/artifacts/event-outcome-matrix.html`
+  — Event outcome spec, 7-event matrix, dice resolution rules.
+  PR: `docs: add event outcome system spec`
+
+- **Codex / PBI 9a-core**: `src/domain/` — domain implementation of dice resolver,
+  event outcome types, 7 event templates, and minimal connection to applyInterventionService.
+  PR: `feat: add event outcome judgement foundation`
+
+Dependency: Codex must not touch `docs/product/**`. Claude must not touch `src/**`.
+Merge order: either order is safe (no file overlap).
+
 ## Recent Merges
 
 - #281 (Observed Dialogue Runtime) — merged to main.
