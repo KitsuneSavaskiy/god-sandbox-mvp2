@@ -104,8 +104,8 @@ const FALLBACK_ART_ID = "event-art-fallback-generic";
 
 | 状態 | 内容 |
 |---|---|
-| 配置済み（SVG） | 全 7 event の started SVG（`public/art/events/{templateId}/started.svg`） |
-| 未制作 | fallback SVG（`public/art/events/_fallback/generic-event.svg`）、success / failure 画像 |
+| 配置済み（SVG） | 全 7 event の started SVG（`public/art/events/{templateId}/started.svg`）、fallback SVG（`public/art/events/_fallback/generic-event.svg`） |
+| 未制作 | success / failure 画像、PO承認済みの本画像（PNG 等） |
 | 本画像への置き換え手順 | `docs/art-prompts/event-images/preauthored-event-art-briefs.md` を参照し PO 確認後に別 PBI で配置 |
 | 採用フロー | PO 確認後に別 PBI で `public/art/events/` へ配置し、proposedPath の拡張子を更新 |
 
