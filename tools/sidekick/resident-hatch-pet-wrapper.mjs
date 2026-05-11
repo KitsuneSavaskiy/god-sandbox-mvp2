@@ -18,7 +18,32 @@ const repoRoot = path.resolve(__dirname, "../..");
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
-const CANVAS = { width: 1536, height: 1872, frameWidth: 192, frameHeight: 208, columns: 8, rows: 9 };
+const CANVAS_BY_SHEET = {
+  motion: {
+    width: 1536,
+    height: 1872,
+    frameWidth: 192,
+    frameHeight: 208,
+    columns: 8,
+    rows: 9,
+  },
+  extended: {
+    width: 1536,
+    height: 1872,
+    frameWidth: 192,
+    frameHeight: 208,
+    columns: 8,
+    rows: 9,
+  },
+  combined: {
+    width: 888,
+    height: 2016,
+    frameWidth: 148,
+    frameHeight: 144,
+    columns: 6,
+    rows: 14,
+  },
+};
 
 const SHEET_DEFINITIONS = {
   motion: {
@@ -65,6 +90,27 @@ const SHEET_DEFINITIONS = {
       "review",
     ],
   },
+  combined: {
+    label: "GodSandbox combined resident sheet",
+    filename: "resident-sprite-sheet-combined.png",
+    rows: [
+      "idle",
+      "walk-right",
+      "walk-left",
+      "waving",
+      "jumping",
+      "failed",
+      "waiting",
+      "review",
+      "walk-up / walk-back",
+      "walk-down / walk-forward",
+      "emote-happy",
+      "emote-angry",
+      "emote-sad",
+      "emote-surprised",
+    ],
+    forbiddenRows: [],
+  },
 };
 
 function printHelp() {
@@ -73,11 +119,12 @@ function printHelp() {
 Usage:
   npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <png> --prompt <prompt.md> --dry-run
   npm run sidekick:resident:hatch-pet -- --slug ryo --sheet extended --portrait <png> --prompt <prompt.md> --dry-run
+  npm run sidekick:resident:hatch-pet -- --slug ryo --sheet combined --portrait <png> --prompt <prompt.md> --dry-run
   npm run sidekick:resident:hatch-pet -- --slug ryo --sheet motion --portrait <png> --prompt <prompt.md> --run-dir .hatch-pet-runs/ryo-motion
 
 Options:
   --slug <id>          Resident asset key, lowercase letters/numbers/_/-
-  --sheet <kind>      motion or extended
+  --sheet <kind>      motion, extended, or combined
   --portrait <path>   Existing PNG portrait reference. A single * filename glob is allowed.
   --prompt <path>     Existing resident prompt file
   --run-dir <path>    hatch-pet run directory. Default: .hatch-pet-runs/<slug>-<sheet>
@@ -150,6 +197,7 @@ function createRunPlan(args) {
   assertHatchPetSkillExists();
   const promptText = readFileSync(promptPath, "utf8");
   validatePromptRows(promptText, sheet);
+  const canvas = CANVAS_BY_SHEET[sheet];
 
   const runDir = path.resolve(repoRoot, args.runDir ?? path.join(".hatch-pet-runs", `${args.slug}-${sheet}`));
   const finalOutput = args.finalOutput
@@ -172,6 +220,7 @@ function createRunPlan(args) {
     slug: args.slug,
     sheet,
     definition,
+    canvas,
     portraitPath,
     promptPath,
     runDir,
@@ -190,7 +239,7 @@ function executeRunPlan(plan) {
 
   assertHatchPetFinalOutput(plan.finalOutput, plan.runDir);
   const metadata = readPngMetadata(plan.finalOutput);
-  assertResidentFinalPng(metadata, plan.finalOutput);
+  assertResidentFinalPng(metadata, plan.finalOutput, plan.canvas);
 
   if (!metadata.hasAlphaChannel && !metadata.hasMagentaChromaKey) {
     throw new Error("Final PNG must have an alpha channel or a #ff00ff chroma-key background.");
@@ -211,13 +260,16 @@ function executeRunPlan(plan) {
   }
   console.log(`\nCopied validated final atlas to ${toRepoPath(plan.incomingPath)}`);
 
-  runSpriteCheckIfPairExists(plan.slug);
+  runPostCopyValidation(plan);
 }
 
 function printRunPlan(plan) {
   console.log(`resident hatch-pet wrapper: ${plan.slug} / ${plan.definition.label}`);
   console.log(`portrait: ${toRepoPath(plan.portraitPath)}`);
   console.log(`prompt: ${toRepoPath(plan.promptPath)}`);
+  console.log(
+    `canvas: ${plan.canvas.width}x${plan.canvas.height} (${plan.canvas.columns}x${plan.canvas.rows}, ${plan.canvas.frameWidth}x${plan.canvas.frameHeight} frame)`,
+  );
   console.log(`run dir: ${toRepoPath(plan.runDir)}`);
   console.log(`final output: ${toRepoPath(plan.finalOutput)}`);
   console.log(`incoming target: ${toRepoPath(plan.incomingPath)}`);
@@ -233,7 +285,7 @@ function toSerializablePlan(plan) {
     createdAt: new Date().toISOString(),
     slug: plan.slug,
     sheet: plan.sheet,
-    canvas: CANVAS,
+    canvas: plan.canvas,
     rowManifest: plan.rowManifest,
     portrait: toRepoPath(plan.portraitPath),
     prompt: toRepoPath(plan.promptPath),
@@ -254,7 +306,7 @@ function assertSlug(value) {
 function normalizeSheet(value) {
   const sheet = String(value ?? "").trim().toLowerCase();
   if (!Object.prototype.hasOwnProperty.call(SHEET_DEFINITIONS, sheet)) {
-    throw new Error("--sheet must be motion or extended.");
+    throw new Error("--sheet must be motion, extended, or combined.");
   }
   return sheet;
 }
@@ -321,10 +373,10 @@ function validatePromptRows(promptText, sheet) {
     throw new Error(`${definition.label} prompt is missing row(s): ${missing.join(", ")}`);
   }
 
-  if (sheet === "extended") {
+  if (definition.forbiddenRows.length > 0) {
     const forbidden = definition.forbiddenRows.filter((row) => promptText.includes(row));
     if (forbidden.length > 0) {
-      throw new Error(`Extended prompt includes standard hatch-pet row(s): ${forbidden.join(", ")}`);
+      throw new Error(`${definition.label} prompt includes forbidden row(s): ${forbidden.join(", ")}`);
     }
   }
 }
@@ -352,10 +404,10 @@ function validatePetRequest(runDir, sheet, dryRun) {
     throw new Error(`Existing pet_request.json is missing row(s): ${missing.join(", ")}`);
   }
 
-  if (sheet === "extended") {
+  if (definition.forbiddenRows.length > 0) {
     const forbidden = definition.forbiddenRows.filter((row) => requestText.includes(row));
     if (forbidden.length > 0) {
-      throw new Error(`Existing extended pet_request.json includes standard hatch-pet row(s): ${forbidden.join(", ")}`);
+      throw new Error(`Existing ${definition.label} pet_request.json includes forbidden row(s): ${forbidden.join(", ")}`);
     }
   }
 }
@@ -436,10 +488,10 @@ function readPngMetadata(filePath) {
   };
 }
 
-function assertResidentFinalPng(metadata, filePath) {
-  if (metadata.width !== CANVAS.width || metadata.height !== CANVAS.height) {
+function assertResidentFinalPng(metadata, filePath, canvas) {
+  if (metadata.width !== canvas.width || metadata.height !== canvas.height) {
     throw new Error(
-      `Final PNG has wrong size: ${metadata.width}x${metadata.height}. Expected ${CANVAS.width}x${CANVAS.height}. File: ${toRepoPath(filePath)}`,
+      `Final PNG has wrong size: ${metadata.width}x${metadata.height}. Expected ${canvas.width}x${canvas.height}. File: ${toRepoPath(filePath)}`,
     );
   }
 }
@@ -627,6 +679,17 @@ function paethPredictor(left, up, upLeft) {
   if (leftDistance <= upDistance && leftDistance <= upLeftDistance) return left;
   if (upDistance <= upLeftDistance) return up;
   return upLeft;
+}
+
+function runPostCopyValidation(plan) {
+  if (plan.sheet === "combined") {
+    console.log(
+      "\ncombined sheet copied. sprite:check is skipped because it validates the motion + extended pair.",
+    );
+    return;
+  }
+
+  runSpriteCheckIfPairExists(plan.slug);
 }
 
 function runSpriteCheckIfPairExists(slug) {
