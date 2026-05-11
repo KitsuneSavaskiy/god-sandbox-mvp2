@@ -2,8 +2,6 @@ import type { InterventionKind, SandboxSession } from "./models.js";
 
 export const GROWTH_CYCLE_TARGET_MINUTES = 30;
 export const GROWTH_CYCLE_TARGET_EVENT_COUNT = 10;
-export const GOD_POINT_RECOVERY_INTERVAL_MINUTES = 3;
-export const GOD_POINT_RECOVERY_AMOUNT = 1;
 export const MAX_GOD_POINTS = 6;
 
 export const GOD_POINT_RECOVERY_PHASES_PER_POINT = 2;
@@ -11,6 +9,9 @@ export const GOD_POINT_RECOVERY_AMOUNT_PER_TICK = 1;
 export const SANDBOX_DAY_PHASES_PER_SEASON = 4;
 export const GOD_POINT_RECOVERY_PER_SEASON = 2;
 export const SANDBOX_PHASE_MINUTES = 0.75; // 1 phase = 45s
+export const GOD_POINT_RECOVERY_INTERVAL_MINUTES =
+  SANDBOX_PHASE_MINUTES * GOD_POINT_RECOVERY_PHASES_PER_POINT; // 1.5 min per +1
+export const GOD_POINT_RECOVERY_AMOUNT = GOD_POINT_RECOVERY_AMOUNT_PER_TICK; // 1
 
 export const BALANCED_INTERVENTION_COSTS: Record<InterventionKind, number> = {
   watch: 0,

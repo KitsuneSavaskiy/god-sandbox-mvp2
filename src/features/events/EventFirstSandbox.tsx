@@ -811,6 +811,11 @@ export function EventFirstSandbox({
     const elapsedTicks = backgroundCycleStep - lastRecoveryStepRef.current;
     if (elapsedTicks <= 0) return;
 
+    if (runtimeStateRef.current.session.godPoints >= MAX_GOD_POINTS) {
+      lastRecoveryStepRef.current = backgroundCycleStep;
+      return;
+    }
+
     const recoveryTicks = Math.floor(elapsedTicks / GOD_POINT_RECOVERY_PHASES_PER_POINT);
     lastRecoveryStepRef.current += recoveryTicks * GOD_POINT_RECOVERY_PHASES_PER_POINT;
 
