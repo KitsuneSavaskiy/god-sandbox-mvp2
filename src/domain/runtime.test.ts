@@ -798,9 +798,24 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
-  assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
-  assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
-  assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
+  assert.equal(activeAssetBundles[3]?.expressions.angry.assetId, "suzu-expression-angry");
+  assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.angry.path,
+    "/art/characters/defaults/suzu/expressions/angry.png",
+  );
+  assert.equal(activeAssetBundles[3]?.expressions.sad.assetId, "suzu-expression-sad");
+  assert.equal(activeAssetBundles[3]?.expressions.sad.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.sad.path,
+    "/art/characters/defaults/suzu/expressions/sad.png",
+  );
+  assert.equal(activeAssetBundles[3]?.expressions.surprised.assetId, "suzu-expression-surprised");
+  assert.equal(activeAssetBundles[3]?.expressions.surprised.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.surprised.path,
+    "/art/characters/defaults/suzu/expressions/surprised.png",
+  );
 
   const afterIntervention = applyFocusedEventInterventionCommand(state, {
     type: "help",

@@ -540,5 +540,26 @@ export const DEFAULT_CHARACTER_ASSET_MANIFEST: AssetManifest = {
       relativePath: "art/characters/defaults/suzu/expressions/happy.png",
       generatedFromAssetIds: ["suzu-portrait-neutral"],
     },
+    {
+      id: "suzu-expression-angry",
+      ownerCharacterId: "chr_suzu",
+      kind: "appearance-variant",
+      relativePath: "art/characters/defaults/suzu/expressions/angry.png",
+      generatedFromAssetIds: ["suzu-portrait-neutral"],
+    },
+    {
+      id: "suzu-expression-sad",
+      ownerCharacterId: "chr_suzu",
+      kind: "appearance-variant",
+      relativePath: "art/characters/defaults/suzu/expressions/sad.png",
+      generatedFromAssetIds: ["suzu-portrait-neutral"],
+    },
+    {
+      id: "suzu-expression-surprised",
+      ownerCharacterId: "chr_suzu",
+      kind: "appearance-variant",
+      relativePath: "art/characters/defaults/suzu/expressions/surprised.png",
+      generatedFromAssetIds: ["suzu-portrait-neutral"],
+    },
   ],
 };
