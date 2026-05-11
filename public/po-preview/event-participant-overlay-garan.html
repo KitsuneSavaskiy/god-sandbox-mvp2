@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Garan event participant overlay preview</title>
+    <style>
+      :root {
+        color: #211f1b;
+        font-family: "Yu Gothic", "Meiryo", sans-serif;
+        background: #f2eee4;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+      }
+
+      .preview-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .card {
+        border: 1px solid rgba(33, 31, 27, 0.18);
+        border-radius: 18px;
+        overflow: hidden;
+        background: #fffaf1;
+        box-shadow: 0 16px 36px rgba(33, 31, 27, 0.12);
+      }
+
+      .stage {
+        min-height: 420px;
+        display: grid;
+        place-items: end center;
+        padding: 24px 20px 0;
+      }
+
+      .stage img {
+        width: min(78%, 280px);
+        height: auto;
+        display: block;
+      }
+
+      .white {
+        background: #fff;
+      }
+
+      .dark {
+        background:
+          radial-gradient(circle at 35% 20%, rgba(204, 154, 82, 0.2), transparent 32%),
+          linear-gradient(160deg, #17120e, #3b2f25 55%, #120f0c);
+      }
+
+      .event {
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 227, 169, 0.64), transparent 30%),
+          linear-gradient(160deg, #816545, #c49a5f 48%, #5d5f42);
+      }
+
+      .caption {
+        padding: 12px 14px 16px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      code {
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Garan event participant overlay preview</h1>
+    <p>
+      Path:
+      <code>/art/characters/defaults/garan/overlays/event-participant/neutral-body.png</code>
+    </p>
+    <div class="preview-grid">
+      <section class="card">
+        <div class="stage white">
+          <img src="/art/characters/defaults/garan/overlays/event-participant/neutral-body.png" alt="Garan neutral participant overlay on white" />
+        </div>
+        <div class="caption">白背景</div>
+      </section>
+      <section class="card">
+        <div class="stage dark">
+          <img src="/art/characters/defaults/garan/overlays/event-participant/neutral-body.png" alt="Garan neutral participant overlay on dark" />
+        </div>
+        <div class="caption">濃色背景</div>
+      </section>
+      <section class="card">
+        <div class="stage event">
+          <img src="/art/characters/defaults/garan/overlays/event-participant/neutral-body.png" alt="Garan neutral participant overlay on event-like background" />
+        </div>
+        <div class="caption">event art 風背景</div>
+      </section>
+    </div>
+  </body>
+</html>
