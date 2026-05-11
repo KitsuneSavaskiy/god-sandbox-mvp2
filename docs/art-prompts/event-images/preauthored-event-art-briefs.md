@@ -23,22 +23,11 @@
 
 ## #292 CLI との関係
 
-`tools/sidekick/event-image-request.mjs` は **generated_event_art** フローの将来入口です。  
-今回のブリーフは **preauthored_event_art** 用であり、CLI 生成物（request.json / prompt.md / reference-manifest.json）を PR に含めません。
+`tools/sidekick/event-image-request.mjs` は **generated_event_art** フローの将来入口です。
+今回の **preauthored_event_art** 制作では CLI 実行は必須ではありません。
+このPBIでは CLI 生成物（request.json / prompt.md / reference-manifest.json）を PR に含めません。
 
-PO が手動で CLI を使って request を作成することは可能です。
-
-```bash
-# 例: CLI で dry-run プレビューだけ確認する場合
-node tools/sidekick/event-image-request.mjs \
-  --event-id evt_moving_stone_001 \
-  --template-id moving-stone \
-  --summary "石が昨日と少し違う場所にある" \
-  --composition landscape \
-  --dry-run
-```
-
-生成画像を採用する場合は別 PBI で `public/art/events/` へ昇格します。
+必要になった場合のみ別 PBI で CLI を使います。生成画像を採用する場合は別 PBI で `public/art/events/` へ昇格します。
 
 ---
 
