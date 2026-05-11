@@ -62,6 +62,7 @@ export type ApplyInterventionInput = {
   currentMemoGroup?: PlayerMemoGroup | null;
   previousMemoGroup?: PlayerMemoGroup | null;
   costs?: Record<InterventionKind, number>;
+  faithTriggerOverride?: FaithChangeTrigger;
 };
 
 export type ApplyInterventionResult = {
@@ -106,7 +107,7 @@ export function applyIntervention(input: ApplyInterventionInput): ApplyIntervent
   }
 
   const delta = STATUS_DELTA_BY_INTERVENTION[input.type];
-  const faithTrigger = FAITH_TRIGGER_BY_INTERVENTION[input.type];
+  const faithTrigger = input.faithTriggerOverride ?? FAITH_TRIGGER_BY_INTERVENTION[input.type];
   const interventionId = `itv_${input.idSeed}`;
   const godPointsAfterApply = godPointsBeforeApply - resourceCost;
   const currentMemoGroup =
