@@ -3,6 +3,7 @@ import {
   resolveEventJudgement,
   resolveEventOutcome,
   resolveFaithTriggerByOutcome,
+  resolveTemplateThreshold,
 } from "../domain/eventOutcome.js";
 import { applyIntervention, resolvePlayerMemoGroup } from "../domain/interventions.js";
 import type {
@@ -102,11 +103,14 @@ export function applyInterventionService(
     state.characters.get(currentEvent.primaryCharacterId) ?? targetCharacters[0];
 
   // Pre-compute judgement so we can pass the correct faith trigger (success vs failure).
+  // Use resolveTemplateThreshold so legendary-big-fish (threshold 13) and other templates
+  // always use the same threshold here and inside resolveEventOutcome.
   const preJudgement = resolveEventJudgement({
     seed: command.idSeed,
     eventId: currentEvent.id,
     interventionType: command.type,
     character: primaryCharacter,
+    threshold: resolveTemplateThreshold(currentEvent.templateId),
   });
   const faithTriggerOverride = resolveFaithTriggerByOutcome(command.type, preJudgement.outcome);
 

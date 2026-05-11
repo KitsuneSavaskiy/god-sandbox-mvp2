@@ -14,6 +14,10 @@ const TEMPLATE_THRESHOLDS: Partial<Record<string, number>> = {
   "legendary-big-fish": 13,
 };
 
+export function resolveTemplateThreshold(templateId: string): number {
+  return TEMPLATE_THRESHOLDS[templateId] ?? 11;
+}
+
 export function rollD20(seed: string): number {
   return 1 + (stableHash(seed) % 20);
 }
@@ -103,7 +107,7 @@ export function resolveEventOutcome(input: {
   primaryCharacter: Character;
   seed: string;
 }): EventOutcomeRecord {
-  const threshold = TEMPLATE_THRESHOLDS[input.event.templateId] ?? 11;
+  const threshold = resolveTemplateThreshold(input.event.templateId);
 
   const judgement = resolveEventJudgement({
     seed: input.seed,

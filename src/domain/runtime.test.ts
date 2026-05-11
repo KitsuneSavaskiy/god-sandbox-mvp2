@@ -121,6 +121,7 @@ import {
   rollD20,
   resolveEventJudgement,
   resolveEventOutcome,
+  resolveTemplateThreshold,
 } from "./eventOutcome.js";
 
 type TestAssert = {
@@ -2537,6 +2538,62 @@ function testEventOutcomeFoundation(): void {
   assert.ok(foxOutcome.outcome === "success" || foxOutcome.outcome === "failure");
   assert.ok(typeof foxOutcome.summary === "string" && foxOutcome.summary.length > 0);
   // offeringCount は今回増やさない（この PR では offeringCollected flag のみ）
+
+  // --- resolveTemplateThreshold ---
+  assert.equal(resolveTemplateThreshold("legendary-big-fish"), 13);
+  assert.equal(resolveTemplateThreshold("moving-stone"), 11);
+  assert.equal(resolveTemplateThreshold("unknown-template"), 11);
+
+  // --- legendary-big-fish: threshold=13, total 11 or 12 must be failure ---
+  // faith trigger and structuredPayload.outcome must agree when total is in the 11-12 range.
+  // We find a seed that produces roll+modifier with total exactly 11 or 12 for legendary-big-fish.
+  const fishChar = character("chr_fish", "FishWatcher");
+  fishChar.state.status = { ...fishChar.state.status, insight: 0, stress: 0 }; // modifier = 0
+  let fishRegressionTested = false;
+  for (let i = 0; i < 500; i++) {
+    const seed = `fish-regression-${i}`;
+    const roll = rollD20(`${seed}:evt_fish_test:watch`);
+    if (roll === 11 || roll === 12) {
+      // modifier=0, total=11 or 12 — should be failure at threshold 13
+      const j = resolveEventJudgement({
+        seed,
+        eventId: "evt_fish_test",
+        interventionType: "watch",
+        character: fishChar,
+        threshold: resolveTemplateThreshold("legendary-big-fish"),
+      });
+      assert.equal(j.total, roll);
+      assert.equal(j.threshold, 13);
+      assert.equal(j.outcome, "failure");
+
+      // resolveEventOutcome must also return failure for the same seed
+      const fishEvent: WorldEvent = {
+        id: "evt_fish_test",
+        templateId: "legendary-big-fish",
+        status: "active",
+        primaryCharacterId: "chr_fish",
+        participantCharacterIds: ["chr_fish"],
+        situationTags: ["rare"],
+        summary: "大きな影が見えた。",
+        createdAt: now,
+        updatedAt: now,
+      };
+      const fishRecord = resolveEventOutcome({
+        event: fishEvent,
+        intervention: { ...testIntervention, eventId: "evt_fish_test" },
+        primaryCharacter: fishChar,
+        seed,
+      });
+      // faith trigger outcome and structuredPayload outcome must agree
+      assert.equal(fishRecord.outcome, "failure");
+      assert.equal(fishRecord.judgement.total, j.total);
+
+      fishRegressionTested = true;
+      break;
+    }
+  }
+  // If this fails, the seed search range needs to be increased
+  assert.ok(fishRegressionTested);
 
   // --- applyInterventionService wires outcome into resolvedEvent ---
   const initialState = worldState();
