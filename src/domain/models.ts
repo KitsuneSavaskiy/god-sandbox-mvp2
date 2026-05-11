@@ -259,6 +259,27 @@ export type InterventionRecord = {
   createdAt: string;
 };
 
+export type EventOutcomeKind = "success" | "failure";
+
+export type EventJudgement = {
+  formula: "1d20 + modifier";
+  roll: number;
+  modifier: number;
+  total: number;
+  threshold: number;
+  outcome: EventOutcomeKind;
+};
+
+export type EventOutcomeRecord = {
+  eventId: string;
+  interventionId: string;
+  templateId: string;
+  outcome: EventOutcomeKind;
+  judgement: EventJudgement;
+  summary: string;
+  appliedEffectLabels: string[];
+};
+
 export type ChangeSetKind =
   | "status-delta"
   | "personality-delta"
