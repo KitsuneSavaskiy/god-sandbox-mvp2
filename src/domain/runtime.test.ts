@@ -699,7 +699,7 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(
     ryoAssetBundle.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png",
   );
   assert.equal(
     ryoAssetBundle.spriteSheet.plannedPath,
@@ -707,13 +707,13 @@ function testRuntimeSelectorsAndCommands(): void {
   );
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
-  // Ryo PO preview sheet: one combined Codex pet sheet, 7 cols, 14 rows
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 118);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 136);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 7);
+  // Ryo PO preview sheet: one combined Codex pet sheet, 6 cols, 14 rows.
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 6);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 14);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 7);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 6);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.waving?.row, 3);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.review?.row, 7);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"]?.row, 2);
@@ -721,8 +721,8 @@ function testRuntimeSelectorsAndCommands(): void {
   // Extended motions share the same PO preview PNG.
   assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
   assert.equal(ryoAssetBundle.extendedSheet.ready, true);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 118);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 136);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-up"]?.row, 8);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-happy"]?.row, 10);
@@ -760,11 +760,13 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.motions.failed?.frames, 7);
   assert.equal(
     activeAssetBundles[2]?.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png",
   );
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 118);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 136);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 5);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 6);
   assert.equal(
     activeAssetBundles[3]?.spriteSheet.path,
     "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
@@ -793,7 +795,12 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.frameHeight, 136);
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["emote-angry"]?.row, 11);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.rows, 14);
   assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["emote-sad"]?.row, 12);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameWidth, 148);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
