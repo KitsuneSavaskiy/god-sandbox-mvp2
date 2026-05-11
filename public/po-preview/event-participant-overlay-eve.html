@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eve event participant overlay preview</title>
+    <style>
+      :root {
+        color: #1f241c;
+        font-family: "Yu Gothic", "Meiryo", sans-serif;
+        background: #f5f1e8;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+      }
+
+      .preview-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .card {
+        border: 1px solid rgba(31, 36, 28, 0.18);
+        border-radius: 18px;
+        overflow: hidden;
+        background: #fffdf7;
+        box-shadow: 0 16px 36px rgba(31, 36, 28, 0.12);
+      }
+
+      .stage {
+        min-height: 420px;
+        display: grid;
+        place-items: end center;
+        padding: 24px 20px 0;
+      }
+
+      .stage img {
+        width: min(72%, 260px);
+        height: auto;
+        display: block;
+      }
+
+      .white {
+        background: #fff;
+      }
+
+      .dark {
+        background:
+          radial-gradient(circle at 35% 20%, rgba(164, 202, 146, 0.22), transparent 32%),
+          linear-gradient(160deg, #152014, #2a3628 55%, #111812);
+      }
+
+      .event {
+        background:
+          radial-gradient(circle at 50% 18%, rgba(255, 244, 194, 0.64), transparent 30%),
+          linear-gradient(160deg, #9f7f52, #d9b56f 48%, #567052);
+      }
+
+      .caption {
+        padding: 12px 14px 16px;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      code {
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Eve event participant overlay preview</h1>
+    <p>
+      Path:
+      <code>/art/characters/defaults/eve/overlays/event-participant/neutral-body.png</code>
+    </p>
+    <div class="preview-grid">
+      <section class="card">
+        <div class="stage white">
+          <img src="/art/characters/defaults/eve/overlays/event-participant/neutral-body.png" alt="Eve neutral participant overlay on white" />
+        </div>
+        <div class="caption">白背景</div>
+      </section>
+      <section class="card">
+        <div class="stage dark">
+          <img src="/art/characters/defaults/eve/overlays/event-participant/neutral-body.png" alt="Eve neutral participant overlay on dark" />
+        </div>
+        <div class="caption">濃色背景</div>
+      </section>
+      <section class="card">
+        <div class="stage event">
+          <img src="/art/characters/defaults/eve/overlays/event-participant/neutral-body.png" alt="Eve neutral participant overlay on event-like background" />
+        </div>
+        <div class="caption">event art 風背景</div>
+      </section>
+    </div>
+  </body>
+</html>
