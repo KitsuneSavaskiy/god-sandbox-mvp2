@@ -65,6 +65,14 @@ Example:
 `);
 }
 
+function requireValue(argv, index, flag) {
+  const value = argv[index + 1];
+  if (!value || value.startsWith("-")) {
+    throw new Error(`${flag} requires a value.`);
+  }
+  return value;
+}
+
 function parseArgs(argv) {
   const args = {
     tags: [],
@@ -73,19 +81,18 @@ function parseArgs(argv) {
   };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
-    const next = argv[i + 1];
     if (flag === "--help" || flag === "-h") { args.help = true; }
     else if (flag === "--dry-run") { args.dryRun = true; }
-    else if (flag === "--event-id") { args.eventId = next; i++; }
-    else if (flag === "--template-id") { args.templateId = next; i++; }
-    else if (flag === "--summary") { args.summary = next; i++; }
-    else if (flag === "--tag") { args.tags.push(next); i++; }
-    else if (flag === "--location-label") { args.locationLabel = next; i++; }
-    else if (flag === "--mood-tag") { args.moodTags.push(next); i++; }
-    else if (flag === "--composition") { args.composition = next; i++; }
-    else if (flag === "--background-hint") { args.backgroundHint = next; i++; }
-    else if (flag === "--style-hint") { args.styleHint = next; i++; }
-    else if (flag === "--participant") { args.participants.push(next); i++; }
+    else if (flag === "--event-id") { args.eventId = requireValue(argv, i, flag); i++; }
+    else if (flag === "--template-id") { args.templateId = requireValue(argv, i, flag); i++; }
+    else if (flag === "--summary") { args.summary = requireValue(argv, i, flag); i++; }
+    else if (flag === "--tag") { args.tags.push(requireValue(argv, i, flag)); i++; }
+    else if (flag === "--location-label") { args.locationLabel = requireValue(argv, i, flag); i++; }
+    else if (flag === "--mood-tag") { args.moodTags.push(requireValue(argv, i, flag)); i++; }
+    else if (flag === "--composition") { args.composition = requireValue(argv, i, flag); i++; }
+    else if (flag === "--background-hint") { args.backgroundHint = requireValue(argv, i, flag); i++; }
+    else if (flag === "--style-hint") { args.styleHint = requireValue(argv, i, flag); i++; }
+    else if (flag === "--participant") { args.participants.push(requireValue(argv, i, flag)); i++; }
     else if (flag.startsWith("-")) {
       throw new Error(`Unknown flag: "${flag}". Run --help to see valid flags.`);
     }
