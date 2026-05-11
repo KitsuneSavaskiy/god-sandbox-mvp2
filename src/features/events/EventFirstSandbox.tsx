@@ -1768,7 +1768,6 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
 
   const metadata = resident.spriteSheetMetadata;
   const failedFrameMaxSpan = isVariableWidthFailedResident(resident) ? 2 : 1;
-  const emoteTopInset = resolveResidentEmoteTopInset(metadata);
   const displayScale = resolveResidentDisplayScale(metadata);
 
   return {
@@ -1777,7 +1776,6 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
     "--resident-frame-height": metadata ? `${metadata.frameHeight}px` : undefined,
     "--resident-frame-max-span": failedFrameMaxSpan,
     "--resident-display-scale": displayScale.toFixed(3),
-    "--resident-emote-top-inset": `${emoteTopInset}px`,
     "--resident-sheet-width": metadata
       ? `${metadata.frameWidth * metadata.columns}px`
       : undefined,
