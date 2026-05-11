@@ -6,6 +6,11 @@ export const GOD_POINT_RECOVERY_INTERVAL_MINUTES = 3;
 export const GOD_POINT_RECOVERY_AMOUNT = 1;
 export const MAX_GOD_POINTS = 6;
 
+export const GOD_POINT_RECOVERY_PHASES_PER_POINT = 2;
+export const GOD_POINT_RECOVERY_AMOUNT_PER_TICK = 1;
+export const SANDBOX_DAY_PHASES_PER_SEASON = 4;
+export const GOD_POINT_RECOVERY_PER_SEASON = 2;
+
 export const BALANCED_INTERVENTION_COSTS: Record<InterventionKind, number> = {
   watch: 0,
   help: 2,
@@ -32,6 +37,18 @@ export function getGrowthCycleProgress(completedEventCount: number): GrowthCycle
       GROWTH_CYCLE_TARGET_EVENT_COUNT - normalizedCompletedEventCount,
     ),
     isCycleComplete: normalizedCompletedEventCount >= GROWTH_CYCLE_TARGET_EVENT_COUNT,
+  };
+}
+
+export function recoverGodPointsByPhaseTicks(
+  session: SandboxSession,
+  elapsedPhaseTicks: number,
+): SandboxSession {
+  if (elapsedPhaseTicks <= 0) return session;
+  const recoveryTicks = Math.floor(elapsedPhaseTicks / GOD_POINT_RECOVERY_PHASES_PER_POINT);
+  return {
+    ...session,
+    godPoints: Math.min(MAX_GOD_POINTS, session.godPoints + recoveryTicks * GOD_POINT_RECOVERY_AMOUNT_PER_TICK),
   };
 }
 

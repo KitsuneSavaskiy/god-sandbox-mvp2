@@ -13,6 +13,14 @@ import {
 } from "../../application/characterAssetBundles.js";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
+  recoverRuntimeGodPointsByPhaseTicks,
+} from "../../application/growthBalanceService.js";
+import {
+  BALANCED_INTERVENTION_COSTS,
+  GOD_POINT_RECOVERY_PHASES_PER_POINT,
+  MAX_GOD_POINTS,
+} from "../../domain/growthBalance.js";
+import {
   selectActiveCharacters,
   selectCurrentEvent,
   selectObservationPreset,
@@ -392,6 +400,8 @@ export function EventFirstSandbox({
   const apostleMotionRef = useRef(apostleMotion);
   const residentEmoteRef = useRef<EmoteKind[]>([]);
   const residentMovementsRef = useRef<ResidentMovementState[]>(residentMovements);
+  const lastRecoveryStepRef = useRef(backgroundCycleStep);
+  const runtimeStateRef = useRef(runtimeState);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const residentNodeRefs = useRef<Record<string, HTMLElement | null>>({});
   const previousBackgroundRef = useRef<SandboxBackgroundState | null>(null);
@@ -544,6 +554,11 @@ export function EventFirstSandbox({
   );
   const sandboxSeasonLabel = sandboxSeasonLabels[sandboxBackground.season];
   const sandboxDayPhaseLabel = sandboxDayPhaseLabels[sandboxBackground.dayPhase];
+  const godPoints = runtimeState.session.godPoints;
+  const recoveryPhaseProgress = Math.min(
+    1,
+    (backgroundCycleStep - lastRecoveryStepRef.current) / GOD_POINT_RECOVERY_PHASES_PER_POINT,
+  );
 
   useEffect(() => {
     const previousBackground = previousBackgroundRef.current;
@@ -778,6 +793,30 @@ export function EventFirstSandbox({
       window.cancelAnimationFrame(animationFrameId);
     };
   }, [apostleMotion.isMoving, apostleMotion.targetX, apostleMotion.targetY]);
+
+  useEffect(() => {
+    runtimeStateRef.current = runtimeState;
+  }, [runtimeState]);
+
+  useEffect(() => {
+    if (backgroundCyclePaused) return;
+
+    const elapsedTicks = backgroundCycleStep - lastRecoveryStepRef.current;
+    if (elapsedTicks <= 0) return;
+
+    const recoveryTicks = Math.floor(elapsedTicks / GOD_POINT_RECOVERY_PHASES_PER_POINT);
+    lastRecoveryStepRef.current += recoveryTicks * GOD_POINT_RECOVERY_PHASES_PER_POINT;
+
+    if (recoveryTicks <= 0) return;
+
+    const result = recoverRuntimeGodPointsByPhaseTicks(runtimeStateRef.current, {
+      elapsedPhaseTicks: recoveryTicks * GOD_POINT_RECOVERY_PHASES_PER_POINT,
+      now: new Date().toISOString(),
+    });
+    if (result.recoveredAmount > 0) {
+      onRuntimeStateChange(result.state);
+    }
+  }, [backgroundCycleStep, backgroundCyclePaused]);
 
   useEffect(() => {
     onFocusedEventIdChange(currentEvent.id);
@@ -1223,6 +1262,28 @@ export function EventFirstSandbox({
             {sandboxSeasonLabel.label}
           </span>
         </div>
+        <div
+          className="event-first-sandbox__vitality-hud"
+          aria-label={`体力 ${godPoints} / ${MAX_GOD_POINTS}。次の回復まで ${Math.round(recoveryPhaseProgress * 100)}%`}
+        >
+          <span className="event-first-sandbox__vitality-label" aria-hidden="true">体力</span>
+          <span className="event-first-sandbox__vitality-pips" aria-hidden="true">
+            {Array.from({ length: MAX_GOD_POINTS }, (_, i) => (
+              <span
+                key={i}
+                className={`event-first-sandbox__vitality-pip${
+                  i < godPoints ? " event-first-sandbox__vitality-pip--filled" : ""
+                }`}
+              />
+            ))}
+          </span>
+          <span className="event-first-sandbox__vitality-recovery" aria-hidden="true">
+            <span
+              className="event-first-sandbox__vitality-recovery-fill"
+              style={{ width: `${recoveryPhaseProgress * 100}%` }}
+            />
+          </span>
+        </div>
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
 
@@ -1497,17 +1558,22 @@ export function EventFirstSandbox({
                   tutorialBinding?.anchorId === "tutorial-anchor-event-interventions" || undefined
                 }
               >
-                {(Object.keys(interventionLabels) as InterventionKind[]).map((type) => (
-                  <Button
-                    key={type}
-                    type="button"
-                    variant={type === "help" ? "primary" : "secondary"}
-                    className={`event-first-sandbox__intervention-button event-first-sandbox__intervention-button--${type}`}
-                    onClick={() => handleIntervention(type)}
-                  >
-                    {interventionLabels[type]}
-                  </Button>
-                ))}
+                {(Object.keys(interventionLabels) as InterventionKind[]).map((type) => {
+                  const canAfford = godPoints >= BALANCED_INTERVENTION_COSTS[type];
+                  return (
+                    <Button
+                      key={type}
+                      type="button"
+                      variant={type === "help" ? "primary" : "secondary"}
+                      className={`event-first-sandbox__intervention-button event-first-sandbox__intervention-button--${type}`}
+                      disabled={!canAfford}
+                      title={!canAfford ? "体力が足りません" : undefined}
+                      onClick={() => handleIntervention(type)}
+                    >
+                      {interventionLabels[type]}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
           )}
