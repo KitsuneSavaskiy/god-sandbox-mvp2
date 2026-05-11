@@ -1302,6 +1302,10 @@ button.event-first-sandbox__emote:disabled {
   max-height: 84%;
 }
 
+.event-first-sandbox__event-participant--count-3.event-first-sandbox__event-participant--left-back {
+  max-height: 68%;
+}
+
 /* 4名 */
 .event-first-sandbox__event-participant--count-4 {
   max-height: 78%;
@@ -1309,10 +1313,12 @@ button.event-first-sandbox__emote:disabled {
 
 .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--left-back {
   left: 14%;
+  max-height: 68%;
 }
 
 .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--right-back {
   right: 14%;
+  max-height: 68%;
 }
 
 @keyframes event-participant-side-in-left {
