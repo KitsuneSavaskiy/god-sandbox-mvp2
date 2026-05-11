@@ -1354,6 +1354,18 @@ button.event-first-sandbox__emote:disabled {
     max-height: 72%;
   }
 
+  .event-first-sandbox__event-participant--count-1.event-first-sandbox__event-participant--left-front,
+  .event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--left-front,
+  .event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--right-front {
+    max-height: 72%;
+  }
+
+  .event-first-sandbox__event-participant--count-3.event-first-sandbox__event-participant--left-back,
+  .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--left-back,
+  .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--right-back {
+    max-height: 62%;
+  }
+
   .event-first-sandbox__event-participant--left-back {
     left: 10%;
   }
