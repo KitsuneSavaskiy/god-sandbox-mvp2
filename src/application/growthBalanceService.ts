@@ -1,6 +1,7 @@
 import {
   getGrowthCycleProgress,
   recoverGodPointsByElapsedMinutes,
+  recoverGodPointsByPhaseTicks,
   type GrowthCycleProgress,
 } from "../domain/growthBalance.js";
 import type { RuntimeWorldState } from "../state/runtimeState.js";
@@ -12,6 +13,23 @@ export function selectGrowthCycleProgress(state: RuntimeWorldState): GrowthCycle
   ).length;
 
   return getGrowthCycleProgress(completedEventCount);
+}
+
+export type RecoverGodPointsCommand = {
+  elapsedPhaseTicks: number;
+  now: string;
+};
+
+export function recoverRuntimeGodPointsByPhaseTicks(
+  state: RuntimeWorldState,
+  command: RecoverGodPointsCommand,
+): { state: RuntimeWorldState; recoveredAmount: number } {
+  const before = state.session.godPoints;
+  const updatedSession = recoverGodPointsByPhaseTicks(state.session, command.elapsedPhaseTicks);
+  return {
+    state: createRuntimeWorldState({ ...state, session: updatedSession }),
+    recoveredAmount: updatedSession.godPoints - before,
+  };
 }
 
 export function recoverRuntimeGodPointsByElapsedMinutes(

@@ -95,9 +95,11 @@ import {
   MAX_GOD_POINTS,
   getGrowthCycleProgress,
   recoverGodPointsByElapsedMinutes,
+  recoverGodPointsByPhaseTicks,
 } from "./growthBalance.js";
 import {
   recoverRuntimeGodPointsByElapsedMinutes,
+  recoverRuntimeGodPointsByPhaseTicks,
   selectGrowthCycleProgress,
 } from "../application/growthBalanceService.js";
 import { resolveCharacterAnimationAssetStatus } from "../features/residents/characterAssetStatus.js";
@@ -549,6 +551,14 @@ function testThirtyMinuteGrowthBalance(): void {
   assert.equal(progressAtGoal.remainingEventCount, 0);
 
   const state = worldState();
+  // 3 minutes = 4 phases => +2 (phase-aligned recovery)
+  const threeMinSession = recoverGodPointsByElapsedMinutes(
+    { ...state.session, godPoints: 2 },
+    3,
+  );
+  assert.equal(threeMinSession.godPoints, 4);
+
+  // 9 minutes = 12 phases => +6, but capped at MAX_GOD_POINTS (6)
   const recoveredSession = recoverGodPointsByElapsedMinutes(
     {
       ...state.session,
@@ -556,7 +566,7 @@ function testThirtyMinuteGrowthBalance(): void {
     },
     9,
   );
-  assert.equal(recoveredSession.godPoints, 5);
+  assert.equal(recoveredSession.godPoints, MAX_GOD_POINTS);
 
   const cappedSession = recoverGodPointsByElapsedMinutes(
     {
@@ -577,7 +587,7 @@ function testThirtyMinuteGrowthBalance(): void {
     }),
     6,
   );
-  assert.equal(recoveredRuntime.session.godPoints, 3);
+  assert.equal(recoveredRuntime.session.godPoints, 5); // 6 min = 8 phases => +4
 
   const events = new Map(state.events);
   for (let index = 0; index < GROWTH_CYCLE_TARGET_EVENT_COUNT; index += 1) {
@@ -788,9 +798,24 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["emote-surprised"]?.row, 13);
-  assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, true);
-  assert.equal(activeAssetBundles[3]?.expressions.angry.fallbackAssetId, "suzu-portrait-neutral");
-  assert.equal(activeAssetBundles[3]?.expressions.angry.missingReason, "not-generated-yet");
+  assert.equal(activeAssetBundles[3]?.expressions.angry.assetId, "suzu-expression-angry");
+  assert.equal(activeAssetBundles[3]?.expressions.angry.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.angry.path,
+    "/art/characters/defaults/suzu/expressions/angry.png",
+  );
+  assert.equal(activeAssetBundles[3]?.expressions.sad.assetId, "suzu-expression-sad");
+  assert.equal(activeAssetBundles[3]?.expressions.sad.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.sad.path,
+    "/art/characters/defaults/suzu/expressions/sad.png",
+  );
+  assert.equal(activeAssetBundles[3]?.expressions.surprised.assetId, "suzu-expression-surprised");
+  assert.equal(activeAssetBundles[3]?.expressions.surprised.isPlaceholder, false);
+  assert.equal(
+    activeAssetBundles[3]?.expressions.surprised.path,
+    "/art/characters/defaults/suzu/expressions/surprised.png",
+  );
 
   const afterIntervention = applyFocusedEventInterventionCommand(state, {
     type: "help",
@@ -2343,6 +2368,90 @@ function testPassportBoundarySmokeTests(): void {
   assert.equal(display.externalAiPromptBlock.systemPrompt.includes(String(faithValue)), false);
 }
 
+function testGodPointPhaseRecovery(): void {
+  const state = worldState();
+  const baseSession = { ...state.session };
+
+  // 1 phase tick => no recovery
+  const noRecovery = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 3 }, 1);
+  assert.equal(noRecovery.godPoints, 3);
+
+  // 2 phase ticks => +1
+  const oneRecovery = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 3 }, 2);
+  assert.equal(oneRecovery.godPoints, 4);
+
+  // 4 phase ticks => +2
+  const twoRecovery = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 3 }, 4);
+  assert.equal(twoRecovery.godPoints, 5);
+
+  // 0 ticks => no change
+  const zeroTicks = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 3 }, 0);
+  assert.equal(zeroTicks.godPoints, 3);
+
+  // negative ticks => no change
+  const negativeTicks = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 3 }, -5);
+  assert.equal(negativeTicks.godPoints, 3);
+
+  // max 6 is not exceeded
+  const nearMax = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: 5 }, 4);
+  assert.equal(nearMax.godPoints, MAX_GOD_POINTS);
+
+  const atMax = recoverGodPointsByPhaseTicks({ ...baseSession, godPoints: MAX_GOD_POINTS }, 4);
+  assert.equal(atMax.godPoints, MAX_GOD_POINTS);
+
+  // other fields are unchanged
+  assert.equal(noRecovery.id, baseSession.id);
+  assert.equal(noRecovery.currentEventId, baseSession.currentEventId);
+
+  // applyIntervention still reduces godPoints correctly
+  const eventState = state;
+  const currentEvent = selectCurrentEvent(eventState);
+  const helpCost = BALANCED_INTERVENTION_COSTS.help; // 2
+  const initialGp = eventState.session.godPoints;
+  // seed world starts at MAX_GOD_POINTS, so help (cost 2) is always affordable
+  assert.ok(initialGp >= helpCost);
+  const interventionResult = applyIntervention({
+    session: eventState.session,
+    event: currentEvent,
+    targetCharacters: [...eventState.characters.values()].filter((c) =>
+      currentEvent.participantCharacterIds.includes(c.id),
+    ),
+    type: "help",
+    now: "2026-01-01T00:00:00.000Z",
+    idSeed: "test-help-9f",
+  });
+  assert.equal(interventionResult.session.godPoints, initialGp - helpCost);
+
+  // after help (cost 2), 4 phase ticks restore +2 (up to max 6)
+  const afterHelp = interventionResult.session;
+  const restored = recoverGodPointsByPhaseTicks(afterHelp, 4);
+  assert.equal(restored.godPoints, Math.min(MAX_GOD_POINTS, afterHelp.godPoints + 2));
+
+  // recoverRuntimeGodPointsByPhaseTicks: state-level wrapper
+  const runtimeBefore = createRuntimeWorldState({
+    ...state,
+    session: { ...state.session, godPoints: 2 },
+  });
+  const runtimeResult = recoverRuntimeGodPointsByPhaseTicks(runtimeBefore, {
+    elapsedPhaseTicks: 4,
+    now: "2026-01-01T00:00:00.000Z",
+  });
+  assert.equal(runtimeResult.recoveredAmount, 2);
+  assert.equal(runtimeResult.state.session.godPoints, 4);
+
+  // 0 recovery amount when already at max
+  const runtimeFull = createRuntimeWorldState({
+    ...state,
+    session: { ...state.session, godPoints: MAX_GOD_POINTS },
+  });
+  const fullResult = recoverRuntimeGodPointsByPhaseTicks(runtimeFull, {
+    elapsedPhaseTicks: 4,
+    now: "2026-01-01T00:00:00.000Z",
+  });
+  assert.equal(fullResult.recoveredAmount, 0);
+  assert.equal(fullResult.state.session.godPoints, MAX_GOD_POINTS);
+}
+
 function testEventOutcomeFoundation(): void {
   // --- rollD20 ---
   // Same seed always returns the same value (deterministic)
@@ -2645,6 +2754,7 @@ const tests: Array<[string, () => void]> = [
   ["observed dialogue runtime smoke tests (PBI 8a)", testObservedDialogueRuntimeSmokeTests],
   ["passport boundary smoke tests (PBI 8a)", testPassportBoundarySmokeTests],
   ["event outcome foundation (PBI 9a-core)", testEventOutcomeFoundation],
+  ["god point phase recovery (PBI 9f)", testGodPointPhaseRecovery],
 ];
 
 for (const [name, test] of tests) {
