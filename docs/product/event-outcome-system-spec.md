@@ -43,11 +43,11 @@ GodSandbox のイベントを「発生するだけ」から「介入によって
 3. 神が `watch` / `help` / `trial` のいずれかで介入する
 4. 内部で **1d20 + modifier** を振る（seed は deterministic）
 5. 結末は **success / failure の2択** で決まる
-6. 結末に応じて:
-   - `event.structuredPayload.outcome` が `"success"` または `"failure"` になる
-   - `event.structuredPayload.judgement` に判定詳細が記録される
-   - status delta / relation delta / worldStatusTags が適用される
-   - 蓄積型イベントのみ chained event が発生しうる
+6. 結末に応じて（Sprint 9a-core の範囲）:
+   - `event.structuredPayload.outcome` / `judgement` / `outcomeSummary` を記録する
+   - `event.status` は `"resolved"` になる
+   - イベントテンプレート別の status delta / relation delta / worldStatusTags 適用は次 PBI で扱う
+   - 蓄積型イベントの chained event 発生は次 PBI で扱う
 7. キャラ発話は `event_started` / `intervention_applied` / `event_resolved` に反応する
 8. **LLM は結末を決めない**。domain logic が deterministic に決める
 
