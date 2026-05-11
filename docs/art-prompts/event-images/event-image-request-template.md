@@ -15,6 +15,8 @@ Create one cozy sandbox event illustration.
 
 ## Composition
 - Aspect: {{composition}}
+- Background hint: {{backgroundHint}}
+- Style hint: {{styleHint}}
 - Include the listed residents naturally in the scene.
 - Use the reference image paths to preserve character identity.
 - Do not redesign the characters.

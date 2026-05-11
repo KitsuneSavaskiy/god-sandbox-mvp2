@@ -11,7 +11,7 @@
  *   npm run sidekick:event-image -- --help
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -59,6 +59,8 @@ Example:
     --participant chr_ryo:Ryo:primary:public/art/characters/defaults/ryo/portrait.png \\
     --participant chr_suzu:Suzu:supporting:public/art/characters/defaults/suzu/portrait.png \\
     --composition landscape \\
+    --background-hint "緑の木陰、午後の木漏れ日" \\
+    --style-hint "watercolor, soft light" \\
     --dry-run
 `);
 }
@@ -74,16 +76,19 @@ function parseArgs(argv) {
     const next = argv[i + 1];
     if (flag === "--help" || flag === "-h") { args.help = true; }
     else if (flag === "--dry-run") { args.dryRun = true; }
-    else if (flag === "--event-id" && next) { args.eventId = next; i++; }
-    else if (flag === "--template-id" && next) { args.templateId = next; i++; }
-    else if (flag === "--summary" && next) { args.summary = next; i++; }
-    else if (flag === "--tag" && next) { args.tags.push(next); i++; }
-    else if (flag === "--location-label" && next) { args.locationLabel = next; i++; }
-    else if (flag === "--mood-tag" && next) { args.moodTags.push(next); i++; }
-    else if (flag === "--composition" && next) { args.composition = next; i++; }
-    else if (flag === "--background-hint" && next) { args.backgroundHint = next; i++; }
-    else if (flag === "--style-hint" && next) { args.styleHint = next; i++; }
-    else if (flag === "--participant" && next) { args.participants.push(next); i++; }
+    else if (flag === "--event-id") { args.eventId = next; i++; }
+    else if (flag === "--template-id") { args.templateId = next; i++; }
+    else if (flag === "--summary") { args.summary = next; i++; }
+    else if (flag === "--tag") { args.tags.push(next); i++; }
+    else if (flag === "--location-label") { args.locationLabel = next; i++; }
+    else if (flag === "--mood-tag") { args.moodTags.push(next); i++; }
+    else if (flag === "--composition") { args.composition = next; i++; }
+    else if (flag === "--background-hint") { args.backgroundHint = next; i++; }
+    else if (flag === "--style-hint") { args.styleHint = next; i++; }
+    else if (flag === "--participant") { args.participants.push(next); i++; }
+    else if (flag.startsWith("-")) {
+      throw new Error(`Unknown flag: "${flag}". Run --help to see valid flags.`);
+    }
   }
   return args;
 }
@@ -165,7 +170,8 @@ function validate(args) {
     if (!p.referencePath.trim()) {
       throw new Error("referencePath must not be empty.");
     }
-    if (path.isAbsolute(p.referencePath)) {
+    // Reject POSIX absolute paths and Windows-style absolute paths (C:\...)
+    if (path.isAbsolute(p.referencePath) || /^[a-zA-Z]:[\\\/]/.test(p.referencePath)) {
       throw new Error(
         `referencePath must be a repo-relative path, not absolute: "${p.referencePath}"`
       );
@@ -186,23 +192,22 @@ function validate(args) {
   return { parsed, composition };
 }
 
-function checkReferenceExists(referencePath) {
+function validateReferencePath(referencePath) {
   const abs = path.join(repoRoot, referencePath);
-  return existsSync(abs);
+  if (!existsSync(abs)) return "missing";
+  if (!statSync(abs).isFile()) return "not-a-file";
+  return "ok";
 }
 
 function buildParticipantRefs(parsedParticipants) {
-  return parsedParticipants.map((p) => {
-    const exists = checkReferenceExists(p.referencePath);
-    return {
-      characterId: p.characterId,
-      displayName: p.displayName,
-      role: p.role,
-      referencePath: p.referencePath,
-      referenceKind: inferReferenceKind(p.referencePath),
-      exists,
-    };
-  });
+  return parsedParticipants.map((p) => ({
+    characterId: p.characterId,
+    displayName: p.displayName,
+    role: p.role,
+    referencePath: p.referencePath,
+    referenceKind: inferReferenceKind(p.referencePath),
+    exists: existsSync(path.join(repoRoot, p.referencePath)),
+  }));
 }
 
 function buildRequest(args, requestId, refs, composition) {
@@ -269,7 +274,9 @@ function buildPrompt(args, refs, composition) {
     .replace("{{locationLabel}}", args.locationLabel ?? "(unspecified)")
     .replace("{{moodTags}}", args.moodTags.join(", ") || "(none)")
     .replace("{{participants}}", participantLines)
-    .replace("{{composition}}", composition);
+    .replace("{{composition}}", composition)
+    .replace("{{backgroundHint}}", args.backgroundHint ?? "(unspecified)")
+    .replace("{{styleHint}}", args.styleHint ?? "(unspecified)");
 }
 
 function buildManifest(requestId, refs) {
@@ -281,7 +288,13 @@ function buildManifest(requestId, refs) {
 }
 
 function main() {
-  const args = parseArgs(process.argv.slice(2));
+  let args;
+  try {
+    args = parseArgs(process.argv.slice(2));
+  } catch (err) {
+    console.error(`[error] ${err.message}`);
+    process.exit(1);
+  }
 
   if (args.help || process.argv.length <= 2) {
     printHelp();
@@ -296,16 +309,22 @@ function main() {
     process.exit(1);
   }
 
-  const refs = buildParticipantRefs(parsed);
-
-  const missingRefs = refs.filter((r) => !r.exists);
-  if (missingRefs.length > 0) {
-    for (const r of missingRefs) {
-      console.error(`[error] referencePath not found: ${r.referencePath}`);
+  // Validate each referencePath: must exist and be a file
+  const refErrors = parsed
+    .map((p) => ({ p, status: validateReferencePath(p.referencePath) }))
+    .filter(({ status }) => status !== "ok");
+  if (refErrors.length > 0) {
+    for (const { p, status } of refErrors) {
+      const msg =
+        status === "missing"
+          ? `referencePath not found: ${p.referencePath}`
+          : `referencePath is not a file: ${p.referencePath}`;
+      console.error(`[error] ${msg}`);
     }
     process.exit(1);
   }
 
+  const refs = buildParticipantRefs(parsed);
   const requestId = buildRequestId(args.eventId);
 
   let request, prompt, manifest;
