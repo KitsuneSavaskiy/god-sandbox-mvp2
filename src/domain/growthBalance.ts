@@ -10,6 +10,7 @@ export const GOD_POINT_RECOVERY_PHASES_PER_POINT = 2;
 export const GOD_POINT_RECOVERY_AMOUNT_PER_TICK = 1;
 export const SANDBOX_DAY_PHASES_PER_SEASON = 4;
 export const GOD_POINT_RECOVERY_PER_SEASON = 2;
+export const SANDBOX_PHASE_MINUTES = 0.75; // 1 phase = 45s
 
 export const BALANCED_INTERVENTION_COSTS: Record<InterventionKind, number> = {
   watch: 0,
@@ -56,13 +57,6 @@ export function recoverGodPointsByElapsedMinutes(
   session: SandboxSession,
   elapsedMinutes: number,
 ): SandboxSession {
-  const recoveryTicks = Math.floor(
-    Math.max(0, elapsedMinutes) / GOD_POINT_RECOVERY_INTERVAL_MINUTES,
-  );
-  const recoveredGodPoints = recoveryTicks * GOD_POINT_RECOVERY_AMOUNT;
-
-  return {
-    ...session,
-    godPoints: Math.min(MAX_GOD_POINTS, session.godPoints + recoveredGodPoints),
-  };
+  const elapsedPhaseTicks = Math.floor(Math.max(0, elapsedMinutes) / SANDBOX_PHASE_MINUTES);
+  return recoverGodPointsByPhaseTicks(session, elapsedPhaseTicks);
 }

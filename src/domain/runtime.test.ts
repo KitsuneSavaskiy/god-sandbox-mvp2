@@ -551,6 +551,14 @@ function testThirtyMinuteGrowthBalance(): void {
   assert.equal(progressAtGoal.remainingEventCount, 0);
 
   const state = worldState();
+  // 3 minutes = 4 phases => +2 (phase-aligned recovery)
+  const threeMinSession = recoverGodPointsByElapsedMinutes(
+    { ...state.session, godPoints: 2 },
+    3,
+  );
+  assert.equal(threeMinSession.godPoints, 4);
+
+  // 9 minutes = 12 phases => +6, but capped at MAX_GOD_POINTS (6)
   const recoveredSession = recoverGodPointsByElapsedMinutes(
     {
       ...state.session,
@@ -558,7 +566,7 @@ function testThirtyMinuteGrowthBalance(): void {
     },
     9,
   );
-  assert.equal(recoveredSession.godPoints, 5);
+  assert.equal(recoveredSession.godPoints, MAX_GOD_POINTS);
 
   const cappedSession = recoverGodPointsByElapsedMinutes(
     {
@@ -579,7 +587,7 @@ function testThirtyMinuteGrowthBalance(): void {
     }),
     6,
   );
-  assert.equal(recoveredRuntime.session.godPoints, 3);
+  assert.equal(recoveredRuntime.session.godPoints, 5); // 6 min = 8 phases => +4
 
   const events = new Map(state.events);
   for (let index = 0; index < GROWTH_CYCLE_TARGET_EVENT_COUNT; index += 1) {

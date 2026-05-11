@@ -555,10 +555,17 @@ export function EventFirstSandbox({
   const sandboxSeasonLabel = sandboxSeasonLabels[sandboxBackground.season];
   const sandboxDayPhaseLabel = sandboxDayPhaseLabels[sandboxBackground.dayPhase];
   const godPoints = runtimeState.session.godPoints;
-  const recoveryPhaseProgress = Math.min(
-    1,
-    (backgroundCycleStep - lastRecoveryStepRef.current) / GOD_POINT_RECOVERY_PHASES_PER_POINT,
-  );
+  const recoveryPhaseProgress =
+    godPoints >= MAX_GOD_POINTS
+      ? 0
+      : Math.min(
+          1,
+          (backgroundCycleStep - lastRecoveryStepRef.current) / GOD_POINT_RECOVERY_PHASES_PER_POINT,
+        );
+  const vitalityAriaLabel =
+    godPoints >= MAX_GOD_POINTS
+      ? `体力 ${godPoints} / ${MAX_GOD_POINTS}。満タン`
+      : `体力 ${godPoints} / ${MAX_GOD_POINTS}。次の回復まで ${Math.round(recoveryPhaseProgress * 100)}%`;
 
   useEffect(() => {
     const previousBackground = previousBackgroundRef.current;
@@ -1264,7 +1271,7 @@ export function EventFirstSandbox({
         </div>
         <div
           className="event-first-sandbox__vitality-hud"
-          aria-label={`体力 ${godPoints} / ${MAX_GOD_POINTS}。次の回復まで ${Math.round(recoveryPhaseProgress * 100)}%`}
+          aria-label={vitalityAriaLabel}
         >
           <span className="event-first-sandbox__vitality-label" aria-hidden="true">体力</span>
           <span className="event-first-sandbox__vitality-pips" aria-hidden="true">
