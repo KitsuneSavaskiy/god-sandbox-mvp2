@@ -1,0 +1,11 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="謎の動く石">
+  <rect width="320" height="180" fill="#d8eef8"/>
+  <rect y="118" width="320" height="62" fill="#8ab87a"/>
+  <path d="M100 142 Q140 138 162 146 Q182 150 202 144" stroke="#7a8a60" stroke-width="2" fill="none" stroke-dasharray="4,3" opacity="0.7"/>
+  <ellipse cx="108" cy="146" rx="9" ry="3" fill="#6a7a50" opacity="0.45"/>
+  <ellipse cx="123" cy="149" rx="7" ry="2.5" fill="#6a7a50" opacity="0.38"/>
+  <ellipse cx="163" cy="148" rx="24" ry="6" fill="#6a7a50" opacity="0.35"/>
+  <ellipse cx="158" cy="130" rx="26" ry="22" fill="#a0978c"/>
+  <ellipse cx="153" cy="124" rx="13" ry="9" fill="#bcb4ac" opacity="0.48"/>
+  <ellipse cx="168" cy="138" rx="6" ry="4" fill="#888078" opacity="0.3"/>
+</svg>

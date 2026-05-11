@@ -40,6 +40,7 @@ import {
   type SandboxExperienceStage,
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
+import { resolveEventArt } from "./eventArt.js";
 import { createVisibleChangePatchForSandboxUi } from "./interventionOutcomeViewModel.js";
 import {
   createNextAmbientResidentEmote,
@@ -387,6 +388,7 @@ export function EventFirstSandbox({
   const [backgroundCycleStep, setBackgroundCycleStep] = useState(() =>
     sandboxDayPhases.indexOf("noon"),
   );
+  const [eventArtError, setEventArtError] = useState(false);
   const apostleMotionRef = useRef(apostleMotion);
   const residentEmoteRef = useRef<EmoteKind[]>([]);
   const residentMovementsRef = useRef<ResidentMovementState[]>(residentMovements);
@@ -403,6 +405,7 @@ export function EventFirstSandbox({
   const currentEvent = selectCurrentEvent(runtimeState);
   const observationPreset = selectObservationPreset(runtimeState);
   const activeCharacters = selectActiveCharacters(runtimeState);
+  const eventArt = resolveEventArt(currentEvent.templateId);
   const activeAssetBundles = useMemo(
     () => selectActiveCharacterAssetBundleReadModels(runtimeState),
     [runtimeState],
@@ -579,6 +582,10 @@ export function EventFirstSandbox({
     },
     [],
   );
+
+  useEffect(() => {
+    setEventArtError(false);
+  }, [currentEvent.templateId]);
 
   useEffect(() => {
     if (sandboxPaused || lastObservedDialogueEventIdRef.current === currentEvent.id) {
@@ -1461,12 +1468,14 @@ export function EventFirstSandbox({
                 <strong id="event-first-sandbox-event-window-title">見守り中</strong>
                 <span>出来事の絵を確認してから、関わり方を選びます。</span>
               </div>
-              <div
-                className="event-first-sandbox__event-image-placeholder"
-                aria-label="イベント画像の仮枠"
-              >
-                <strong>イベント画像</strong>
-                <span>ここに出来事の絵が入ります</span>
+              <div className="event-first-sandbox__event-art-frame">
+                <img
+                  key={eventArt.assetId}
+                  src={eventArtError ? eventArt.fallbackSrc : eventArt.src}
+                  alt={eventArt.alt}
+                  className="event-first-sandbox__event-art-image"
+                  onError={() => setEventArtError(true)}
+                />
               </div>
               <div className="event-first-sandbox__event-details">
                 <strong>観察プリセット</strong>

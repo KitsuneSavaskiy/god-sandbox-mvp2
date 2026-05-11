@@ -1,0 +1,14 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="祠の油揚げ">
+  <rect width="320" height="180" fill="#e8d8c0"/>
+  <rect y="138" width="320" height="42" fill="#90a870"/>
+  <rect x="136" y="102" width="48" height="38" rx="2" fill="#8a7860"/>
+  <polygon points="122,102 198,102 182,82 138,82" fill="#5a4a3a"/>
+  <polygon points="132,102 188,102 175,86 145,86" fill="#7a6a5a"/>
+  <rect x="150" y="114" width="20" height="26" rx="2" fill="#5a4030" opacity="0.78"/>
+  <rect x="136" y="136" width="48" height="4" rx="1" fill="#6a5840"/>
+  <rect x="144" y="127" width="32" height="9" rx="3" fill="#f0d890"/>
+  <rect x="147" y="128" width="26" height="7" rx="2" fill="#f8e8a0" opacity="0.82"/>
+  <path d="M207 148 Q224 136 230 122 Q234 110 225 106" stroke="#d08040" stroke-width="3" fill="none" opacity="0.42"/>
+  <ellipse cx="225" cy="104" rx="8" ry="10" fill="#e09050" opacity="0.28"/>
+  <ellipse cx="160" cy="118" rx="32" ry="18" fill="#f8f0c0" opacity="0.1"/>
+</svg>

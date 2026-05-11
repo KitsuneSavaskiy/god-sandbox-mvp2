@@ -1,0 +1,12 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="伝説の大きな魚">
+  <rect width="320" height="120" fill="#b8d8f0"/>
+  <rect y="110" width="320" height="70" fill="#4a88b0"/>
+  <path d="M40 118 Q80 114 120 118 Q160 122 200 118 Q240 114 280 118" stroke="#6aaccc" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M20 130 Q70 126 120 130 Q170 134 220 130 Q270 126 300 130" stroke="#6aaccc" stroke-width="1.5" fill="none" opacity="0.4"/>
+  <ellipse cx="158" cy="150" rx="92" ry="22" fill="#2a5870" opacity="0.55"/>
+  <path d="M245 150 L278 134 L268 156 Z" fill="#2a5870" opacity="0.45"/>
+  <circle cx="83" cy="146" r="5" fill="#1a4060" opacity="0.4"/>
+  <ellipse cx="158" cy="122" rx="50" ry="8" fill="#a0d8f8" opacity="0.32"/>
+  <rect x="50" y="100" width="6" height="14" rx="2" fill="#4a5030" opacity="0.72"/>
+  <circle cx="53" cy="97" r="5" fill="#4a5030" opacity="0.72"/>
+</svg>
