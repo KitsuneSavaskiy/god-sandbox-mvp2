@@ -342,7 +342,6 @@
   --resident-frame-height: 208px;
   --resident-frame-max-span: 1;
   --resident-display-scale: 1.5;
-  --resident-emote-top-inset: 0px;
   --resident-sheet-width: 1536px;
   --resident-sheet-height: 1872px;
   --resident-sheet-x-end: -1536px;
@@ -635,8 +634,8 @@
 
 .event-first-sandbox__resident--sprite-ready .event-first-sandbox__emote {
   bottom: calc(
-    (var(--resident-frame-height) - var(--resident-emote-top-inset)) *
-      var(--resident-display-scale) * var(--resident-scale) + 4px
+    var(--resident-frame-height) * var(--resident-display-scale) +
+      clamp(10px, 1.4vw, 16px)
   );
 }
 
