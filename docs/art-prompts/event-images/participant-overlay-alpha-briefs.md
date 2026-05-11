@@ -76,7 +76,7 @@ no cropped body (must show head to feet)
 | 四隅 | 透明 |
 | 背景色縁取り | なし（matting / halo 不可） |
 | ゴミピクセル | 体の輪郭外に最小限 |
-| ファイルサイズ | PNG で 1MB 未満を目安 |
+| ファイルサイズ | PNG で 1MB 未満を目安（品質優先で PO 判断可能） |
 
 ---
 
@@ -97,7 +97,7 @@ no cropped body (must show head to feet)
 
 ```
 1. このブリーフ + reference portrait を制作担当へ渡す（手動）
-2. 制作担当が body.png を作成
+2. 制作担当が neutral-body.png を作成（α透過済み）
 3. α品質チェック（docs/operations/event-participant-overlay-asset-pipeline.md 参照）
 4. PO が確認・承認
 5. PO 承認後の別 PBI で public/art/characters/defaults/{slug}/overlays/event-participant/ へ配置
@@ -110,9 +110,9 @@ no cropped body (must show head to feet)
 ## 配置先パス（PO承認後の別 PBI で使用）
 
 ```
-public/art/characters/defaults/ryo/overlays/event-participant/body.png
-public/art/characters/defaults/suzu/overlays/event-participant/body.png
-public/art/characters/defaults/eve/overlays/event-participant/body.png
-public/art/characters/defaults/garan/overlays/event-participant/body.png
+public/art/characters/defaults/ryo/overlays/event-participant/neutral-body.png
+public/art/characters/defaults/suzu/overlays/event-participant/neutral-body.png
+public/art/characters/defaults/eve/overlays/event-participant/neutral-body.png
+public/art/characters/defaults/garan/overlays/event-participant/neutral-body.png
 public/art/characters/defaults/_fallback/overlays/event-participant/silhouette.png
 ```

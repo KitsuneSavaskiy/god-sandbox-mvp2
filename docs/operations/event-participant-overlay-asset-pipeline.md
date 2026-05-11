@@ -38,8 +38,8 @@ type ParticipantOverlayAssetKind =
 ### 本素材（キャラ別）
 
 ```
-public/art/characters/defaults/{characterSlug}/overlays/event-participant/body.png
-public/art/characters/defaults/{characterSlug}/overlays/event-participant/body.webp  （future optional）
+public/art/characters/defaults/{characterSlug}/overlays/event-participant/neutral-body.png
+public/art/characters/defaults/{characterSlug}/overlays/event-participant/neutral-body.webp  （future optional）
 ```
 
 対象キャラ（MVP時点）:
@@ -72,7 +72,7 @@ public/art/characters/defaults/_fallback/overlays/event-participant/silhouette.p
 ## 3. assetId 規則
 
 ```
-{characterSlug}-event-participant-body
+{characterSlug}-event-participant-neutral-body
 {characterSlug}-event-participant-bust   （future）
 fallback-event-participant-silhouette
 ```
@@ -81,10 +81,10 @@ fallback-event-participant-silhouette
 
 | characterSlug | assetId |
 |---|---|
-| `ryo` | `ryo-event-participant-body` |
-| `suzu` | `suzu-event-participant-body` |
-| `eve` | `eve-event-participant-body` |
-| `garan` | `garan-event-participant-body` |
+| `ryo` | `ryo-event-participant-neutral-body` |
+| `suzu` | `suzu-event-participant-neutral-body` |
+| `eve` | `eve-event-participant-neutral-body` |
+| `garan` | `garan-event-participant-neutral-body` |
 | fallback | `fallback-event-participant-silhouette` |
 
 ---
@@ -162,7 +162,7 @@ max-height: clamp(180px, 34vh, 360px);
 - [ ] キャラ輪郭が切れていない（頭・手足・衣装端）
 - [ ] 背景色のマッティング（白縁・色縁）が残っていない
 - [ ] 体の輪郭外にゴミピクセルが少ない
-- [ ] ファイルサイズが過大でない（目安: PNG で 1MB 未満）
+- [ ] ファイルサイズが過大でない（目安: PNG で 1MB 未満。品質優先で PO 判断可能）
 
 ### 表示確認
 
@@ -199,7 +199,7 @@ UI 側が event art レイヤー + overlay レイヤーをそれぞれ `<img>` /
 
 | 状況 | 使用するasset |
 |---|---|
-| キャラの `body.png` が未配置 | `fallback-event-participant-silhouette` |
+| キャラの `neutral-body.png` が未配置 | `fallback-event-participant-silhouette` |
 | fallback 自体も未配置 | overlay 非表示（event art のみ表示） |
 
 fallback silhouette はキャラを特定しない汎用シルエット（性別・種族不問）。
@@ -210,7 +210,7 @@ fallback silhouette はキャラを特定しない汎用シルエット（性別
 
 | 状態 | 内容 |
 |---|---|
-| 未制作 | 全キャラの `body.png`、fallback `silhouette.png` |
+| 未制作 | 全キャラの `neutral-body.png`、fallback `silhouette.png` |
 | 制作ブリーフ | `docs/art-prompts/event-images/participant-overlay-alpha-briefs.md` を参照 |
 | 採用フロー | PO 確認後に別 PBI で `public/art/characters/defaults/{slug}/overlays/event-participant/` へ配置 |
 
