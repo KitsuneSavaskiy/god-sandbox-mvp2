@@ -72,6 +72,86 @@ export const EVENT_TEMPLATES: readonly EventTemplate[] = [
       principleRole: "separate",
     },
   },
+  // MVP 7 events (PBI 9a-core)
+  {
+    id: "moving-stone",
+    name: "謎の動く石",
+    situationTags: ["mystery", "observation", "recurring"],
+    summaryTemplate: "{name}の近くで、また石が位置を変えていた。",
+    principleProfile: {
+      dominantPhase: "water",
+      polarity: "yin",
+      principleRole: "separate",
+    },
+  },
+  {
+    id: "shrine-prayer-wish",
+    name: "お参りと願い",
+    situationTags: ["shrine", "inner-life", "prayer"],
+    summaryTemplate: "{name}が、祠の前で何かを祈ろうとしている。",
+    principleProfile: {
+      dominantPhase: "fire",
+      polarity: "yin",
+      principleRole: "bind",
+    },
+  },
+  {
+    id: "strange-grass-found",
+    name: "変な草を拾う",
+    situationTags: ["nature", "curiosity", "discovery"],
+    summaryTemplate: "{name}が、見たことのない草を拾い上げた。",
+    principleProfile: {
+      dominantPhase: "wood",
+      polarity: "yang",
+      principleRole: "circulate",
+    },
+  },
+  {
+    id: "shared-nap-place",
+    name: "同じ場所で昼寝",
+    situationTags: ["daily-life", "relationship", "multi-character"],
+    summaryTemplate: "{name}たちが、同じ場所でうとうとしている。",
+    principleProfile: {
+      dominantPhase: "earth",
+      polarity: "yin",
+      principleRole: "bind",
+    },
+  },
+  {
+    id: "mysterious-footprints",
+    name: "謎の足あと",
+    situationTags: ["mystery", "investigation", "plaza"],
+    summaryTemplate: "{name}が、広場に残された謎の足あとを見つけた。",
+    principleProfile: {
+      dominantPhase: "metal",
+      polarity: "yang",
+      principleRole: "reveal",
+    },
+  },
+  {
+    id: "legendary-big-fish",
+    name: "伝説の大きな魚",
+    situationTags: ["rare", "river", "pond", "legend"],
+    summaryTemplate: "{name}が、水面の奥に大きな魚影を見た気がした。",
+    principleProfile: {
+      dominantPhase: "water",
+      polarity: "yang",
+      principleRole: "separate",
+    },
+  },
+  {
+    id: "shrine-fox-offering",
+    name: "祠の油揚げ",
+    // offeringCount accumulation across events is deferred to a future PBI.
+    // For now, each event instance records offeringCollected in structuredPayload only.
+    situationTags: ["shrine", "offering", "accumulative"],
+    summaryTemplate: "{name}が、祠のそばに置かれた油揚げを見つけた。",
+    principleProfile: {
+      dominantPhase: "wood",
+      polarity: "yin",
+      principleRole: "circulate",
+    },
+  },
 ];
 
 export function createWorldEvent(input: WorldEvent): WorldEvent {

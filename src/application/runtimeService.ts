@@ -1,4 +1,9 @@
 import { generateWorldEvent } from "../domain/events.js";
+import {
+  resolveEventJudgement,
+  resolveEventOutcome,
+  resolveFaithTriggerByOutcome,
+} from "../domain/eventOutcome.js";
 import { applyIntervention, resolvePlayerMemoGroup } from "../domain/interventions.js";
 import type {
   CharacterPassport,
@@ -93,6 +98,18 @@ export function applyInterventionService(
     return character;
   });
 
+  const primaryCharacter =
+    state.characters.get(currentEvent.primaryCharacterId) ?? targetCharacters[0];
+
+  // Pre-compute judgement so we can pass the correct faith trigger (success vs failure).
+  const preJudgement = resolveEventJudgement({
+    seed: command.idSeed,
+    eventId: currentEvent.id,
+    interventionType: command.type,
+    character: primaryCharacter,
+  });
+  const faithTriggerOverride = resolveFaithTriggerByOutcome(command.type, preJudgement.outcome);
+
   const applied = applyIntervention({
     session: state.session,
     event: currentEvent,
@@ -104,11 +121,31 @@ export function applyInterventionService(
     playerMemo: command.playerMemo,
     currentMemoGroup: resolvePlayerMemoGroup(command.playerMemo ?? command.playerReason),
     previousMemoGroup: resolvePreviousInterventionMemoGroup(state),
+    faithTriggerOverride,
   });
+
+  const outcomeRecord = resolveEventOutcome({
+    event: currentEvent,
+    intervention: applied.intervention,
+    primaryCharacter,
+    seed: command.idSeed,
+  });
+
+  const outcomePayload: Record<string, unknown> = {
+    ...(currentEvent.structuredPayload ?? {}),
+    outcome: outcomeRecord.outcome,
+    judgement: outcomeRecord.judgement,
+    outcomeSummary: outcomeRecord.summary,
+  };
+
+  if (currentEvent.templateId === "shrine-fox-offering") {
+    outcomePayload.offeringCollected = outcomeRecord.outcome === "success";
+  }
 
   const resolvedEvent: WorldEvent = {
     ...currentEvent,
     status: "resolved",
+    structuredPayload: outcomePayload,
     updatedAt: command.now,
   };
 
