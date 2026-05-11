@@ -1,4 +1,4 @@
-export const HIDDEN_CHANGE_KEYS_FOR_SANDBOX_UI = new Set([
+const HIDDEN_CHANGE_KEYS_FOR_SANDBOX_UI = new Set([
   "faith",
   "faithChange",
   "currentFaith",
@@ -6,7 +6,7 @@ export const HIDDEN_CHANGE_KEYS_FOR_SANDBOX_UI = new Set([
   "newFaith",
 ]);
 
-export function isHiddenChangeKeyForSandboxUi(key: string): boolean {
+function isHiddenChangeKeyForSandboxUi(key: string): boolean {
   return HIDDEN_CHANGE_KEYS_FOR_SANDBOX_UI.has(key);
 }
 

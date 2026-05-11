@@ -226,9 +226,7 @@ textarea {
   font-weight: 900;
 }
 
-.preset-preview__tags,
-.panel-toggle-row,
-.mobile-sheet-dock__buttons {
+.preset-preview__tags {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -244,7 +242,6 @@ textarea {
 }
 
 .panel-note,
-.panel-route-note,
 .route-placeholder p {
   margin: 0;
   color: #55664e;
@@ -275,16 +272,6 @@ textarea {
 .route-stage--stack {
   align-content: stretch;
 }
-.desktop-panels {
-  display: grid;
-  align-content: start;
-  gap: 12px;
-}
-
-.desktop-panels__grid {
-  display: grid;
-  gap: 12px;
-}
 
 .ui-panel {
   padding: 16px;
@@ -303,10 +290,6 @@ textarea {
 
 .ui-panel__body {
   color: #3f4e38;
-}
-
-.mobile-sheet-dock {
-  display: none;
 }
 
 .edge-drawer {
@@ -443,16 +426,8 @@ textarea {
     padding: 10px 10px 22px;
   }
 
-  .desktop-panels {
-    display: none;
-  }
-
   .roster-preview__list {
     grid-template-columns: 1fr;
-  }
-
-  .mobile-sheet-dock {
-    display: none;
   }
 
   .edge-drawer {
@@ -493,7 +468,6 @@ textarea {
     font-size: 1.3rem;
   }
 
-  .mobile-sheet-dock__buttons .ui-button,
   .panel-action-stack .ui-button {
     flex: 1 1 100%;
   }

@@ -118,13 +118,6 @@
   line-height: 1.5;
 }
 
-.dialogue-preview__hint--chatgpt {
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(103, 135, 86, 0.08);
-  color: #405336;
-}
-
 .dialogue-preview__advanced-prompt summary {
   cursor: pointer;
   font-size: 0.8rem;
