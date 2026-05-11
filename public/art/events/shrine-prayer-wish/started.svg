@@ -1,0 +1,12 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="お参りと願い">
+  <rect width="320" height="180" fill="#cce4f8"/>
+  <rect y="138" width="320" height="42" fill="#80b068"/>
+  <rect x="134" y="98" width="52" height="42" rx="2" fill="#8a7860"/>
+  <polygon points="118,98 202,98 184,76 136,76" fill="#6a5a4a"/>
+  <polygon points="128,98 192,98 177,82 143,82" fill="#7a6a5a"/>
+  <rect x="149" y="110" width="22" height="30" rx="2" fill="#5a4030" opacity="0.72"/>
+  <path d="M154 93 Q157 76 152 60" stroke="#f0f0c0" stroke-width="2" fill="none" opacity="0.82"/>
+  <path d="M163 90 Q169 72 164 54" stroke="#e8f0c0" stroke-width="2" fill="none" opacity="0.72"/>
+  <path d="M173 94 Q177 78 172 64" stroke="#f0f0c0" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <ellipse cx="162" cy="93" rx="14" ry="7" fill="#f8f8a0" opacity="0.18"/>
+</svg>

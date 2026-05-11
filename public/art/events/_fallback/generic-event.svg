@@ -1,0 +1,9 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="出来事の様子">
+  <rect width="320" height="180" fill="#d8eef8"/>
+  <rect y="130" width="320" height="50" fill="#88b870" rx="4"/>
+  <rect x="147" y="92" width="12" height="38" fill="#7a6a50"/>
+  <ellipse cx="153" cy="82" rx="36" ry="28" fill="#5a9455"/>
+  <ellipse cx="138" cy="92" rx="24" ry="18" fill="#6aae65"/>
+  <ellipse cx="168" cy="90" rx="22" ry="16" fill="#70b865"/>
+  <circle cx="64" cy="44" r="20" fill="#f8e080" opacity="0.88"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="謎の足あと">
+  <rect width="320" height="180" fill="#d8e8e8"/>
+  <rect y="118" width="320" height="62" fill="#90b878"/>
+  <ellipse cx="160" cy="148" rx="82" ry="20" fill="#c0a870" opacity="0.78"/>
+  <ellipse cx="124" cy="152" rx="9" ry="6" fill="#8a7850" opacity="0.68" transform="rotate(-10 124 152)"/>
+  <ellipse cx="140" cy="142" rx="9" ry="6" fill="#8a7850" opacity="0.58" transform="rotate(8 140 142)"/>
+  <ellipse cx="153" cy="133" rx="9" ry="6" fill="#8a7850" opacity="0.46" transform="rotate(-5 153 133)"/>
+  <ellipse cx="136" cy="158" rx="9" ry="6" fill="#8a7850" opacity="0.68" transform="rotate(10 136 158)"/>
+  <ellipse cx="151" cy="148" rx="9" ry="6" fill="#8a7850" opacity="0.58" transform="rotate(-8 151 148)"/>
+  <ellipse cx="165" cy="139" rx="9" ry="6" fill="#8a7850" opacity="0.46" transform="rotate(5 165 139)"/>
+  <circle cx="194" cy="114" r="3" fill="#6a7860" opacity="0.36"/>
+  <circle cx="202" cy="106" r="2.5" fill="#6a7860" opacity="0.28"/>
+  <circle cx="208" cy="98" r="2" fill="#6a7860" opacity="0.20"/>
+</svg>
