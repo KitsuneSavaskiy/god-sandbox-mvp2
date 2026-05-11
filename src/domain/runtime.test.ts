@@ -117,6 +117,12 @@ import {
   PASSPORT_FORBIDDEN_WORDS,
 } from "../features/passport/passportUiText.js";
 import { createVisibleChangePatchForSandboxUi } from "../features/events/interventionOutcomeViewModel.js";
+import {
+  rollD20,
+  resolveEventJudgement,
+  resolveEventOutcome,
+  resolveTemplateThreshold,
+} from "./eventOutcome.js";
 
 type TestAssert = {
   deepEqual(actual: unknown, expected: unknown): void;
@@ -2337,6 +2343,278 @@ function testPassportBoundarySmokeTests(): void {
   assert.equal(display.externalAiPromptBlock.systemPrompt.includes(String(faithValue)), false);
 }
 
+function testEventOutcomeFoundation(): void {
+  // --- rollD20 ---
+  // Same seed always returns the same value (deterministic)
+  const roll1 = rollD20("seed-abc");
+  const roll2 = rollD20("seed-abc");
+  assert.equal(roll1, roll2);
+
+  // Result is always 1–20
+  for (const seed of ["s1", "s2", "s3", "s4", "s5", "hello", "world", "test:event:watch"]) {
+    const r = rollD20(seed);
+    assert.ok(r >= 1 && r <= 20);
+  }
+
+  // Different seeds usually produce different values (not a hard invariant, but sanity check)
+  const distinctRolls = new Set(
+    ["a", "b", "c", "d", "e", "f", "g", "h"].map((s) => rollD20(s)),
+  );
+  assert.ok(distinctRolls.size > 1);
+
+  // --- resolveEventJudgement: success case ---
+  // Build a character with high insight (watch +2 modifier) so total is likely >= 11
+  const highInsightCharacter = character("chr_hi", "HighInsight");
+  highInsightCharacter.state.status = {
+    ...highInsightCharacter.state.status,
+    insight: 80,
+    stress: 20,
+  };
+  // Try multiple seeds until we find one that passes
+  let successFound = false;
+  for (let i = 0; i < 100; i++) {
+    const j = resolveEventJudgement({
+      seed: `success-seed-${i}`,
+      eventId: "evt_test",
+      interventionType: "watch",
+      character: highInsightCharacter,
+    });
+    assert.ok(j.roll >= 1 && j.roll <= 20);
+    assert.equal(j.modifier, 2); // insight >= 60 => +2
+    assert.equal(j.total, j.roll + j.modifier);
+    assert.equal(j.outcome, j.total >= j.threshold ? "success" : "failure");
+    if (j.outcome === "success") {
+      successFound = true;
+      break;
+    }
+  }
+  assert.ok(successFound);
+
+  // --- resolveEventJudgement: failure case ---
+  const highStressCharacter = character("chr_lo", "HighStress");
+  highStressCharacter.state.status = {
+    ...highStressCharacter.state.status,
+    insight: 10,
+    empathy: 10,
+    courage: 10,
+    harmony: 10,
+    stress: 90, // -1 modifier
+  };
+  let failureFound = false;
+  for (let i = 0; i < 100; i++) {
+    const j = resolveEventJudgement({
+      seed: `failure-seed-${i}`,
+      eventId: "evt_test",
+      interventionType: "trial",
+      character: highStressCharacter,
+    });
+    assert.equal(j.modifier, -1); // stress >= 70 => -1, courage < 60 => no bonus
+    assert.equal(j.total, j.roll + j.modifier);
+    if (j.outcome === "failure") {
+      failureFound = true;
+      break;
+    }
+  }
+  assert.ok(failureFound);
+
+  // --- modifier rules ---
+  const baseChar = character("chr_base", "Base");
+
+  // watch: insight >= 60 => +2
+  baseChar.state.status = { ...baseChar.state.status, insight: 60, stress: 0 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "watch", character: baseChar }).modifier,
+    2,
+  );
+
+  // watch: insight < 60 => 0
+  baseChar.state.status = { ...baseChar.state.status, insight: 59, stress: 0 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "watch", character: baseChar }).modifier,
+    0,
+  );
+
+  // help: empathy >= 60 => +1
+  baseChar.state.status = { ...baseChar.state.status, insight: 0, empathy: 60, harmony: 0, stress: 0 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "help", character: baseChar }).modifier,
+    1,
+  );
+
+  // help: harmony >= 60 => +1
+  baseChar.state.status = { ...baseChar.state.status, empathy: 0, harmony: 60, stress: 0 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "help", character: baseChar }).modifier,
+    1,
+  );
+
+  // trial: courage >= 60 => +2
+  baseChar.state.status = { ...baseChar.state.status, empathy: 0, harmony: 0, courage: 60, stress: 0 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "trial", character: baseChar }).modifier,
+    2,
+  );
+
+  // stress >= 70 => -1
+  baseChar.state.status = { ...baseChar.state.status, insight: 0, empathy: 0, harmony: 0, courage: 0, stress: 70 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "watch", character: baseChar }).modifier,
+    -1,
+  );
+
+  // stress >= 70 stacks with other modifiers (watch + insight - stress)
+  baseChar.state.status = { ...baseChar.state.status, insight: 60, stress: 70 };
+  assert.equal(
+    resolveEventJudgement({ seed: "m", eventId: "e", interventionType: "watch", character: baseChar }).modifier,
+    1, // +2 - 1
+  );
+
+  // --- 7 event templates ---
+  const MVP_TEMPLATE_IDS = [
+    "moving-stone",
+    "shrine-prayer-wish",
+    "strange-grass-found",
+    "shared-nap-place",
+    "mysterious-footprints",
+    "legendary-big-fish",
+    "shrine-fox-offering",
+  ];
+  for (const templateId of MVP_TEMPLATE_IDS) {
+    const tmpl = EVENT_TEMPLATES.find((t) => t.id === templateId);
+    assert.ok(tmpl != null);
+    assert.ok(tmpl.principleProfile != null);
+    assert.ok(typeof tmpl.summaryTemplate === "string" && tmpl.summaryTemplate.length > 0);
+  }
+
+  // --- resolveEventOutcome returns valid record ---
+  const testEvent: WorldEvent = {
+    id: "evt_outcome_test",
+    templateId: "moving-stone",
+    status: "active",
+    primaryCharacterId: "chr_a",
+    participantCharacterIds: ["chr_a"],
+    situationTags: ["mystery"],
+    summary: "石が動いた。",
+    createdAt: now,
+    updatedAt: now,
+  };
+  const testIntervention = {
+    id: "itv_outcome_test",
+    eventId: "evt_outcome_test",
+    type: "watch" as const,
+    resourceCost: 1,
+    godPointsBeforeApply: 4,
+    godPointsAfterApply: 3,
+    changeSetIds: [],
+    createdAt: now,
+  };
+  const testChar = character("chr_a", "Aki");
+  const outcomeRecord = resolveEventOutcome({
+    event: testEvent,
+    intervention: testIntervention,
+    primaryCharacter: testChar,
+    seed: "outcome-test-seed",
+  });
+  assert.equal(outcomeRecord.eventId, "evt_outcome_test");
+  assert.equal(outcomeRecord.templateId, "moving-stone");
+  assert.ok(outcomeRecord.outcome === "success" || outcomeRecord.outcome === "failure");
+  assert.ok(outcomeRecord.judgement.roll >= 1 && outcomeRecord.judgement.roll <= 20);
+  assert.equal(outcomeRecord.judgement.total, outcomeRecord.judgement.roll + outcomeRecord.judgement.modifier);
+  assert.ok(typeof outcomeRecord.summary === "string" && outcomeRecord.summary.length > 0);
+
+  // --- shrine-fox-offering: offeringCollected flag ---
+  const foxEvent: WorldEvent = {
+    ...testEvent,
+    id: "evt_fox_test",
+    templateId: "shrine-fox-offering",
+    summary: "油揚げがあった。",
+  };
+  const foxOutcome = resolveEventOutcome({
+    event: foxEvent,
+    intervention: { ...testIntervention, eventId: "evt_fox_test" },
+    primaryCharacter: testChar,
+    seed: "fox-test-seed",
+  });
+  assert.ok(foxOutcome.outcome === "success" || foxOutcome.outcome === "failure");
+  assert.ok(typeof foxOutcome.summary === "string" && foxOutcome.summary.length > 0);
+  // offeringCount は今回増やさない（この PR では offeringCollected flag のみ）
+
+  // --- resolveTemplateThreshold ---
+  assert.equal(resolveTemplateThreshold("legendary-big-fish"), 13);
+  assert.equal(resolveTemplateThreshold("moving-stone"), 11);
+  assert.equal(resolveTemplateThreshold("unknown-template"), 11);
+
+  // --- legendary-big-fish: threshold=13, total 11 or 12 must be failure ---
+  // faith trigger and structuredPayload.outcome must agree when total is in the 11-12 range.
+  // We find a seed that produces roll+modifier with total exactly 11 or 12 for legendary-big-fish.
+  const fishChar = character("chr_fish", "FishWatcher");
+  fishChar.state.status = { ...fishChar.state.status, insight: 0, stress: 0 }; // modifier = 0
+  let fishRegressionTested = false;
+  for (let i = 0; i < 500; i++) {
+    const seed = `fish-regression-${i}`;
+    const roll = rollD20(`${seed}:evt_fish_test:watch`);
+    if (roll === 11 || roll === 12) {
+      // modifier=0, total=11 or 12 — should be failure at threshold 13
+      const j = resolveEventJudgement({
+        seed,
+        eventId: "evt_fish_test",
+        interventionType: "watch",
+        character: fishChar,
+        threshold: resolveTemplateThreshold("legendary-big-fish"),
+      });
+      assert.equal(j.total, roll);
+      assert.equal(j.threshold, 13);
+      assert.equal(j.outcome, "failure");
+
+      // resolveEventOutcome must also return failure for the same seed
+      const fishEvent: WorldEvent = {
+        id: "evt_fish_test",
+        templateId: "legendary-big-fish",
+        status: "active",
+        primaryCharacterId: "chr_fish",
+        participantCharacterIds: ["chr_fish"],
+        situationTags: ["rare"],
+        summary: "大きな影が見えた。",
+        createdAt: now,
+        updatedAt: now,
+      };
+      const fishRecord = resolveEventOutcome({
+        event: fishEvent,
+        intervention: { ...testIntervention, eventId: "evt_fish_test" },
+        primaryCharacter: fishChar,
+        seed,
+      });
+      // faith trigger outcome and structuredPayload outcome must agree
+      assert.equal(fishRecord.outcome, "failure");
+      assert.equal(fishRecord.judgement.total, j.total);
+
+      fishRegressionTested = true;
+      break;
+    }
+  }
+  // If this fails, the seed search range needs to be increased
+  assert.ok(fishRegressionTested);
+
+  // --- applyInterventionService wires outcome into resolvedEvent ---
+  const initialState = worldState();
+  const afterIntervention = applyInterventionService(initialState, {
+    type: "watch",
+    now,
+    idSeed: "outcome-wiring-seed",
+  });
+  const resolvedEventId = initialState.session.currentEventId;
+  const resolvedEvent = afterIntervention.state.events.get(resolvedEventId);
+  assert.ok(resolvedEvent != null);
+  assert.equal(resolvedEvent.status, "resolved");
+  assert.ok(resolvedEvent.structuredPayload != null);
+  const payload = resolvedEvent.structuredPayload as Record<string, unknown>;
+  assert.ok(payload.outcome === "success" || payload.outcome === "failure");
+  const j = payload.judgement as Record<string, unknown>;
+  assert.ok(typeof j.roll === "number" && (j.roll as number) >= 1 && (j.roll as number) <= 20);
+  assert.equal(j.total, (j.roll as number) + (j.modifier as number));
+  assert.ok(typeof payload.outcomeSummary === "string" && (payload.outcomeSummary as string).length > 0);
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -2366,6 +2644,7 @@ const tests: Array<[string, () => void]> = [
   ["dialogue handoff smoke tests (PBI 8a)", testDialogueHandoffSmokeTests],
   ["observed dialogue runtime smoke tests (PBI 8a)", testObservedDialogueRuntimeSmokeTests],
   ["passport boundary smoke tests (PBI 8a)", testPassportBoundarySmokeTests],
+  ["event outcome foundation (PBI 9a-core)", testEventOutcomeFoundation],
 ];
 
 for (const [name, test] of tests) {
