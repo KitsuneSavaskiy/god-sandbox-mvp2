@@ -16,7 +16,8 @@ This applies to `AGENTS.md`, `CLAUDE.md`, `.kiro/**`, `docs/**`, and all source 
 ### LLM Context
 
 - Never pass raw faith values, relation scores, five-phase internal values, or any raw internal game parameter to an LLM prompt.
-- Convert faith to `faithBand` (string, e.g. `"low"`, `"mid"`, `"high"`) before including it in any prompt.
+- Convert faith to the canonical `FaithBand` string before including it in any prompt.
+  Examples: `"disbelieves"`, `"uncertain"`, `"senses_presence"`, `"believes"`, `"devoted"`.
 - All LLM output must pass through `src/ai/security/output_guard.ts` before reaching UI or downstream processing.
 - `state_change_request` in LLM output is always `null` and is enforced by schema validation in `src/ai/schemas/`.
 

@@ -5,11 +5,15 @@ They complement and do not override `AGENTS.md` and `docs/agent-operating-rules.
 
 ## Required Before Starting Work
 
+Always:
+
 ```bash
 git fetch origin
 git switch main
 git pull --ff-only
 ```
+
+**For sprint-dispatch-managed PBIs:**
 
 1. Run `npm run sprint9:dispatch -- --status` to check Wave state and dependencies.
 2. Read the latest dispatch comment for the assigned Issue.
@@ -18,20 +22,43 @@ git pull --ff-only
 
 Do not begin implementation if the Wave gate is not yet open. Confirm with PO.
 
+**For Kiro-managed PBIs:**
+
+1. Read `.kiro/specs/<feature>/requirements.md`.
+2. Read `.kiro/specs/<feature>/design.md`.
+3. Read `.kiro/specs/<feature>/tasks.md`.
+4. Confirm the spec is merged to `main` and assigned by PO before implementation.
+5. Create a dedicated branch: `git switch -c <branch-name>`.
+
+Do not begin implementation until either the sprint dispatch gate is open or the relevant Kiro spec is merged and PO-assigned.
+
 ## Required Before Creating a PR
 
+Run the verification commands required by `.kiro/steering/review-policy.md` for the PR type.
+
+**For src changes:**
+
 ```bash
-git diff --name-only origin/main...HEAD   # verify only declared files changed
-git diff --check origin/main...HEAD       # no trailing whitespace or conflict markers
+git diff --name-only origin/main...HEAD
+git diff --check origin/main...HEAD
 npm run typecheck
 npm run test:domain
 npm run test:ai
 npm run build
 ```
 
-- If any command cannot run, state the reason explicitly in the PR body.
-- Do not omit results. Pass/fail must be recorded honestly.
-- UI changes require browser verification. If not possible, state why and describe the alternative check.
+UI changes additionally require browser verification or a stated reason why it was not possible.
+
+**For docs-only changes:**
+
+```bash
+git diff --name-only origin/main...HEAD
+git diff --check origin/main...HEAD
+npm run build
+```
+
+If any command cannot run, state the reason explicitly in the PR body.
+Do not omit results. Pass/fail must be recorded honestly.
 
 ## Scope Rules
 
@@ -102,6 +129,7 @@ Changes to the following always require `manual-review-required` and explicit PO
 - `CLAUDE.md`
 - `package.json`
 - `.kiro/steering/**`
+- `.kiro/specs/**`
 
 ## Secrets and Personal Data
 

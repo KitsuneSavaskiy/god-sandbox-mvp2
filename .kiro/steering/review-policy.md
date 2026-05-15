@@ -8,7 +8,7 @@
 | `manual-review-required` | Everything else. When uncertain, always choose this route. |
 
 `docs/product/**` and `docs/architecture/**` updates always require `manual-review-required`, even if docs-only.
-`.kiro/steering/**` updates always require `manual-review-required`.
+`.kiro/steering/**` and `.kiro/specs/**` updates always require `manual-review-required`.
 
 ## Manual Review Required — Always
 
@@ -24,6 +24,7 @@ Changes to the following paths always require `manual-review-required` and expli
 - `CLAUDE.md`
 - `package.json`
 - `.kiro/steering/**`
+- `.kiro/specs/**`
 
 ## PR Body Must Include
 

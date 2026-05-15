@@ -21,7 +21,10 @@ The game rewards emotional connection with characters and the satisfaction of sh
 - Player intervenes with limited godPoints via `watch | help | trial`.
 - Event outcome is recorded and shapes the world.
 - Visuals help the player understand the event.
-- Music Garden lets the player offer MIDI music and earn godPoints.
+
+## Planned Kiro-managed MVP Extension
+
+- Music Garden will let the player upload MIDI music, play it as sandbox BGM, interact with mystical note visuals, and earn capped godPoints through consecutive successful note clicks.
 
 ## Active Slots and Roster
 
@@ -36,7 +39,7 @@ The following areas require explicit Product Owner decision before an agent may 
 - Game balance (godPoints economy, faith thresholds, reward caps)
 - Character visual quality and approval
 - Event art approval
-- Music reward economy (charge-to-godPoint ratio, session cap)
+- Music reward economy (streak target, per-file godPoint cap)
 - Any change exposing faith, relation score, or five-phase internal values to UI or LLM
 - Any new external dependency or API call from the web app runtime
 - Scope of MVP: death, lifespan, medals are out of scope until PO re-defines
