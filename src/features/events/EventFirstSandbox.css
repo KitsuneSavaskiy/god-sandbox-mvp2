@@ -1211,6 +1211,7 @@ button.event-first-sandbox__emote:disabled {
 }
 
 .event-first-sandbox__event-art-frame {
+  position: relative;
   width: 100%;
   min-width: 0;
   aspect-ratio: 16 / 9;
@@ -1224,8 +1225,154 @@ button.event-first-sandbox__emote:disabled {
   display: block;
   width: 100%;
   height: 100%;
+  position: relative;
+  z-index: 1;
   object-fit: cover;
   border-radius: inherit;
+}
+
+.event-first-sandbox__event-participant-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.event-first-sandbox__event-participant {
+  position: absolute;
+  bottom: -4%;
+  width: auto;
+  max-height: min(92%, 360px);
+  object-fit: contain;
+  filter: drop-shadow(0 14px 18px rgba(31, 42, 24, 0.24));
+  transform-origin: center bottom;
+}
+
+/* slot positions */
+.event-first-sandbox__event-participant--left-front {
+  left: 2%;
+  z-index: 4;
+  animation: event-participant-side-in-left 360ms ease-out both;
+}
+
+.event-first-sandbox__event-participant--right-front {
+  right: 2%;
+  z-index: 4;
+  animation: event-participant-side-in-right 360ms ease-out both;
+}
+
+.event-first-sandbox__event-participant--left-back {
+  left: 14%;
+  bottom: -2%;
+  max-height: 68%;
+  opacity: 0.92;
+  z-index: 3;
+  animation: event-participant-side-in-left 360ms ease-out both;
+}
+
+.event-first-sandbox__event-participant--right-back {
+  right: 14%;
+  bottom: -2%;
+  max-height: 68%;
+  opacity: 0.92;
+  z-index: 3;
+  animation: event-participant-side-in-right 360ms ease-out both;
+}
+
+/* 1名 */
+.event-first-sandbox__event-participant--count-1.event-first-sandbox__event-participant--left-front {
+  left: 6%;
+  max-height: 92%;
+}
+
+/* 2名 */
+.event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--left-front {
+  left: 3%;
+  max-height: 92%;
+}
+
+.event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--right-front {
+  right: 3%;
+  max-height: 92%;
+}
+
+/* 3名 */
+.event-first-sandbox__event-participant--count-3 {
+  max-height: 84%;
+}
+
+.event-first-sandbox__event-participant--count-3.event-first-sandbox__event-participant--left-back {
+  max-height: 68%;
+}
+
+/* 4名 */
+.event-first-sandbox__event-participant--count-4 {
+  max-height: 78%;
+}
+
+.event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--left-back {
+  left: 14%;
+  max-height: 68%;
+}
+
+.event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--right-back {
+  right: 14%;
+  max-height: 68%;
+}
+
+@keyframes event-participant-side-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-36%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes event-participant-side-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(36%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-first-sandbox__event-participant {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .event-first-sandbox__event-participant {
+    max-height: 72%;
+  }
+
+  .event-first-sandbox__event-participant--count-1.event-first-sandbox__event-participant--left-front,
+  .event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--left-front,
+  .event-first-sandbox__event-participant--count-2.event-first-sandbox__event-participant--right-front {
+    max-height: 72%;
+  }
+
+  .event-first-sandbox__event-participant--count-3.event-first-sandbox__event-participant--left-back,
+  .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--left-back,
+  .event-first-sandbox__event-participant--count-4.event-first-sandbox__event-participant--right-back {
+    max-height: 62%;
+  }
+
+  .event-first-sandbox__event-participant--left-back {
+    left: 10%;
+  }
+
+  .event-first-sandbox__event-participant--right-back {
+    right: 10%;
+  }
 }
 
 .event-first-sandbox__event-window-body--result > p {
