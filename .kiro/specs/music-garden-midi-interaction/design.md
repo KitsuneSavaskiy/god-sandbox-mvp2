@@ -80,7 +80,7 @@ If `currentNoteStreak` reaches `MUSIC_NOTE_STREAK_TARGET` while godPoints are al
 3. Player presses Play → isPlaying = true; musicGardenAudio.ts starts oscillator playback; visualizer animation loop starts.
 4. Each animation frame: elapsedMs advances; notes with startMs ≤ elapsedMs become active.
 5. Player clicks an active unclicked note → handleNoteClick: marks clicked, increments currentNoteStreak.
-6. An active note expires unclicked (while rewardsEnabled = true) → handleNoteExpiry: currentNoteStreak resets to 0.
+6. An active rendered note expires unclicked (while rewardsEnabled = true) → handleNoteExpiry: currentNoteStreak resets to 0. Notes that were never added to the rendered note list do not trigger this path.
 7. currentNoteStreak reaches MUSIC_NOTE_STREAK_TARGET → streakReward: currentNoteStreak resets to 0, godPointRewardsEarned++ (only if godPoints < MAX_GOD_POINTS), grantRuntimeGodPoints called.
 8. godPointRewardsEarned reaches MUSIC_GOD_POINT_REWARD_CAP_PER_FILE → further streaks do not trigger rewards.
 9. Event window / result modal opens → rewardsEnabled = false: note clicks do not increment streak; note expiry does not break streak.
@@ -99,6 +99,11 @@ Recommended MVP limits to prevent browser memory and frame-rate issues:
 
 Exceeding these limits shows a warning; the file is rejected or notes are truncated.
 Final values are PO-confirmed (see requirements.md PO Confirmation Points).
+
+**Streak scope rule**: Only notes that are rendered as visual notes (`active === true` at some point
+during playback) are streak targets. Notes truncated by the visualization limit are never added to
+the active note list and therefore never trigger streak-breaking expiry. The `handleNoteExpiry`
+reducer must only be called for notes that were actually rendered.
 
 ## UI
 

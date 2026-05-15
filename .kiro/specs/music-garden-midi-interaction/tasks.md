@@ -12,6 +12,7 @@
     - Unit tests: note-on velocity 0 treated as note-off; tempo event affects startMs; running status parsed
     - Unit tests: malformed track returns controlled error without crashing `/sandbox`
     - Unit tests: file exceeding MVP limits → returns error or truncated result
+    - Unit tests: truncated (non-rendered) notes are excluded from the active note list and cannot trigger streak breaks
 
 - [ ] 2. Add Music Garden state model and reducers
   - Scope: `MusicGardenState` type (`currentNoteStreak`, `godPointRewardsEarned`, `rewardsEnabled`, etc.), initial state factory, pure reducers: `tickElapsed`, `activateNotes`, `handleNoteExpiry` (streak break), `resetPlayback` (streak reset, no reward cap reset), `resetSession` (full reset on new file upload).

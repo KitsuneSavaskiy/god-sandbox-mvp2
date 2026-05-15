@@ -61,9 +61,11 @@ THE SYSTEM SHALL NOT increase the current note success streak after the first su
 WHEN the current note success streak reaches 10 consecutive successful note clicks
 THE SYSTEM SHALL grant at most 1 godPoint and reset the current note success streak to 0.
 
-### Requirement 8 — Streak Break on Missed Note
-WHEN an active clickable note expires without being clicked while rewards are enabled
+### Requirement 8 — Streak Break on Missed Visual Note
+WHEN an active clickable visual note expires without being clicked while rewards are enabled
 THE SYSTEM SHALL reset the current note success streak to 0.
+Notes that are parsed but not rendered as visual notes (e.g., truncated due to the MVP note count limit)
+SHALL NOT count as missed notes and SHALL NOT trigger a streak break.
 
 ### Requirement 9 — Per-File Reward Cap
 WHEN the currently loaded MIDI file has already granted 2 godPoints
