@@ -49,6 +49,7 @@ import {
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
 import { resolveEventArt } from "./eventArt.js";
+import { createEventParticipantOverlayViewModels } from "./eventParticipantOverlay.js";
 import { createVisibleChangePatchForSandboxUi } from "./interventionOutcomeViewModel.js";
 import {
   createNextAmbientResidentEmote,
@@ -419,6 +420,14 @@ export function EventFirstSandbox({
   const activeAssetBundles = useMemo(
     () => selectActiveCharacterAssetBundleReadModels(runtimeState),
     [runtimeState],
+  );
+  const participantOverlays = useMemo(
+    () =>
+      createEventParticipantOverlayViewModels({
+        event: currentEvent,
+        characters: runtimeState.characters,
+      }),
+    [currentEvent, runtimeState.characters],
   );
   const ambientPersonalitySignature = useMemo(
     () =>
@@ -1549,6 +1558,28 @@ export function EventFirstSandbox({
                   className="event-first-sandbox__event-art-image"
                   onError={() => setEventArtError(true)}
                 />
+                <div
+                  className="event-first-sandbox__event-participant-layer"
+                  aria-label="イベント参加キャラ"
+                >
+                  {participantOverlays.map((participant) => (
+                    <img
+                      key={`${currentEvent.id}:${participant.characterId}`}
+                      src={participant.src}
+                      alt={participant.alt}
+                      className={[
+                        "event-first-sandbox__event-participant",
+                        `event-first-sandbox__event-participant--${participant.slot}`,
+                        `event-first-sandbox__event-participant--${participant.role}`,
+                        `event-first-sandbox__event-participant--count-${participantOverlays.length}`,
+                      ].join(" ")}
+                      title={participant.displayName}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
               <div className="event-first-sandbox__event-details">
                 <strong>観察プリセット</strong>

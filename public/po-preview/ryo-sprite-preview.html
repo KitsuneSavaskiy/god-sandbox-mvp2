@@ -6,10 +6,10 @@
     <title>Ryo PO Sprite Preview</title>
     <style>
       :root {
-        --sheet: url("/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png");
-        --frame-width: 118px;
-        --frame-height: 136px;
-        --columns: 7;
+        --sheet: url("/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png");
+        --frame-width: 148px;
+        --frame-height: 144px;
+        --columns: 6;
         --rows: 14;
         --sheet-width: calc(var(--frame-width) * var(--columns));
         --sheet-height: calc(var(--frame-height) * var(--rows));
@@ -155,10 +155,6 @@
         animation-play-state: paused;
       }
 
-      .sprite--failed {
-        animation: play-failed 1.25s step-end infinite;
-      }
-
       .motion-card h2 {
         margin: 0 0 6px;
         font-size: 18px;
@@ -181,38 +177,6 @@
             calc(var(--row) * var(--frame-height) * -1);
         }
       }
-
-      @keyframes play-failed {
-        0%,
-        19.99% {
-          width: var(--frame-width);
-          background-position: 0 calc(var(--row) * var(--frame-height) * -1);
-        }
-
-        20%,
-        39.99% {
-          width: var(--frame-width);
-          background-position: calc(var(--frame-width) * -1) calc(var(--row) * var(--frame-height) * -1);
-        }
-
-        40%,
-        59.99% {
-          width: var(--frame-width);
-          background-position: calc(var(--frame-width) * -2) calc(var(--row) * var(--frame-height) * -1);
-        }
-
-        60%,
-        79.99% {
-          width: calc(var(--frame-width) * 2);
-          background-position: calc(var(--frame-width) * -3) calc(var(--row) * var(--frame-height) * -1);
-        }
-
-        80%,
-        100% {
-          width: calc(var(--frame-width) * 2);
-          background-position: calc(var(--frame-width) * -5) calc(var(--row) * var(--frame-height) * -1);
-        }
-      }
     </style>
   </head>
   <body>
@@ -221,22 +185,25 @@
         <h1>Ryo PO Sprite Preview</h1>
         <p class="lead">
           Ryoの1枚統合sprite sheetを、行ごとに同時再生する確認ページです。
-          EveでPO確認済みになった1枚構成と、failed行だけ2セル幅を使う再生ルールを使っています。
+          新しいcombined 14×6規格に合わせた1枚構成で、全行を6フレーム再生します。
         </p>
         <div class="toolbar">
           <button type="button" id="pauseButton">一時停止</button>
           <a href="/sandbox?mode=manual-sweep">箱庭で見る</a>
-          <a href="/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png">
+          <a href="/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png">
             元PNGを開く
+          </a>
+          <a href="/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12-grid.png">
+            グリッドPNGを開く
           </a>
         </div>
       </header>
 
       <section class="spec" aria-label="sprite sheet specification">
-        <div><strong>frame</strong>118 x 136 px</div>
-        <div><strong>columns</strong>7 frames</div>
+        <div><strong>frame</strong>148 x 144 px</div>
+        <div><strong>columns</strong>6 frames</div>
         <div><strong>rows</strong>14 rows</div>
-        <div><strong>canvas</strong>826 x 1904 px</div>
+        <div><strong>canvas</strong>888 x 2016 px</div>
       </section>
 
       <section class="grid" id="motionGrid" aria-label="motion preview grid"></section>
@@ -249,7 +216,7 @@
         ["walk-left", 2, "左歩き。横移動時に足が切れないかを見る。"],
         ["waving", 3, "手振り。手と髪がセル外へ出ないかを見る。"],
         ["jumping", 4, "ジャンプ。上下の余白が残るかを見る。"],
-        ["failed", 5, "失敗。最初の3セルは1セルずつ座りから倒れへ、後半は2セル幅の倒れ絵を2コマ使う。", 5, 2],
+        ["failed", 5, "失敗。新しい14×6規格に合わせ、座りから倒れまで6セル内で再生する。"],
         ["waiting", 6, "待機差分。idleより少し待っている感じに見えるかを見る。"],
         ["review", 7, "確認。手元がセル内に収まるかを見る。"],
         ["walk-up / walk-back", 8, "後ろ姿。walk-backもこの行を使う。"],
@@ -261,14 +228,13 @@
       ];
 
       const grid = document.querySelector("#motionGrid");
-      for (const [name, row, note, motionFrames = 7, frameMaxSpan = 1] of motions) {
+      for (const [name, row, note, motionFrames = 6, frameMaxSpan = 1] of motions) {
         const card = document.createElement("article");
         card.className = "motion-card";
-        const spriteClass = name === "failed" ? "sprite sprite--failed" : "sprite";
         card.innerHTML = `
           <div class="sprite-box" style="--frame-max-span: ${frameMaxSpan};">
             <div class="sprite-frame" style="--frame-max-span: ${frameMaxSpan};">
-              <div class="${spriteClass}" style="--row: ${row}; --motion-frames: ${motionFrames};"></div>
+              <div class="sprite" style="--row: ${row}; --motion-frames: ${motionFrames};"></div>
             </div>
           </div>
           <div>
