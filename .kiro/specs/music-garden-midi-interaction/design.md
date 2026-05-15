@@ -1,117 +1,218 @@
-# Design — Music Garden MIDI Interaction
+# Design
 
 ## Overview
 
-Music Garden is a side-feature layer in EventFirstSandbox. MIDI is parsed in the browser with a
-lightweight custom parser (no new npm dependencies). Note visuals float above the world backdrop
-using a Canvas or CSS-animated overlay. State is local to EventFirstSandbox for MVP; nothing is
-persisted.
+Music Garden is a browser-only MIDI upload and visualization feature.
+It adds a musical interaction layer to the sandbox without changing faith, character vitality, relation scores, or event outcome logic.
 
 ## Architecture
 
-| Layer | Role in this feature |
-|-------|---------------------|
-| `src/features/music-garden/` | UI components, MIDI parser, state model, reward logic, audio (optional) |
-| `src/application/growthBalanceService.ts` | Provides MAX_GOD_POINTS constant and godPoint grant helper |
-| `src/features/events/EventFirstSandbox.tsx` | Integration point; owns local Music Garden state |
-| `src/domain/` | No changes. godPoints type lives here; Music Garden reads but does not mutate domain directly |
+### Files
 
-LLM must not be called by Music Garden. MIDI files must not leave the browser.
+- `src/features/music-garden/musicGardenMidi.ts`
+- `src/features/music-garden/musicGardenModel.ts`
+- `src/features/music-garden/musicGardenReward.ts`
+- `src/features/music-garden/musicGardenAudio.ts`
+- `src/features/music-garden/MusicGardenPanel.tsx`
+- `src/features/music-garden/MusicGardenVisualizer.tsx`
+- `src/features/music-garden/MusicGarden.css`
+- `src/application/growthBalanceService.ts`
+- `src/features/events/EventFirstSandbox.tsx`
+- `src/domain/runtime.test.ts`
+
+### Layer boundary
+
+- `src/features/music-garden/**` owns MIDI parsing, Music Garden state, visual notes, and UI components.
+- `src/application/growthBalanceService.ts` may expose an application helper that applies music rewards without letting the UI mutate domain state directly.
+- `src/domain/growthBalance.ts` remains the source of truth for `MAX_GOD_POINTS`.
+- `src/features/events/EventFirstSandbox.tsx` integrates the panel and visualizer into `/sandbox`.
+- Music Garden must not call LLM APIs, image generation APIs, or any server upload endpoint.
 
 ## Data Model
 
 ```ts
-interface NormalizedNote {
-  id: string;           // unique per note instance
-  pitch: number;        // MIDI note number 0–127
-  startMs: number;      // onset in milliseconds from track start
-  durationMs: number;   // note duration in milliseconds
-  clicked: boolean;     // has the player clicked this note?
-  active: boolean;      // is this note currently in the visible window?
-}
+export type MusicGardenMidiNote = {
+  id: string;
+  trackIndex: number;
+  channel: number;
+  pitch: number;
+  velocity: number;
+  startMs: number;
+  durationMs: number;
+};
 
-interface MusicGardenState {
-  notes: NormalizedNote[];
-  musicCharge: number;       // 0–9, resets to 0 on reward
-  sessionGodPointsGranted: number;  // 0–2, capped per song
-  isPlaying: boolean;
-  elapsedMs: number;
-}
+export type MusicGardenVisualNote = MusicGardenMidiNote & {
+  clicked: boolean;
+  active: boolean;
+};
 
-const MUSIC_CHARGE_PER_REWARD = 10;
-const SESSION_GOD_POINT_CAP = 2;
+export type MusicGardenSessionState = {
+  playbackState: "empty" | "ready" | "playing" | "paused" | "ended" | "error";
+  fileName: string | null;
+  durationMs: number;
+  currentTimeMs: number;
+  notes: MusicGardenVisualNote[];
+  clickedNoteIds: string[];
+  musicCharge: number;
+  musicChargeTarget: number;
+  godPointRewardsEarned: number;
+  godPointRewardCap: number;
+  rewardClicksEnabled: boolean;
+  errorMessage: string | null;
+};
 ```
+
+Reward constants:
+
+```ts
+const MUSIC_CHARGE_TARGET = 10;
+const MUSIC_GOD_POINT_REWARD_CAP_PER_FILE = 2;
+```
+
+If `musicCharge` reaches `musicChargeTarget` while current godPoints are already `MAX_GOD_POINTS`, the system does not grant a godPoint and does not increment `godPointRewardsEarned`.
+The UI may keep the charge capped or show a gentle "already full" state, but it must not create an unlimited farming loop.
 
 ## Components
 
-| File | Responsibility |
-|------|----------------|
-| `src/features/music-garden/musicGardenMidi.ts` | Parse ArrayBuffer → NormalizedNote[] (custom lightweight parser, no deps) |
-| `src/features/music-garden/musicGardenModel.ts` | MusicGardenState type, initial state, pure reducer functions |
-| `src/features/music-garden/musicGardenReward.ts` | handleNoteClick logic: charge increment, reward conversion, cap enforcement |
-| `src/features/music-garden/musicGardenAudio.ts` | Optional: simple Web Audio API tone on note onset |
-| `src/features/music-garden/MusicGardenPanel.tsx` | Upload button, play/pause/reset controls, charge progress display |
-| `src/features/music-garden/MusicGardenVisualizer.tsx` | Canvas or CSS overlay rendering active NormalizedNotes as floating visuals |
-| `src/features/music-garden/MusicGarden.css` | Styles for panel and visualizer (z-index layering) |
-| `src/application/growthBalanceService.ts` | Add godPointFromMusicReward helper (reads MAX_GOD_POINTS, returns updated value or cap) |
-| `src/features/events/EventFirstSandbox.tsx` | Integrate MusicGardenPanel and MusicGardenVisualizer; own MusicGardenState via useState |
+### MIDI Parser
+
+- Parse Standard MIDI File header `MThd`.
+- Parse track chunk `MTrk`.
+- Support format 0 and format 1.
+- Support variable-length delta time.
+- Support note-on / note-off.
+- Treat note-on velocity 0 as note-off.
+- Support tempo meta event `0xFF 0x51`.
+- Support running status.
+- Merge multi-track note timing into one normalized note list.
+- Skip unknown events safely.
+- Return a controlled parse error for malformed or unsupported files.
+
+### MusicGardenPanel
+
+- MIDI file input.
+- File name display.
+- Play / pause / reset controls.
+- musicCharge display.
+- Reward cap display.
+- Parse warning / error display.
+
+### MusicGardenVisualizer
+
+- Renders note visuals in the sandbox viewport.
+- Uses pitch for vertical position.
+- Uses time for horizontal drift.
+- Uses velocity for size or glow.
+- Clickable note visuals.
+- Disabled during event window / result modal.
+
+### Reward Logic
+
+- 1 clicked note = 1 musicCharge.
+- Duplicate note clicks do not increase musicCharge.
+- 10 musicCharge = +1 godPoint.
+- Max +2 godPoints per MIDI file.
+- Never exceed MAX_GOD_POINTS.
+- If event window or result modal is open, note clicks may be visually acknowledged but must not increase musicCharge.
 
 ## State Flow
 
-1. Player opens sandbox → MusicGardenState initializes to empty/idle.
-2. Player uploads .mid file → musicGardenMidi.ts parses → notes array populated.
-3. Player presses Play → isPlaying = true, animation loop starts.
-4. Each animation frame: elapsedMs advances; notes with startMs ≤ elapsedMs become active.
-5. Player clicks note → handleNoteClick: marks clicked, increments musicCharge.
-6. musicCharge hits 10 → rewardStep: musicCharge resets to 0, sessionGodPointsGranted++, godPoints++ (if under cap).
-7. Event window opens → isRewarding = false (clicks have no effect on charge until window closes).
-8. Song ends or player resets → state resets; sessionGodPointsGranted resets for next song.
+1. Player selects MIDI file.
+2. Browser reads ArrayBuffer.
+3. Parser normalizes note events.
+4. MusicGardenSessionState is created.
+5. Player presses play.
+6. Audio clock and visualizer start.
+7. Player clicks notes.
+8. musicCharge increases.
+9. Reward logic grants capped godPoints through application service.
+10. Event window or result modal opens.
+11. `rewardClicksEnabled` becomes false while event play has priority.
+12. Event window and result modal close.
+13. `rewardClicksEnabled` becomes true again if playback is still active.
 
 ## UI
 
-- **MusicGardenPanel**: positioned bottom-left or bottom-center of sandbox. Must not overlap the HP HUD (top-right). Shows file input, play/pause/reset buttons, and a musicCharge progress indicator.
-- **MusicGardenVisualizer**: full-sandbox Canvas overlay. z-index: above world backdrop, below event overlay and character sprites. Semi-transparent note particles drift upward and fade.
-- When event window is open: Visualizer opacity reduces (notes still animate but are visually de-emphasized). Note clicks do not register rewards.
+Placement:
+
+- Music Garden panel should be bottom-right or bottom-left.
+- It must not overlap the top-right vitality HUD.
+- It must not block event window or result modal.
+
+Visual style:
+
+- semi-transparent
+- mystical
+- sparkle-like
+- gentle
+- not rhythm-game intense
+
+The UI must not show faith, relation score, five-phase internal values, or raw internal parameters.
 
 ## Error Handling
 
-- Non-MIDI file selected: show inline error message in MusicGardenPanel; do not crash.
-- Malformed MIDI (parse error): show "読み込めませんでした" message; reset to idle state.
-- MIDI with no note-on events: play silently; charge never accumulates; inform player via panel message.
+- Invalid MIDI shows error.
+- Oversized file shows warning/error.
+- Too many notes are capped.
+- Audio failure does not block visualization.
+- Unsupported MIDI events are skipped.
+- Malformed tracks return a controlled error instead of crashing `/sandbox`.
 
 ## Security / Privacy
 
-- MIDI files are read via FileReader API in the browser only. No data is sent to any server.
-- No faith, relation score, five-phase internal values, or internal game parameters are displayed in Music Garden UI.
-- No LLM API calls are made by this feature.
-- No new environment variables or API keys are required.
+- MIDI is parsed in the browser.
+- MIDI is not uploaded to a server.
+- No external API calls.
+- No LLM calls.
+- No raw faith/internal values are shown.
+- No package dependency changes in MVP.
 
 ## Test Strategy
 
-Unit tests in `src/domain/runtime.test.ts` (or a new `musicGarden.test.ts`):
-- MIDI parser: valid file → correct NormalizedNote count and timing.
-- handleNoteClick: charge increments correctly; duplicate click ignored; reward triggers at 10; cap enforced at 2 session godPoints.
-- godPointFromMusicReward: does not exceed MAX_GOD_POINTS.
-
-No visual snapshot tests for MVP.
+- Parser test with minimal valid MIDI.
+- Format 0 and format 1 parsing tests.
+- Variable-length delta time test.
+- Running status test.
+- note-on velocity 0 test.
+- Tempo conversion test.
+- Unknown event skip test.
+- Malformed track error test.
+- maxNotes truncation test.
+- click duplicate prevention test.
+- event window / result modal reward disable test.
+- reward cap test.
+- max godPoints test.
+- browser-only privacy and no external-call regression check.
+- internal-values-hidden regression check.
 
 ## Manual QA
 
-1. Navigate to `/sandbox`.
-2. Upload a valid `.mid` file via the Music Garden panel.
-3. Press Play. Confirm note visuals appear in the background.
-4. Click notes. Confirm musicCharge progress indicator increases.
-5. Click the same note twice. Confirm charge does not increase on second click.
-6. Accumulate 10 charges. Confirm godPoints +1 and charge resets.
-7. Repeat until 2 godPoints granted. Confirm no further rewards despite clicking notes.
-8. Open an event window during playback. Confirm note clicks do not grant charge.
-9. Close the event window. Confirm note clicks resume granting charge (charge not retroactive).
-10. Upload a non-MIDI file. Confirm error message; no crash.
+- Upload MIDI.
+- Play / pause / reset.
+- Observe background notes.
+- Click notes.
+- See musicCharge increase.
+- Confirm duplicate note clicks do not increase musicCharge.
+- Confirm godPoints reward cap.
+- Confirm MAX_GOD_POINTS boundary.
+- Confirm event UI is not blocked.
+- Confirm event window / result modal disables note rewards.
+- Confirm no faith/internal values shown.
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Custom MIDI parser may not handle all SMF formats | Scope to Type 0 and Type 1 MIDI for MVP; show error for unsupported files |
-| Canvas animation may affect performance on low-end devices | Keep particle count low; use requestAnimationFrame with frame throttle |
-| z-index conflicts with existing event UI | Define explicit z-index constants in a shared CSS layer map |
+- MIDI parsing complexity.
+- Too many notes may hurt performance.
+- Reward balance may be too generous.
+- Visual layer may make sandbox noisy.
+- Reward boundary can be confusing if godPoints are already full.
+
+## Out of Scope
+
+- Persistence
+- High-quality sound font
+- DAW editing
+- Server upload
+- LLM music
+- Music-driven event generation
+- Package dependency changes

@@ -1,87 +1,142 @@
-# Tasks — Music Garden MIDI Interaction
+# Tasks
 
 ## Implementation Tasks
 
 - [ ] 1. Add MIDI parser
-  - Scope: Parse ArrayBuffer from FileReader into NormalizedNote[]. Support SMF Type 0 and Type 1. No npm dependencies.
+  - Scope:
+    - Parse minimal Standard MIDI File data into normalized notes.
+    - Support format 0 and format 1, variable-length delta time, tempo meta events, running status, note-on, note-off, and note-on velocity 0 as note-off.
+    - Skip unknown events safely and return controlled errors for malformed files.
   - Files:
     - `src/features/music-garden/musicGardenMidi.ts`
+    - `src/domain/runtime.test.ts`
+  - Depends on:
+    - None
   - Verification:
-    - Unit tests: valid MIDI → correct note count and timing values
-    - Unit tests: malformed input → throws or returns empty array without crash
+    - Minimal MThd/MTrk test passes.
+    - note-on velocity 0 is treated as note-off.
+    - tempo event affects startMs.
+    - running status is parsed.
+    - malformed track does not crash `/sandbox`.
 
-- [ ] 2. Add Music Garden state model and reducer
-  - Scope: MusicGardenState type, initial state factory, pure reducers (tickElapsed, activateNotes, resetSession).
+- [ ] 2. Add Music Garden state model
+  - Scope:
+    - Define playback and visual note state.
+    - Track reward disabled state and parse error state.
   - Files:
     - `src/features/music-garden/musicGardenModel.ts`
+  - Depends on:
+    - Task 1
   - Verification:
-    - Types compile without error
-    - Reducers are pure (no side effects)
+    - Empty session can be created.
+    - Parsed MIDI can create session state.
+    - Error session can be represented without crashing.
+    - Event window reward-disable state can be represented.
 
 - [ ] 3. Add reward logic
-  - Scope: handleNoteClick (charge increment, duplicate guard), rewardStep (godPoint grant, session cap, MAX_GOD_POINTS guard).
+  - Scope:
+    - Click notes, prevent duplicate click, convert charge into capped reward.
+    - Use domain MAX_GOD_POINTS through an application boundary.
   - Files:
     - `src/features/music-garden/musicGardenReward.ts`
-    - `src/application/growthBalanceService.ts` (add godPointFromMusicReward helper)
+    - `src/application/growthBalanceService.ts`
+    - `src/domain/runtime.test.ts`
+  - Depends on:
+    - Task 2
   - Verification:
-    - Unit tests: charge increments; duplicate click ignored; reward at 10; session cap at 2; MAX_GOD_POINTS not exceeded
+    - Duplicate click does not increase charge.
+    - 10 charge returns +1 reward.
+    - cap prevents rewards after +2.
+    - MAX_GOD_POINTS is not exceeded.
+    - Blocked reward at MAX_GOD_POINTS does not increment the per-file reward count.
+    - Event window / result modal disables reward gain.
 
-- [ ] 4. Add upload panel component
-  - Scope: File input (.mid/.midi only), play/pause/reset controls, musicCharge progress display, error message display.
+- [ ] 4. Add MIDI upload panel
+  - Scope:
+    - File input, play/pause/reset controls, charge display.
   - Files:
     - `src/features/music-garden/MusicGardenPanel.tsx`
     - `src/features/music-garden/MusicGarden.css`
+  - Depends on:
+    - Task 2
   - Verification:
-    - Panel renders without error
-    - File input filters to .mid/.midi
-    - Invalid file shows inline error; no crash
+    - `.mid` / `.midi` can be selected.
+    - File name and parse warning/error display correctly.
+    - No raw faith, relation score, five-phase values, or internal parameters are displayed.
 
-- [ ] 5. Add visualizer component
-  - Scope: Canvas or CSS overlay rendering active notes as semi-transparent floating particles. z-index: above world backdrop, below event overlay. De-emphasize when event window is open.
+- [ ] 5. Add background visualizer
+  - Scope:
+    - Render active notes as semi-transparent mystical visuals.
   - Files:
     - `src/features/music-garden/MusicGardenVisualizer.tsx`
     - `src/features/music-garden/MusicGarden.css`
+  - Depends on:
+    - Task 2
   - Verification:
-    - Visualizer renders without error
-    - Notes appear during playback; disappear after durationMs
-    - z-index does not overlap event window
+    - Notes appear during playback.
+    - Notes can be clicked.
+    - Clicked notes visually change or disappear.
+    - Event window / result modal lowers interaction priority.
 
-- [ ] 6. Integrate with EventFirstSandbox
-  - Scope: Add MusicGardenState via useState; wire MusicGardenPanel and MusicGardenVisualizer; disable reward clicks when event window is open.
+- [ ] 6. Add simple WebAudio playback
+  - Scope:
+    - Play simple oscillator notes based on parsed MIDI.
+  - Files:
+    - `src/features/music-garden/musicGardenAudio.ts`
+  - Depends on:
+    - Task 1
+  - Verification:
+    - Playback starts only after user action.
+    - Stop/pause works.
+    - Audio failure does not break visuals.
+
+- [ ] 7. Integrate with EventFirstSandbox
+  - Scope:
+    - Add panel and visualizer into sandbox viewport.
+    - Disable note rewards during event window/result modal.
   - Files:
     - `src/features/events/EventFirstSandbox.tsx`
-    - `src/features/events/EventFirstSandbox.css` (if z-index adjustments needed)
+    - `src/features/events/EventFirstSandbox.css`
+  - Depends on:
+    - Tasks 2, 3, 4, and 5
   - Verification:
-    - Music Garden visible in /sandbox
-    - Note clicks do not grant charge while event window is open
-    - State resets correctly on new song upload
-
-- [ ] 7. Add unit tests
-  - Scope: MIDI parser, reward logic, state reducers.
-  - Files:
-    - `src/domain/runtime.test.ts` or new `src/features/music-garden/musicGarden.test.ts`
-  - Verification:
-    - All tests pass with `npm run test:domain` or equivalent
+    - UI does not block vitality HUD.
+    - UI does not block event buttons.
+    - No faith/internal values are shown.
+    - MIDI remains browser-only and no external API call is added.
 
 - [ ] 8. Manual QA
-  - Scope: Full play-through per the QA steps in design.md.
-  - Follow steps 1–10 from `design.md#manual-qa`.
-  - Record results in PR body.
+  - Scope:
+    - Browser confirmation.
+  - Files:
+    - PR body only
+  - Depends on:
+    - Tasks 1 through 7
+  - Verification:
+    - Upload MIDI.
+    - Play/pause/reset.
+    - Click notes.
+    - Confirm capped godPoints reward.
+    - Confirm event UI remains usable.
+    - Confirm no server upload, LLM call, or raw internal value display.
 
 ## Out of Scope
 
-- MIDI persistent storage
-- Server upload of MIDI data
-- High-quality audio synthesis or soundfont
-- LLM calls from Music Garden
-- Automatic event generation from music analysis
-- New npm package dependencies
-- faith / relation score / five-phase values in UI
+- Persistent MIDI storage
+- High-quality synth
+- External API
+- Package dependency changes
+- LLM music generation
+- Event generation from music
+- Faith system changes
+- Character vitality changes
 
 ## PR Checklist
 
-- [ ] `git diff --name-only origin/main...HEAD` shows only `.kiro/specs/**`
-- [ ] `git diff --check origin/main...HEAD` is clean
-- [ ] `npm run build` passes (no src changes in this PR)
-- [ ] No secrets, tokens, or local absolute paths committed
-- [ ] PR body includes: target PBI, issue number (Closes #...), changed files, out of scope, build result, manual QA N/A (docs-only PR), merge dependency on steering PR
+- [ ] `git diff --name-only origin/main...HEAD`
+- [ ] `git diff --check origin/main...HEAD`
+- [ ] `npm run typecheck`
+- [ ] `npm run test:domain`
+- [ ] `npm run test:ai`
+- [ ] `npm run build`
+- [ ] Manual QA documented

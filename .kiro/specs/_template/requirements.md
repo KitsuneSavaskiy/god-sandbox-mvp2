@@ -2,36 +2,40 @@
 
 ## Feature Summary
 
-<!-- 1–2 sentences describing the feature and its value to the player. -->
+Describe the feature in one short paragraph.
 
 ## User Stories
 
 ### Story 1
-As a [role],
-I want [action],
-So that [value].
+As a ...
+I want ...
+So that ...
 
 ### Story 2
-As a [role],
-I want [action],
-So that [value].
+As a ...
+I want ...
+So that ...
 
 ## Acceptance Criteria
 
-Use EARS-style notation: WHEN / IF / THE SYSTEM SHALL.
+Use EARS-style notation so the requirements can be translated into implementation and tests.
 
-### Requirement 1 — [Name]
-WHEN [trigger or condition]
-THE SYSTEM SHALL [observable behavior].
+### Requirement 1
+WHEN ...
+THE SYSTEM SHALL ...
 
-### Requirement 2 — [Name]
-IF [condition]
-THE SYSTEM SHALL [observable behavior].
+### Requirement 2
+IF ...
+THE SYSTEM SHALL ...
+
+### Requirement 3
+WHEN ...
+THE SYSTEM SHALL ...
 
 ## Out of Scope
 
-- [Feature or behavior explicitly excluded from this spec]
+- ...
 
 ## PO Confirmation Points
 
-- [Decision or trade-off that requires explicit PO sign-off before implementation]
+- ...

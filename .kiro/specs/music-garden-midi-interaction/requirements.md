@@ -1,44 +1,44 @@
-# Requirements — Music Garden MIDI Interaction
+# Requirements
 
 ## Feature Summary
 
-Music Garden lets the player upload a MIDI file, which is parsed in the browser and rendered as
-semi-transparent mystical note visuals in the sandbox background. Clicking notes accumulates
-musicCharge, which converts to godPoints at a defined rate, capped per song and bounded by
-MAX_GOD_POINTS.
+Music Garden lets players bring their own MIDI composition into the sandbox.
+The uploaded MIDI is parsed in the browser, visualized as mystical semi-transparent notes in the background, and can be clicked to build musicCharge.
+musicCharge can restore godPoints with a strict per-file cap.
 
 ## User Stories
 
-### Story 1 — Upload and Play
-As a player,
-I want to upload a MIDI file from my device,
-So that I can fill the sandbox with musical energy.
+### Story 1 — Musician Player
+As a player who creates music,
+I want to upload my own MIDI file,
+So that my composition becomes part of the sandbox atmosphere.
 
-### Story 2 — Note Interaction
-As a player,
-I want to click on floating note visuals,
-So that I can accumulate musicCharge and earn godPoints.
+### Story 2 — Interactive God
+As a god-like player,
+I want to click mystical notes flowing through the sandbox,
+So that my music feels like a blessing that restores intervention power.
 
-### Story 3 — Reward Economy
-As a player,
-I want to understand the reward cap before I start playing,
-So that I can plan my god actions strategically.
+### Story 3 — Game Balance
+As the product owner,
+I want music rewards to be capped,
+So that godPoints do not become unlimited or trivial.
 
 ## Acceptance Criteria
 
 ### Requirement 1 — MIDI Upload
-WHEN the player selects a `.mid` or `.midi` file via the Music Garden panel
+WHEN the player selects a `.mid` or `.midi` file
 THE SYSTEM SHALL read the file in the browser without uploading it to a server.
 
 ### Requirement 2 — MIDI Parsing
 WHEN a valid MIDI file is loaded
-THE SYSTEM SHALL convert note-on and note-off events into normalized note events
-with at minimum: pitch, start time (ms), and duration (ms).
+THE SYSTEM SHALL convert note-on and note-off events into normalized note events.
+
+The parser scope shall include Standard MIDI File format 0 and format 1, variable-length delta time, tempo meta event `0xFF 0x51`, running status, and note-on with velocity 0 as note-off.
+Unsupported MIDI events shall be skipped safely without crashing the sandbox.
 
 ### Requirement 3 — Visual Notes
 WHEN MIDI playback is active
-THE SYSTEM SHALL render semi-transparent mystical note visuals in the sandbox background,
-above the world backdrop and below the event UI layer.
+THE SYSTEM SHALL render semi-transparent mystical note visuals in the sandbox background.
 
 ### Requirement 4 — Note Click
 WHEN the player clicks an active visual note
@@ -50,37 +50,40 @@ THE SYSTEM SHALL NOT increase musicCharge after the first click.
 
 ### Requirement 6 — Reward Conversion
 WHEN musicCharge reaches 10
-THE SYSTEM SHALL grant at most 1 godPoint and reset musicCharge to 0.
+THE SYSTEM SHALL grant at most 1 godPoint and reset musicCharge.
 
-### Requirement 7 — Per-Session Reward Cap
+### Requirement 7 — Reward Cap
 WHEN the current MIDI session has already granted 2 godPoints
-THE SYSTEM SHALL NOT grant additional godPoints from note clicks, regardless of musicCharge.
+THE SYSTEM SHALL NOT grant additional godPoints from note clicks.
 
-### Requirement 8 — MAX_GOD_POINTS Boundary
-WHEN a music reward is about to be granted
+### Requirement 8 — Max God Points
+WHEN a music reward is granted
 THE SYSTEM SHALL NOT increase godPoints beyond MAX_GOD_POINTS.
 
-### Requirement 9 — UI Non-Interference
-WHEN the event window or result modal is open
-THE SYSTEM SHALL disable note click rewards (musicCharge does not increase)
-and reduce visual layer priority so note visuals do not interfere with the event UI.
+If godPoints are already at MAX_GOD_POINTS, the system shall not count the blocked reward toward the per-file reward cap.
 
-### Requirement 10 — Information Safety
-THE SYSTEM SHALL NOT display faith, relation score, five-phase internal values,
-or any raw internal parameter in the Music Garden UI or pass them to any LLM context.
+### Requirement 9 — Event UI Boundary
+WHEN the event window or result modal is open
+THE SYSTEM SHALL disable note click rewards or lower the visual interaction priority so it does not interfere with event play.
+
+### Requirement 10 — Safety
+THE SYSTEM SHALL NOT display faith, relation score, five-phase internal values, or internal parameters.
 
 ## Out of Scope
 
-- MIDI file persistent storage (no save between sessions)
-- Server upload of MIDI files
-- High-quality audio synthesis or soundfont loading
-- LLM-generated music or composition
-- Automatic event generation triggered by music analysis
-- New npm package dependencies
+- Persistent MIDI storage
+- Server upload
+- High-quality synthesizer
+- Instrument selection
+- Multiple-song playlist
+- LLM-generated music
+- Event generation from music
+- Unlimited godPoints farming
+- Package dependency changes
 
 ## PO Confirmation Points
 
-- Exact musicCharge-to-godPoint ratio (currently specified as 10:1)
-- Per-song godPoint cap (currently specified as 2)
-- Visual design direction for note particles (color, shape, animation speed)
-- Placement of the Music Garden upload panel (must not overlap the HP HUD at top-right)
+- Is `10 musicCharge = +1 godPoint` acceptable?
+- Is `max +2 godPoints per MIDI file` acceptable?
+- Should UI wording use `Music Garden`, `音の祝福`, or `神力回復`?
+- Should note visuals pause or fade during event windows?
