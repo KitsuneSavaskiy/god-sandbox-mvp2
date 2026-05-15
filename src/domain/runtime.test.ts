@@ -103,6 +103,7 @@ import {
   selectGrowthCycleProgress,
 } from "../application/growthBalanceService.js";
 import { resolveCharacterAnimationAssetStatus } from "../features/residents/characterAssetStatus.js";
+import { createEventParticipantOverlayViewModels } from "../features/events/eventParticipantOverlay.js";
 import {
   isResidentMovementBlockingEmote,
   resolveResidentEmote,
@@ -699,7 +700,7 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.missingReason, undefined);
   assert.equal(
     ryoAssetBundle.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png",
   );
   assert.equal(
     ryoAssetBundle.spriteSheet.plannedPath,
@@ -707,13 +708,13 @@ function testRuntimeSelectorsAndCommands(): void {
   );
   assert.equal(ryoAssetBundle.spriteSheet.fallbackAssetId, "ryo-portrait-neutral");
   assert.equal(ryoAssetBundle.spriteSheet.fallbackPath, "/art/characters/defaults/ryo/portrait.png");
-  // Ryo PO preview sheet: one combined Codex pet sheet, 7 cols, 14 rows
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 118);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 136);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 7);
+  // Ryo PO preview sheet: one combined Codex pet sheet, 6 cols, 14 rows.
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.columns, 6);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.rows, 14);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.row, 0);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 7);
+  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.idle?.frames, 6);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.waving?.row, 3);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.review?.row, 7);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"]?.row, 2);
@@ -721,8 +722,8 @@ function testRuntimeSelectorsAndCommands(): void {
   // Extended motions share the same PO preview PNG.
   assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
   assert.equal(ryoAssetBundle.extendedSheet.ready, true);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 118);
-  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 136);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(ryoAssetBundle.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-up"]?.row, 8);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(ryoAssetBundle.extendedSheet.metadata?.motions["emote-happy"]?.row, 10);
@@ -760,11 +761,13 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[1]?.spriteSheet.metadata?.motions.failed?.frames, 7);
   assert.equal(
     activeAssetBundles[2]?.spriteSheet.path,
-    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png",
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png",
   );
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 118);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 136);
-  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 5);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.rows, 14);
+  assert.equal(activeAssetBundles[2]?.spriteSheet.metadata?.motions.failed?.frames, 6);
   assert.equal(
     activeAssetBundles[3]?.spriteSheet.path,
     "/art/characters/defaults/suzu/sprites/resident-sprite-sheet-combined-preview-v2.png",
@@ -793,7 +796,12 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.frameHeight, 136);
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
   assert.equal(activeAssetBundles[1]?.extendedSheet.metadata?.motions["emote-angry"]?.row, 11);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.frameWidth, 148);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.frameHeight, 144);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.columns, 6);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.rows, 14);
   assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
+  assert.equal(activeAssetBundles[2]?.extendedSheet.metadata?.motions["emote-sad"]?.row, 12);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameWidth, 148);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.frameHeight, 144);
   assert.equal(activeAssetBundles[3]?.extendedSheet.metadata?.motions["walk-forward"]?.row, 9);
@@ -2724,6 +2732,90 @@ function testEventOutcomeFoundation(): void {
   assert.ok(typeof payload.outcomeSummary === "string" && (payload.outcomeSummary as string).length > 0);
 }
 
+function testEventParticipantOverlayViewModel(): void {
+  const mkChar = (id: string) => character(id, id.replace("chr_", ""));
+  const chars = new Map([
+    ["chr_a", mkChar("chr_a")],
+    ["chr_b", mkChar("chr_b")],
+    ["chr_c", mkChar("chr_c")],
+    ["chr_d", mkChar("chr_d")],
+    ["chr_e", mkChar("chr_e")],
+  ]);
+
+  const mkEvent = (participantIds: string[]) => ({
+    ...event("evt_test"),
+    primaryCharacterId: participantIds[0] ?? "chr_a",
+    participantCharacterIds: participantIds,
+  });
+
+  // 1名: primary → left-front
+  const one = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a"]),
+    characters: chars,
+  });
+  assert.equal(one.length, 1);
+  assert.equal(one[0].slot, "left-front");
+  assert.equal(one[0].role, "primary");
+
+  // 2名: primary left-front, supporting right-front
+  const two = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a", "chr_b"]),
+    characters: chars,
+  });
+  assert.equal(two.length, 2);
+  assert.equal(two[0].slot, "left-front");
+  assert.equal(two[0].role, "primary");
+  assert.equal(two[1].slot, "right-front");
+  assert.equal(two[1].role, "supporting");
+
+  // 3名
+  const three = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a", "chr_b", "chr_c"]),
+    characters: chars,
+  });
+  assert.equal(three.length, 3);
+  assert.equal(three[0].slot, "left-front");
+  assert.equal(three[1].slot, "right-front");
+  assert.equal(three[2].slot, "left-back");
+
+  // 4名
+  const four = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a", "chr_b", "chr_c", "chr_d"]),
+    characters: chars,
+  });
+  assert.equal(four.length, 4);
+  assert.equal(four[3].slot, "right-back");
+  assert.equal(four[3].role, "supporting");
+
+  // 5名以上: 4名に丸める。primary は必ず含む
+  const five = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a", "chr_b", "chr_c", "chr_d", "chr_e"]),
+    characters: chars,
+  });
+  assert.equal(five.length, 4);
+  assert.equal(five[0].characterId, "chr_a");
+  assert.equal(five[0].role, "primary");
+
+  // 存在しないcharacterIdはskip
+  const withMissing = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_a", "chr_missing", "chr_b"]),
+    characters: chars,
+  });
+  assert.equal(withMissing.length, 2);
+  assert.ok(withMissing.every((v) => v.characterId !== "chr_missing"));
+
+  // slug解決: chr_ prefix を除去
+  const eveChar = character("chr_eve", "Eve");
+  const eveSingle = createEventParticipantOverlayViewModels({
+    event: mkEvent(["chr_eve"]),
+    characters: new Map([["chr_eve", eveChar]]),
+  });
+  assert.ok(eveSingle[0].src.includes("/defaults/eve/overlays/event-participant/"));
+
+  // alt テキスト
+  assert.equal(one[0].alt, "aの立ち絵");
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
@@ -2755,6 +2847,7 @@ const tests: Array<[string, () => void]> = [
   ["passport boundary smoke tests (PBI 8a)", testPassportBoundarySmokeTests],
   ["event outcome foundation (PBI 9a-core)", testEventOutcomeFoundation],
   ["god point phase recovery (PBI 9f)", testGodPointPhaseRecovery],
+  ["event participant overlay view model (PBI 9e-ui)", testEventParticipantOverlayViewModel],
 ];
 
 for (const [name, test] of tests) {
