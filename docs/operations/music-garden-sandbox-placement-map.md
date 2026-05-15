@@ -218,7 +218,7 @@ Event state:
 ### Event window open
 
 - note click: disabled
-- musicCharge reward: disabled
+- note streak increment and godPoint reward: disabled
 - streak or timing pressure: paused
 - panel controls: pause/reset may remain available if they do not cover the event UI
 - visuals: dimmed and non-dominant
@@ -227,7 +227,7 @@ Event state:
 ### Result view open
 
 - note click: disabled
-- musicCharge reward: disabled
+- note streak increment and godPoint reward: disabled
 - streak or timing pressure: paused
 - panel controls: pause/reset may remain available if they do not cover the result view
 - visuals: dimmed or hidden
