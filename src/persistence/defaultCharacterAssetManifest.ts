@@ -10,7 +10,7 @@ const updatedAt = "2026-05-07T00:00:00.000Z";
 const EVE_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/eve/sprites/resident-sprite-sheet-combined-preview-v14.png";
 const RYO_PO_PREVIEW_COMBINED_SHEET_PATH =
-  "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v7.png";
+  "art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png";
 const GARAN_PO_PREVIEW_COMBINED_SHEET_PATH =
   "art/characters/defaults/garan/sprites/resident-sprite-sheet-combined-preview-v21.png";
 const SUZU_PO_PREVIEW_COMBINED_SHEET_PATH =
@@ -55,38 +55,38 @@ const EVE_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
 
 const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
   kind: "motion",
-  frameWidth: 118,
-  frameHeight: 136,
-  columns: 7,
+  frameWidth: 148,
+  frameHeight: 144,
+  columns: 6,
   rows: 14,
   motions: {
-    idle: { row: 0, frames: 7 },
-    "walk-right": { row: 1, frames: 7 },
-    "walk-left": { row: 2, frames: 7 },
-    waving: { row: 3, frames: 7 },
-    jumping: { row: 4, frames: 7 },
-    failed: { row: 5, frames: 5 },
-    waiting: { row: 6, frames: 7 },
-    running: { row: 1, frames: 7 },
-    review: { row: 7, frames: 7 },
+    idle: { row: 0, frames: 6 },
+    "walk-right": { row: 1, frames: 6 },
+    "walk-left": { row: 2, frames: 6 },
+    waving: { row: 3, frames: 6 },
+    jumping: { row: 4, frames: 6 },
+    failed: { row: 5, frames: 6 },
+    waiting: { row: 6, frames: 6 },
+    running: { row: 1, frames: 6 },
+    review: { row: 7, frames: 6 },
   },
 };
 
 const RYO_PO_PREVIEW_COMBINED_EXTENDED_METADATA: SpriteSheetMetadata = {
   kind: "extended",
-  frameWidth: 118,
-  frameHeight: 136,
-  columns: 7,
+  frameWidth: 148,
+  frameHeight: 144,
+  columns: 6,
   rows: 14,
   motions: {
-    "walk-up": { row: 8, frames: 7 },
-    "walk-down": { row: 9, frames: 7 },
-    "walk-forward": { row: 9, frames: 7 },
-    "walk-back": { row: 8, frames: 7 },
-    "emote-happy": { row: 10, frames: 7 },
-    "emote-angry": { row: 11, frames: 7 },
-    "emote-sad": { row: 12, frames: 7 },
-    "emote-surprised": { row: 13, frames: 7 },
+    "walk-up": { row: 8, frames: 6 },
+    "walk-down": { row: 9, frames: 6 },
+    "walk-forward": { row: 9, frames: 6 },
+    "walk-back": { row: 8, frames: 6 },
+    "emote-happy": { row: 10, frames: 6 },
+    "emote-angry": { row: 11, frames: 6 },
+    "emote-sad": { row: 12, frames: 6 },
+    "emote-surprised": { row: 13, frames: 6 },
   },
 };
 
