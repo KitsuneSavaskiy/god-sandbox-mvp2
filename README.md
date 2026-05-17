@@ -16,7 +16,7 @@ GodSandbox は、プレイヤーが神視点で 4 人の住民を見守り、イ
 - 保存はローカルファイルベース（MVP 範囲）。
 - MVP では **死亡・寿命・勲章は扱わない**。
 
-詳細な正本仕様は `docs/product/godsandbox-user-flow.md` と `docs/architecture/` を参照してください。
+詳細な正本仕様は [docs/product/godsandbox-user-flow.md](docs/product/godsandbox-user-flow.md) と [docs/architecture/](docs/architecture/) を参照してください。
 
 ## セットアップ
 
@@ -49,21 +49,21 @@ npm run dev
 
 ### 外部設計（ユーザー体験・仕様）
 
-- 完成版ユーザーフロー: `docs/product/godsandbox-user-flow.md`
-- UI 状態モデル: `docs/architecture/ui-state-model.md`
-- イベントと介入仕様: `docs/architecture/event-and-intervention-spec.md`
-- Snapshot / Passport 仕様: `docs/architecture/snapshot-passport-spec.md`
+- 完成版ユーザーフロー: [docs/product/godsandbox-user-flow.md](docs/product/godsandbox-user-flow.md)
+- UI 状態モデル: [docs/architecture/ui-state-model.md](docs/architecture/ui-state-model.md)
+- イベントと介入仕様: [docs/architecture/event-and-intervention-spec.md](docs/architecture/event-and-intervention-spec.md)
+- Snapshot / Passport 仕様: [docs/architecture/snapshot-passport-spec.md](docs/architecture/snapshot-passport-spec.md)
 
 ### 内部設計（実装構造・技術仕様）
 
-- システム仕様: `docs/architecture/system-spec.md`
-- ローカル保存仕様: `docs/architecture/local-persistence-spec.md`
-- AI アーキテクチャ: `docs/architecture/ai-architecture.md`
-- テスト戦略: `docs/architecture/testing-strategy.md`
+- システム仕様: [docs/architecture/system-spec.md](docs/architecture/system-spec.md)
+- ローカル保存仕様: [docs/architecture/local-persistence-spec.md](docs/architecture/local-persistence-spec.md)
+- AI アーキテクチャ: [docs/architecture/ai-architecture.md](docs/architecture/ai-architecture.md)
+- テスト戦略: [docs/architecture/testing-strategy.md](docs/architecture/testing-strategy.md)
 
 ## 主要ドキュメント
 
-- 完成版ユーザーフロー: `docs/product/godsandbox-user-flow.md`
-- アーキテクチャ仕様: `docs/architecture/`
-- 運用ルール: `docs/agent-operating-rules.md`
-- PR チェックリスト: `docs/agent-pr-checklists.md`
+- 完成版ユーザーフロー: [docs/product/godsandbox-user-flow.md](docs/product/godsandbox-user-flow.md)
+- アーキテクチャ仕様: [docs/architecture/](docs/architecture/)
+- 運用ルール: [docs/agent-operating-rules.md](docs/agent-operating-rules.md)
+- PR チェックリスト: [docs/agent-pr-checklists.md](docs/agent-pr-checklists.md)
