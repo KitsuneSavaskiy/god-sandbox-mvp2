@@ -120,7 +120,7 @@ export function MusicGardenPanel({
         <div className="music-garden-panel__right">
           <div className="music-garden-panel__streak">
             <div className="music-garden-panel__streak-label">
-              <span>連続 {state.currentNoteStreak} / {MUSIC_NOTE_STREAK_TARGET}</span>
+              <span>クリック {state.currentNoteStreak} / {MUSIC_NOTE_STREAK_TARGET}</span>
               <span>あと {Math.max(0, MUSIC_NOTE_STREAK_TARGET - state.currentNoteStreak)}</span>
             </div>
             <div className="music-garden-panel__streak-bar">

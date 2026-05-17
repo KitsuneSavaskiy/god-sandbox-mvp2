@@ -418,6 +418,7 @@ export function EventFirstSandbox({
   );
   const [eventArtError, setEventArtError] = useState(false);
   const [musicState, setMusicState] = useState<MusicGardenState>(createInitialMusicGardenState);
+  const [musicResetKey, setMusicResetKey] = useState(0);
   const musicAudioRef = useRef<MusicGardenAudio>(new MusicGardenAudio());
   const musicRuntimeStateRef = useRef(runtimeState);
   const apostleMotionRef = useRef(apostleMotion);
@@ -1127,15 +1128,27 @@ export function EventFirstSandbox({
       }));
       return;
     }
-    const outcome = parseMidi(buffer);
-    if (!outcome.ok) {
-      setMusicState((prev) => ({ ...prev, errorMessage: outcome.error, isPlaying: false }));
-      return;
-    }
-    const { notes, warnings } = outcome.result;
-    const newState = musicResetSession(notes, warnings);
-    setMusicState(newState);
-    musicAudioRef.current.resetSchedule();
+    // Show loading state immediately so the UI stays responsive, then parse
+    // on the next macrotask (parseMidi is synchronous and can take ~100ms on
+    // large files, which would visibly block the main thread if called inline).
+    setMusicState((prev) => ({
+      ...prev,
+      isPlaying: false,
+      errorMessage: null,
+      warnings: ["読み込み中…"],
+    }));
+    setTimeout(() => {
+      const outcome = parseMidi(buffer);
+      if (!outcome.ok) {
+        setMusicState((prev) => ({ ...prev, errorMessage: outcome.error, warnings: [], isPlaying: false }));
+        return;
+      }
+      const { notes, warnings } = outcome.result;
+      const newState = musicResetSession(notes, warnings);
+      setMusicState(newState);
+      setMusicResetKey((k) => k + 1);
+      musicAudioRef.current.resetSchedule();
+    }, 0);
   }, []);
 
   const handleMusicPlay = useCallback(() => {
@@ -1156,6 +1169,7 @@ export function EventFirstSandbox({
   const handleMusicReset = useCallback(() => {
     musicAudioRef.current.stop();
     setMusicState((prev) => musicResetPlayback(prev));
+    setMusicResetKey((k) => k + 1);
     musicAudioRef.current.resetSchedule();
   }, []);
 
@@ -1442,6 +1456,7 @@ export function EventFirstSandbox({
           elapsedMs={musicState.elapsedMs}
           dimmed={sandboxPaused}
           rewardsEnabled={musicState.rewardsEnabled}
+          resetKey={musicResetKey}
           onNoteClick={handleMusicNoteClick}
           onNoteExpire={handleMusicNoteExpire}
         />

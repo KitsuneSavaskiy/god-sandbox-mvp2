@@ -34,15 +34,19 @@ export function tickElapsed(state: MusicGardenState, deltaMs: number): MusicGard
 
 export function activateNotes(state: MusicGardenState): MusicGardenState {
   const { elapsedMs, notes } = state;
-  let changed = false;
-  const updated = notes.map((note) => {
-    if (!note.active && note.startMs <= elapsedMs) {
-      changed = true;
-      return { ...note, active: true };
-    }
-    return note;
-  });
-  return changed ? { ...state, notes: updated } : state;
+  // Notes are sorted by startMs. Find the first index that still needs activation
+  // so we avoid a full map on every frame once early notes are all active.
+  let firstPending = -1;
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i]!;
+    if (!n.active && n.startMs <= elapsedMs) { firstPending = i; break; }
+    if (!n.active && n.startMs > elapsedMs) break; // sorted: nothing more to activate
+  }
+  if (firstPending === -1) return state;
+  const updated = notes.map((note) =>
+    !note.active && note.startMs <= elapsedMs ? { ...note, active: true } : note,
+  );
+  return { ...state, notes: updated };
 }
 
 export function resetPlayback(state: MusicGardenState): MusicGardenState {

@@ -76,12 +76,8 @@ export function streakReward(
 
 export function handleNoteExpiry(
   state: MusicGardenState,
-  noteId: string,
+  _noteId: string,
 ): MusicGardenState {
-  if (!state.rewardsEnabled) return state;
-
-  const note = state.notes.find((n) => n.id === noteId);
-  if (!note || note.clicked) return state;
-
-  return { ...state, currentNoteStreak: 0 };
+  // Missed notes do not reset the click count; only reward-granting resets it.
+  return state;
 }

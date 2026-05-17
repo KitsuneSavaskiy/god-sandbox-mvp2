@@ -288,13 +288,14 @@ function testHandleNoteClickInactiveIgnored(): void {
   assert.equal(handleNoteClick(state, "n1").currentNoteStreak, 2);
 }
 
-function testRewardHandleNoteExpiryResetsStreak(): void {
+function testRewardHandleNoteExpiryNoReset(): void {
+  // Missed notes no longer reset the click count — cumulative system.
   const state = makeMusicState({
     notes: [makeNote({ id: "n1", active: true, clicked: false })],
     currentNoteStreak: 7,
     rewardsEnabled: true,
   });
-  assert.equal(rewardHandleNoteExpiry(state, "n1").currentNoteStreak, 0);
+  assert.equal(rewardHandleNoteExpiry(state, "n1").currentNoteStreak, 7);
 }
 
 function testRewardHandleNoteExpiryClickedIgnored(): void {
@@ -382,7 +383,7 @@ const tests: Array<[string, () => void]> = [
   ["handleNoteClick duplicate click ignored", testHandleNoteClickDuplicateIgnored],
   ["handleNoteClick disabled gate", testHandleNoteClickDisabledIgnored],
   ["handleNoteClick inactive note ignored", testHandleNoteClickInactiveIgnored],
-  ["rewardHandleNoteExpiry resets streak on missed note", testRewardHandleNoteExpiryResetsStreak],
+  ["rewardHandleNoteExpiry does not reset count on missed note", testRewardHandleNoteExpiryNoReset],
   ["rewardHandleNoteExpiry skips clicked note", testRewardHandleNoteExpiryClickedIgnored],
   ["rewardHandleNoteExpiry disabled gate", testRewardHandleNoteExpiryDisabledIgnored],
   ["streakReward grants godPoint at target", testStreakRewardGrantsGodPoint],

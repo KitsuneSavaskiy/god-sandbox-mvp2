@@ -2,14 +2,14 @@ import { useEffect, useRef } from "react";
 import type { NormalizedNote } from "./musicGardenMidi.js";
 import "./MusicGarden.css";
 
-// Notes scroll right→left across a horizontal strip at the bottom of the
-// viewport, below characters (38–62% y) and below both HUD bars (top ~80px).
-// Strip occupies 72%–90% of canvas height — clear of sprites and UI.
-const SCROLL_DURATION_MS = 5500;  // ms to cross full canvas width
-const LANE_TOP = 0.72;            // fraction of canvas height
-const LANE_BOTTOM = 0.90;
+// Notes scroll right→left just below the vitality HUD (top: 14px + ~55px).
+// Strip occupies 14%–24% of canvas height — above characters (~50%+) and HUD-safe.
+// Fade zone is 15% of canvas width so entry/exit feel gradual.
+const SCROLL_DURATION_MS = 7000;  // ms to cross full canvas width
+const LANE_TOP = 0.14;            // fraction of canvas height
+const LANE_BOTTOM = 0.24;
 const MAX_ACTIVE_VISUAL = 80;
-const NOTE_RADIUS_BASE = 11;
+const NOTE_RADIUS_BASE = 9;
 
 interface Particle {
   id: string;
@@ -24,6 +24,7 @@ interface MusicGardenVisualizerProps {
   elapsedMs: number;
   dimmed: boolean;
   rewardsEnabled: boolean;
+  resetKey: number;
   onNoteClick: (noteId: string) => void;
   onNoteExpire: (noteId: string) => void;
 }
@@ -38,6 +39,7 @@ export function MusicGardenVisualizer({
   elapsedMs,
   dimmed,
   rewardsEnabled,
+  resetKey,
   onNoteClick,
   onNoteExpire,
 }: MusicGardenVisualizerProps) {
@@ -126,10 +128,10 @@ export function MusicGardenVisualizer({
           continue;
         }
 
-        // Fade in as note enters from right, fade out as it approaches left
-        const scrollFraction = (elapsedMs - p.born) / SCROLL_DURATION_MS;
-        const alphaIn = Math.min(1, (canvas.width - x) / (p.radius * 4));
-        const alphaOut = Math.min(1, x / (p.radius * 4));
+        // Fade in from right edge, fade out toward left edge (15% canvas width each)
+        const fadeZone = canvas.width * 0.15;
+        const alphaIn = Math.min(1, (canvas.width - x) / fadeZone);
+        const alphaOut = Math.min(1, x / fadeZone);
         const alpha = Math.min(alphaIn, alphaOut);
 
         ctx.save();
@@ -155,7 +157,6 @@ export function MusicGardenVisualizer({
         ctx.fill();
 
         ctx.restore();
-        void scrollFraction;
       }
 
       rafRef.current = requestAnimationFrame(draw);
@@ -191,10 +192,11 @@ export function MusicGardenVisualizer({
     }
   }
 
+  // Clear particles only when a new session starts (new file / reset), not on every notes update.
   useEffect(() => {
     particlesRef.current.clear();
     expiredRef.current.clear();
-  }, [notes]);
+  }, [resetKey]);
 
   return (
     <canvas
