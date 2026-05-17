@@ -1,5 +1,6 @@
 import {
   getGrowthCycleProgress,
+  MAX_GOD_POINTS,
   recoverGodPointsByElapsedMinutes,
   recoverGodPointsByPhaseTicks,
   type GrowthCycleProgress,
@@ -40,4 +41,33 @@ export function recoverRuntimeGodPointsByElapsedMinutes(
     ...state,
     session: recoverGodPointsByElapsedMinutes(state.session, elapsedMinutes),
   });
+}
+
+export type GrantRuntimeGodPointsCommand = {
+  source: "music-garden";
+  amount: number;
+};
+
+export type GrantRuntimeGodPointsResult = {
+  state: RuntimeWorldState;
+  granted: number;
+};
+
+export function grantRuntimeGodPoints(
+  state: RuntimeWorldState,
+  command: GrantRuntimeGodPointsCommand,
+): GrantRuntimeGodPointsResult {
+  const before = state.session.godPoints;
+  const capped = Math.min(MAX_GOD_POINTS, before + command.amount);
+  const granted = capped - before;
+  if (granted <= 0) {
+    return { state, granted: 0 };
+  }
+  return {
+    state: createRuntimeWorldState({
+      ...state,
+      session: { ...state.session, godPoints: capped },
+    }),
+    granted,
+  };
 }
