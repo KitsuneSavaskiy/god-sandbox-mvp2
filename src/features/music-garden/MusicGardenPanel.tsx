@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   MUSIC_GOD_POINT_REWARD_CAP_PER_FILE,
   MUSIC_NOTE_STREAK_TARGET,
@@ -28,13 +28,15 @@ export function MusicGardenPanel({
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    // Reset immediately — before any early return — so the input is never
+    // left in a used state, allowing re-selection even after errors.
+    e.target.value = "";
     if (!file) return;
 
     const name = file.name.toLowerCase();
     if (!name.endsWith(".mid") && !name.endsWith(".midi")) {
       onFileLoad(new ArrayBuffer(0), file.name);
       setFileName(null);
-      e.target.value = "";
       return;
     }
 
@@ -43,11 +45,32 @@ export function MusicGardenPanel({
     reader.onload = () => {
       if (reader.result instanceof ArrayBuffer) {
         onFileLoad(reader.result, file.name);
+      } else {
+        // readAsArrayBuffer should always produce ArrayBuffer; handle edge case.
+        setFileName(null);
+        onFileLoad(new ArrayBuffer(0), file.name);
       }
     };
+    reader.onerror = () => {
+      // Reading failed — clear filename; parent state stays unchanged.
+      setFileName(null);
+    };
+    reader.onabort = () => {
+      setFileName(null);
+    };
     reader.readAsArrayBuffer(file);
-    e.target.value = "";
   }
+
+  // Some browsers (Chromium 113+) fire a "cancel" event on <input type="file">
+  // when the dialog is dismissed without selection. Guard against any filename
+  // state that may have been set before the dialog opened.
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const onCancel = () => setFileName(null);
+    input.addEventListener("cancel", onCancel);
+    return () => input.removeEventListener("cancel", onCancel);
+  }, []);
 
   const hasNotes = state.notes.length > 0;
   const streakPct = Math.min(
