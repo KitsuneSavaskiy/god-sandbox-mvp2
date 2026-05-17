@@ -25,11 +25,13 @@ const MAX_VISUALIZED_NOTES = 800;
 
 const DEFAULT_TEMPO_US = 500000; // 120 BPM
 
+// MIDI spec: VLQ is at most 4 bytes (max value 0x0FFFFFFF)
 function readVarLen(data: Uint8Array, offset: number): [number, number] {
   let value = 0;
   let bytesRead = 0;
   let byte: number;
   do {
+    if (bytesRead >= 4) throw new Error("VLQ exceeds 4-byte limit");
     if (offset + bytesRead >= data.length) throw new Error("Unexpected end of data in var-len");
     byte = data[offset + bytesRead]!;
     value = (value << 7) | (byte & 0x7f);
@@ -75,10 +77,23 @@ function parseTrack(data: Uint8Array, startOffset: number, trackLen: number): Tr
 
     let statusByte = data[offset]!;
 
+    // System realtime messages (0xF8–0xFE) have no data bytes and do not
+    // affect running status. Skip them before the status-byte branch.
+    if (statusByte >= 0xf8) {
+      offset++;
+      continue;
+    }
+
     if (statusByte & 0x80) {
       runningStatus = statusByte;
       offset++;
     } else {
+      // Data byte without a preceding status byte.
+      if (runningStatus === 0) {
+        // No running status established yet — malformed stream; skip byte.
+        offset++;
+        continue;
+      }
       statusByte = runningStatus;
     }
 
@@ -86,25 +101,33 @@ function parseTrack(data: Uint8Array, startOffset: number, trackLen: number): Tr
     const channel = statusByte & 0x0f;
 
     if (statusByte === 0xff) {
-      // Meta event
+      // Meta event — clears running status per spec
+      runningStatus = 0;
       if (offset >= end) break;
       const metaType = data[offset++]!;
       const [metaLen, metaLenBytes] = readVarLen(data, offset);
       offset += metaLenBytes;
 
       if (metaType === 0x51 && metaLen === 3) {
-        // Tempo
         const us =
           ((data[offset]! << 16) | (data[offset + 1]! << 8) | data[offset + 2]!) >>> 0;
         events.push({ tickTime: currentTick, type: "tempo", tempoUs: us });
       }
       offset += metaLen;
     } else if (statusByte === 0xf0 || statusByte === 0xf7) {
-      // SysEx
+      // SysEx — clears running status
+      runningStatus = 0;
       const [sysexLen, sysexLenBytes] = readVarLen(data, offset);
       offset += sysexLenBytes + sysexLen;
+    } else if (statusByte >= 0xf1 && statusByte <= 0xf6) {
+      // System common messages — various data lengths; skip safely
+      runningStatus = 0;
+      const systemCommonDataBytes: Record<number, number> = {
+        0xf1: 1, 0xf2: 2, 0xf3: 1, 0xf4: 0, 0xf5: 0, 0xf6: 0,
+      };
+      offset += systemCommonDataBytes[statusByte] ?? 0;
     } else if (type === 0x90 && offset + 1 < end) {
-      // Note-on
+      // Note-on (all channels treated uniformly for MVP)
       const pitch = data[offset++]!;
       const velocity = data[offset++]!;
       if (velocity === 0) {
@@ -122,11 +145,11 @@ function parseTrack(data: Uint8Array, startOffset: number, trackLen: number): Tr
     } else if ((type === 0xc0 || type === 0xd0) && offset < end) {
       offset += 1;
     } else {
-      // Unknown — skip byte and reset running status
+      // Unknown channel message — skip and reset running status
       runningStatus = 0;
       offset++;
     }
-    void channel; // suppress unused warning
+    void channel;
   }
 
   return events;

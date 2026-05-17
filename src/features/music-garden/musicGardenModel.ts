@@ -11,6 +11,7 @@ export interface MusicGardenState {
   elapsedMs: number;
   rewardsEnabled: boolean;
   errorMessage: string | null;
+  warnings: string[];
 }
 
 export function createInitialMusicGardenState(): MusicGardenState {
@@ -22,6 +23,7 @@ export function createInitialMusicGardenState(): MusicGardenState {
     elapsedMs: 0,
     rewardsEnabled: true,
     errorMessage: null,
+    warnings: [],
   };
 }
 
@@ -43,11 +45,6 @@ export function activateNotes(state: MusicGardenState): MusicGardenState {
   return changed ? { ...state, notes: updated } : state;
 }
 
-export function handleNoteExpiry(state: MusicGardenState, noteId: string): MusicGardenState {
-  if (!state.rewardsEnabled) return state;
-  return { ...state, currentNoteStreak: 0 };
-}
-
 export function resetPlayback(state: MusicGardenState): MusicGardenState {
   return {
     ...state,
@@ -58,7 +55,7 @@ export function resetPlayback(state: MusicGardenState): MusicGardenState {
   };
 }
 
-export function resetSession(notes: NormalizedNote[]): MusicGardenState {
+export function resetSession(notes: NormalizedNote[], warnings: string[] = []): MusicGardenState {
   return {
     notes: notes.map((n) => ({ ...n, clicked: false, active: false })),
     currentNoteStreak: 0,
@@ -67,5 +64,6 @@ export function resetSession(notes: NormalizedNote[]): MusicGardenState {
     elapsedMs: 0,
     rewardsEnabled: true,
     errorMessage: null,
+    warnings,
   };
 }

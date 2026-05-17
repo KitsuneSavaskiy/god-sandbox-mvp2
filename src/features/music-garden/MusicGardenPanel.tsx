@@ -1,4 +1,4 @@
-import { useRef, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import {
   MUSIC_GOD_POINT_REWARD_CAP_PER_FILE,
   MUSIC_NOTE_STREAK_TARGET,
@@ -8,7 +8,8 @@ import "./MusicGarden.css";
 
 interface MusicGardenPanelProps {
   state: MusicGardenState;
-  onFileLoad: (buffer: ArrayBuffer) => void;
+  warnings: string[];
+  onFileLoad: (buffer: ArrayBuffer, fileName: string) => void;
   onPlay: () => void;
   onPause: () => void;
   onReset: () => void;
@@ -16,24 +17,37 @@ interface MusicGardenPanelProps {
 
 export function MusicGardenPanel({
   state,
+  warnings,
   onFileLoad,
   onPlay,
   onPause,
   onReset,
 }: MusicGardenPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Explicit MIME-type / extension guard before handing off to FileReader
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".mid") && !name.endsWith(".midi")) {
+      // Synthesise the same error shape the parent expects
+      onFileLoad(new ArrayBuffer(0), file.name);
+      setFileName(null);
+      e.target.value = "";
+      return;
+    }
+
+    setFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
       if (reader.result instanceof ArrayBuffer) {
-        onFileLoad(reader.result);
+        onFileLoad(reader.result, file.name);
       }
     };
     reader.readAsArrayBuffer(file);
-    // reset input so same file can be re-uploaded
     e.target.value = "";
   }
 
@@ -53,11 +67,16 @@ export function MusicGardenPanel({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".mid,.midi"
+            accept=".mid,.midi,audio/midi,audio/x-midi"
             className="music-garden-panel__file-input"
             onChange={handleFileChange}
           />
         </label>
+        {fileName && (
+          <span className="music-garden-panel__file-name" title={fileName}>
+            {fileName.length > 20 ? `…${fileName.slice(-18)}` : fileName}
+          </span>
+        )}
       </div>
 
       <div className="music-garden-panel__controls">
@@ -93,7 +112,7 @@ export function MusicGardenPanel({
       <div className="music-garden-panel__streak">
         <div className="music-garden-panel__streak-label">
           <span>連続 {state.currentNoteStreak} / {MUSIC_NOTE_STREAK_TARGET}</span>
-          <span>目標まであと {Math.max(0, MUSIC_NOTE_STREAK_TARGET - state.currentNoteStreak)}</span>
+          <span>あと {Math.max(0, MUSIC_NOTE_STREAK_TARGET - state.currentNoteStreak)}</span>
         </div>
         <div className="music-garden-panel__streak-bar">
           <div
@@ -110,6 +129,10 @@ export function MusicGardenPanel({
       {state.errorMessage && (
         <p className="music-garden-panel__message">{state.errorMessage}</p>
       )}
+
+      {warnings.map((w, i) => (
+        <p key={i} className="music-garden-panel__warning">{w}</p>
+      ))}
     </div>
   );
 }

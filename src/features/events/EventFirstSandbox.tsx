@@ -56,7 +56,6 @@ import { parseMidi } from "../music-garden/musicGardenMidi.js";
 import {
   activateNotes,
   createInitialMusicGardenState,
-  handleNoteExpiry as musicHandleNoteExpiry,
   resetPlayback as musicResetPlayback,
   resetSession as musicResetSession,
   tickElapsed,
@@ -1117,21 +1116,32 @@ export function EventFirstSandbox({
     };
   }, [musicState.isPlaying]);
 
-  const handleMidiFileLoad = useCallback((buffer: ArrayBuffer) => {
-    const outcome = parseMidi(buffer);
+  const handleMidiFileLoad = useCallback((buffer: ArrayBuffer, fileName: string) => {
     musicAudioRef.current.stop();
+    // Empty buffer is synthesised by the panel for non-MIDI file selection
+    if (buffer.byteLength === 0) {
+      setMusicState((prev) => ({
+        ...prev,
+        errorMessage: `${fileName}: .mid / .midi ファイルを選んでください`,
+        isPlaying: false,
+      }));
+      return;
+    }
+    const outcome = parseMidi(buffer);
     if (!outcome.ok) {
       setMusicState((prev) => ({ ...prev, errorMessage: outcome.error, isPlaying: false }));
       return;
     }
     const { notes, warnings } = outcome.result;
-    const newState = musicResetSession(notes);
-    const warningMsg = warnings.length > 0 ? warnings[0] ?? null : null;
-    setMusicState({ ...newState, errorMessage: warningMsg });
+    const newState = musicResetSession(notes, warnings);
+    setMusicState(newState);
     musicAudioRef.current.resetSchedule();
   }, []);
 
   const handleMusicPlay = useCallback(() => {
+    // Call prepareForPlay from the direct user-gesture handler to satisfy
+    // browser autoplay policy before the animation loop starts.
+    musicAudioRef.current.prepareForPlay();
     setMusicState((prev) => {
       if (!prev.notes.length) return prev;
       return { ...prev, isPlaying: true };
@@ -1170,13 +1180,12 @@ export function EventFirstSandbox({
     [onRuntimeStateChange],
   );
 
+  // handleNoteExpiry is handled entirely by the reward layer (which checks
+  // rewardsEnabled and note.clicked). The visualizer only calls this when
+  // rewardsEnabled=true, providing a consistent double-guard.
   const handleMusicNoteExpire = useCallback(
     (noteId: string) => {
-      setMusicState((prev) => {
-        const afterModel = musicHandleNoteExpiry(prev, noteId);
-        const afterReward = rewardHandleNoteExpiry(afterModel, noteId);
-        return afterReward;
-      });
+      setMusicState((prev) => rewardHandleNoteExpiry(prev, noteId));
     },
     [],
   );
@@ -1432,6 +1441,7 @@ export function EventFirstSandbox({
           notes={musicState.notes}
           elapsedMs={musicState.elapsedMs}
           dimmed={sandboxPaused}
+          rewardsEnabled={musicState.rewardsEnabled}
           onNoteClick={handleMusicNoteClick}
           onNoteExpire={handleMusicNoteExpire}
         />
@@ -1804,6 +1814,7 @@ export function EventFirstSandbox({
       ) : null}
       <MusicGardenPanel
         state={musicState}
+        warnings={musicState.warnings}
         onFileLoad={handleMidiFileLoad}
         onPlay={handleMusicPlay}
         onPause={handleMusicPause}

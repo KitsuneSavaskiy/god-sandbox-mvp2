@@ -3,8 +3,9 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  pointer-events: none;
+  pointer-events: auto;
   transition: opacity 0.3s ease;
+  cursor: default;
 }
 
 .music-garden-visualizer--dimmed {
@@ -62,6 +63,15 @@
 
 .music-garden-panel__file-input {
   display: none;
+}
+
+.music-garden-panel__file-name {
+  font-size: 11px;
+  color: #b49ee8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 130px;
 }
 
 .music-garden-panel__controls {

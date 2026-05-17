@@ -2,7 +2,6 @@ import {
   MUSIC_GOD_POINT_REWARD_CAP_PER_FILE,
   MUSIC_NOTE_STREAK_TARGET,
   createInitialMusicGardenState,
-  handleNoteExpiry,
   resetPlayback,
   resetSession,
   type MusicGardenState,
@@ -249,15 +248,8 @@ function testResetSessionResetsAll(): void {
   assert.equal(after.isPlaying, false);
 }
 
-function testHandleNoteExpiryResetsStreak(): void {
-  const state = makeMusicState({ currentNoteStreak: 5, rewardsEnabled: true });
-  assert.equal(handleNoteExpiry(state, "x").currentNoteStreak, 0);
-}
-
-function testHandleNoteExpiryNoOpWhenDisabled(): void {
-  const state = makeMusicState({ currentNoteStreak: 5, rewardsEnabled: false });
-  assert.equal(handleNoteExpiry(state, "x").currentNoteStreak, 5);
-}
+// Note: handleNoteExpiry lives only in musicGardenReward (consolidated).
+// See testRewardHandleNoteExpiry* below for expiry coverage.
 
 // ── Reward logic tests ────────────────────────────────────────────────────────
 
@@ -386,8 +378,6 @@ const tests: Array<[string, () => void]> = [
   ["truncated notes excluded from active list (no streak break)", testTruncatedNotesExcludedFromActiveList],
   ["resetPlayback does not reset godPointRewardsEarned", testResetPlaybackDoesNotResetRewardCap],
   ["resetSession resets all fields including godPointRewardsEarned", testResetSessionResetsAll],
-  ["handleNoteExpiry (model) resets streak when enabled", testHandleNoteExpiryResetsStreak],
-  ["handleNoteExpiry (model) no-op when disabled", testHandleNoteExpiryNoOpWhenDisabled],
   ["handleNoteClick increments streak on valid note", testHandleNoteClickIncrementsStreak],
   ["handleNoteClick duplicate click ignored", testHandleNoteClickDuplicateIgnored],
   ["handleNoteClick disabled gate", testHandleNoteClickDisabledIgnored],

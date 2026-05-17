@@ -24,6 +24,17 @@ export class MusicGardenAudio {
     }
   }
 
+  // Call from a direct user-gesture handler (Play button) to satisfy
+  // browser autoplay policy before the animation loop starts scheduling.
+  prepareForPlay(): void {
+    try {
+      const ctx = this.getContext();
+      if (ctx && ctx.state === "suspended") {
+        void ctx.resume();
+      }
+    } catch { /* non-blocking */ }
+  }
+
   scheduleNotes(notes: NormalizedNote[], elapsedMs: number): void {
     const ctx = this.getContext();
     if (!ctx) return;
@@ -40,7 +51,6 @@ export class MusicGardenAudio {
       this.scheduled.add(note.id);
 
       if (this.active.length >= MAX_ACTIVE_OSCILLATORS) {
-        // prune oldest
         const oldest = this.active.shift();
         if (oldest) {
           try {
@@ -79,7 +89,6 @@ export class MusicGardenAudio {
       } catch { /* audio failure is non-blocking */ }
     }
 
-    // prune finished oscillators
     const t = ctx.currentTime;
     this.active = this.active.filter((a) => a.endTime > t);
   }

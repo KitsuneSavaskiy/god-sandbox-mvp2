@@ -20,6 +20,7 @@ interface MusicGardenVisualizerProps {
   notes: NormalizedNote[];
   elapsedMs: number;
   dimmed: boolean;
+  rewardsEnabled: boolean;
   onNoteClick: (noteId: string) => void;
   onNoteExpire: (noteId: string) => void;
 }
@@ -28,6 +29,7 @@ export function MusicGardenVisualizer({
   notes,
   elapsedMs,
   dimmed,
+  rewardsEnabled,
   onNoteClick,
   onNoteExpire,
 }: MusicGardenVisualizerProps) {
@@ -35,9 +37,9 @@ export function MusicGardenVisualizer({
   const particlesRef = useRef<Map<string, Particle>>(new Map());
   const expiredRef = useRef<Set<string>>(new Set());
   const rafRef = useRef<number>(0);
-  const propsRef = useRef({ notes, elapsedMs, onNoteClick, onNoteExpire });
+  const propsRef = useRef({ notes, elapsedMs, rewardsEnabled, onNoteClick, onNoteExpire });
 
-  propsRef.current = { notes, elapsedMs, onNoteClick, onNoteExpire };
+  propsRef.current = { notes, elapsedMs, rewardsEnabled, onNoteClick, onNoteExpire };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -56,11 +58,10 @@ export function MusicGardenVisualizer({
 
     function draw() {
       if (!canvas || !ctx) return;
-      const { notes, elapsedMs, onNoteExpire } = propsRef.current;
+      const { notes, elapsedMs, rewardsEnabled, onNoteExpire } = propsRef.current;
       const particles = particlesRef.current;
       const expired = expiredRef.current;
 
-      // Add new active notes as particles (up to MAX_ACTIVE_VISUAL)
       for (const note of notes) {
         if (!note.active) continue;
         if (particles.has(note.id)) continue;
@@ -95,7 +96,10 @@ export function MusicGardenVisualizer({
           if (!expired.has(id)) {
             expired.add(id);
             const note = notes.find((n) => n.id === id);
-            if (note && !note.clicked) {
+            // Only fire expiry for unclicked notes and only while rewards are enabled.
+            // When event window is open (rewardsEnabled=false) notes animate out without
+            // becoming "missed" — the opportunity is suspended, not forfeited.
+            if (note && !note.clicked && rewardsEnabled) {
               onNoteExpire(id);
             }
           }
@@ -143,6 +147,9 @@ export function MusicGardenVisualizer({
       const dx = mx - p.x;
       const dy = my - p.y;
       if (dx * dx + dy * dy <= (p.size + 10) * (p.size + 10)) {
+        // Stop propagation only when a note is actually hit so viewport
+        // click handling continues to work for misses.
+        e.stopPropagation();
         onNoteClick(id);
         particlesRef.current.delete(id);
         expiredRef.current.add(id);
