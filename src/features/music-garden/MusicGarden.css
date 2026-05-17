@@ -12,53 +12,68 @@
   opacity: 0.3;
 }
 
-/* MusicGardenPanel — bottom-left panel */
+/* MusicGardenPanel — in document flow, below 今の出来事 */
 .music-garden-panel {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
-  z-index: 10;
-  background: rgba(10, 6, 20, 0.82);
-  border: 1px solid rgba(180, 140, 255, 0.35);
-  border-radius: 10px;
-  padding: 10px 14px;
-  min-width: 220px;
-  max-width: 280px;
-  color: #e8d8ff;
+  background: rgba(255, 252, 242, 0.86);
+  border: 1px solid rgba(58, 80, 53, 0.16);
+  border-radius: 24px;
+  padding: 14px 18px;
+  color: #314329;
   font-size: 13px;
   user-select: none;
+  box-shadow: 0 16px 50px rgba(53, 74, 48, 0.12);
 }
 
 .music-garden-panel__title {
   font-size: 11px;
   letter-spacing: 0.08em;
-  color: #b49ee8;
-  margin: 0 0 8px 0;
+  color: #6a5a3a;
+  margin: 0 0 10px 0;
   text-transform: uppercase;
+  font-weight: 900;
+}
+
+.music-garden-panel__body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  align-items: start;
+}
+
+.music-garden-panel__left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.music-garden-panel__right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .music-garden-panel__file-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
 .music-garden-panel__file-label {
   display: inline-block;
-  padding: 4px 10px;
-  background: rgba(120, 80, 200, 0.3);
-  border: 1px solid rgba(180, 140, 255, 0.4);
-  border-radius: 5px;
+  padding: 5px 12px;
+  background: rgba(100, 60, 180, 0.12);
+  border: 1px solid rgba(100, 60, 180, 0.28);
+  border-radius: 7px;
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
-  color: #d4bcff;
+  color: #4a3a7a;
+  font-weight: 700;
   transition: background 0.15s;
 }
 
 .music-garden-panel__file-label:hover {
-  background: rgba(120, 80, 200, 0.5);
+  background: rgba(100, 60, 180, 0.22);
 }
 
 .music-garden-panel__file-input {
@@ -67,80 +82,87 @@
 
 .music-garden-panel__file-name {
   font-size: 11px;
-  color: #b49ee8;
+  color: #6a5a3a;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 130px;
+  max-width: 160px;
 }
 
 .music-garden-panel__controls {
   display: flex;
   gap: 6px;
-  margin-bottom: 8px;
 }
 
 .music-garden-panel__btn {
-  padding: 4px 10px;
-  border: 1px solid rgba(180, 140, 255, 0.4);
-  border-radius: 5px;
-  background: rgba(80, 50, 140, 0.3);
-  color: #d4bcff;
+  padding: 5px 12px;
+  border: 1px solid rgba(58, 80, 53, 0.22);
+  border-radius: 7px;
+  background: rgba(58, 80, 53, 0.08);
+  color: #314329;
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .music-garden-panel__btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .music-garden-panel__btn:not(:disabled):hover {
-  background: rgba(120, 80, 200, 0.5);
+  background: rgba(58, 80, 53, 0.16);
 }
 
 .music-garden-panel__streak {
-  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .music-garden-panel__streak-label {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #b49ee8;
-  margin-bottom: 3px;
+  color: #6a5a3a;
+  font-weight: 700;
 }
 
 .music-garden-panel__streak-bar {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 2px;
+  height: 5px;
+  background: rgba(58, 80, 53, 0.12);
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .music-garden-panel__streak-fill {
   height: 100%;
-  background: linear-gradient(90deg, #9b6fff, #d4bcff);
-  border-radius: 2px;
-  transition: width 0.15s ease;
+  background: linear-gradient(90deg, #7c5cbf, #b49ee8);
+  border-radius: 3px;
+  transition: width 0.18s ease;
 }
 
 .music-garden-panel__rewards {
+  font-size: 12px;
+  color: #4a3a7a;
+  font-weight: 700;
+}
+
+.music-garden-panel__hint {
   font-size: 11px;
-  color: #c4a8ff;
-  margin-bottom: 4px;
+  color: #8a7a5a;
+  line-height: 1.4;
 }
 
 .music-garden-panel__message {
   font-size: 11px;
-  color: #ff9e9e;
-  margin-top: 4px;
+  color: #a03030;
+  font-weight: 700;
   word-break: break-all;
 }
 
 .music-garden-panel__warning {
   font-size: 11px;
-  color: #ffd080;
-  margin-top: 4px;
+  color: #7a5a00;
 }
