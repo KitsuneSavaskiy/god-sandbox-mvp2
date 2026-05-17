@@ -55,6 +55,7 @@ export function resetPlayback(state: MusicGardenState): MusicGardenState {
     elapsedMs: 0,
     isPlaying: false,
     currentNoteStreak: 0,
+    godPointRewardsEarned: 0,
     notes: state.notes.map((n) => ({ ...n, clicked: false, active: false })),
   };
 }

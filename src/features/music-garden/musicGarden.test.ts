@@ -232,10 +232,12 @@ function testTruncatedNotesExcludedFromActiveList(): void {
 
 // ── Model reducer tests ───────────────────────────────────────────────────────
 
-function testResetPlaybackDoesNotResetRewardCap(): void {
+function testResetPlaybackResetsRewardCap(): void {
+  // Cap must reset on playback reset so the player can earn rewards again
+  // after spending vitality on blessings.
   const state = makeMusicState({ godPointRewardsEarned: 2, currentNoteStreak: 5 });
   const after = resetPlayback(state);
-  assert.equal(after.godPointRewardsEarned, 2);
+  assert.equal(after.godPointRewardsEarned, 0);
   assert.equal(after.currentNoteStreak, 0);
   assert.equal(after.isPlaying, false);
   assert.equal(after.elapsedMs, 0);
@@ -377,7 +379,7 @@ const tests: Array<[string, () => void]> = [
   ["malformed MIDI returns controlled error", testMalformedMidiReturnsError],
   ["file exceeding 2MB size limit rejected", testFileSizeLimitRejected],
   ["truncated notes excluded from active list (no streak break)", testTruncatedNotesExcludedFromActiveList],
-  ["resetPlayback does not reset godPointRewardsEarned", testResetPlaybackDoesNotResetRewardCap],
+  ["resetPlayback resets godPointRewardsEarned so rewards can be earned again", testResetPlaybackResetsRewardCap],
   ["resetSession resets all fields including godPointRewardsEarned", testResetSessionResetsAll],
   ["handleNoteClick increments streak on valid note", testHandleNoteClickIncrementsStreak],
   ["handleNoteClick duplicate click ignored", testHandleNoteClickDuplicateIgnored],
