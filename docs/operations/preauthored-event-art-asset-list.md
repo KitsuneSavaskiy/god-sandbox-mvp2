@@ -24,10 +24,10 @@ MVPでは、イベントごとに事前作成した固定 event art（`preauthor
 | 項目 | 規則 |
 |---|---|
 | assetId | `event-art-{templateId}-{phase}` |
-| proposedPath | `public/art/events/{templateId}/{phase}.svg`（MVP）/ 将来 PO 承認の本画像（PNG 等）に置き換え可能 |
+| proposedPath | `public/art/events/{templateId}/{phase}.png`（PO 承認済み本画像） |
 | phase 種別 | `started`（MVP必須）/ `success`（future）/ `failure`（future） |
 | fallbackAssetId | `event-art-fallback-generic` |
-| fallback path | `public/art/events/_fallback/generic-event.svg`（MVP）|
+| fallback path | `public/art/events/_fallback/generic-event.png` |
 
 ---
 
@@ -37,13 +37,13 @@ MVPでは、イベントごとに事前作成した固定 event art（`preauthor
 
 | templateId | displayName | assetId | proposedPath | visualSourceKind | eventPhase | notes |
 |---|---|---|---|---|---|---|
-| `moving-stone` | 謎の動く石 | `event-art-moving-stone-started` | `public/art/events/moving-stone/started.svg` | preauthored_event_art | started | |
-| `shrine-prayer-wish` | お参りと願い | `event-art-shrine-prayer-wish-started` | `public/art/events/shrine-prayer-wish/started.svg` | preauthored_event_art | started | |
-| `strange-grass-found` | 変な草を拾う | `event-art-strange-grass-found-started` | `public/art/events/strange-grass-found/started.svg` | preauthored_event_art | started | |
-| `shared-nap-place` | 同じ場所で昼寝 | `event-art-shared-nap-place-started` | `public/art/events/shared-nap-place/started.svg` | preauthored_event_art | started | 2人イベント |
-| `mysterious-footprints` | 謎の足あと | `event-art-mysterious-footprints-started` | `public/art/events/mysterious-footprints/started.svg` | preauthored_event_art | started | |
-| `legendary-big-fish` | 伝説の大きな魚 | `event-art-legendary-big-fish-started` | `public/art/events/legendary-big-fish/started.svg` | preauthored_event_art | started | rare (threshold 13) |
-| `shrine-fox-offering` | 祠の油揚げ | `event-art-shrine-fox-offering-started` | `public/art/events/shrine-fox-offering/started.svg` | preauthored_event_art | started | 蓄積型 |
+| `moving-stone` | 謎の動く石 | `event-art-moving-stone-started` | `public/art/events/moving-stone/started.png` | preauthored_event_art | started | |
+| `shrine-prayer-wish` | お参りと願い | `event-art-shrine-prayer-wish-started` | `public/art/events/shrine-prayer-wish/started.png` | preauthored_event_art | started | |
+| `strange-grass-found` | 変な草を拾う | `event-art-strange-grass-found-started` | `public/art/events/strange-grass-found/started.png` | preauthored_event_art | started | |
+| `shared-nap-place` | 同じ場所で昼寝 | `event-art-shared-nap-place-started` | `public/art/events/shared-nap-place/started.png` | preauthored_event_art | started | 2人イベント |
+| `mysterious-footprints` | 謎の足あと | `event-art-mysterious-footprints-started` | `public/art/events/mysterious-footprints/started.png` | preauthored_event_art | started | |
+| `legendary-big-fish` | 伝説の大きな魚 | `event-art-legendary-big-fish-started` | `public/art/events/legendary-big-fish/started.png` | preauthored_event_art | started | rare (threshold 13) |
+| `shrine-fox-offering` | 祠の油揚げ | `event-art-shrine-fox-offering-started` | `public/art/events/shrine-fox-offering/started.png` | preauthored_event_art | started | 蓄積型 |
 
 ### success / failure（optional / future）
 
@@ -72,9 +72,9 @@ MVPでは、イベントごとに事前作成した固定 event art（`preauthor
 
 | assetId | proposedPath | visualSourceKind | 用途 |
 |---|---|---|---|
-| `event-art-fallback-generic` | `public/art/events/_fallback/generic-event.svg` | fallback | 個別 art 未準備時の汎用表示 |
+| `event-art-fallback-generic` | `public/art/events/_fallback/generic-event.png` | fallback | 個別 art 未準備時の汎用表示 |
 
-MVPでは `.svg` を使用。将来 PO 承認の本画像（PNG 等）に置き換える場合は proposedPath の拡張子を変更する。
+MVP started art は PO 承認済みの PNG 本画像を使用する。success / failure 画像は optional / future として別 PBI で扱う。
 
 ---
 
@@ -104,10 +104,10 @@ const FALLBACK_ART_ID = "event-art-fallback-generic";
 
 | 状態 | 内容 |
 |---|---|
-| 配置済み（SVG） | 全 7 event の started SVG（`public/art/events/{templateId}/started.svg`）、fallback SVG（`public/art/events/_fallback/generic-event.svg`） |
-| 未制作 | success / failure 画像、PO承認済みの本画像（PNG 等） |
+| 配置済み（PNG） | 全 7 event の started PNG（`public/art/events/{templateId}/started.png`）、fallback PNG（`public/art/events/_fallback/generic-event.png`） |
+| 未制作 | success / failure 画像 |
 | 本画像への置き換え手順 | `docs/art-prompts/event-images/preauthored-event-art-briefs.md` を参照し PO 確認後に別 PBI で配置 |
-| 採用フロー | PO 確認後に別 PBI で `public/art/events/` へ配置し、proposedPath の拡張子を更新 |
+| 採用フロー | PO 確認後に別 PBI で `public/art/events/` へ配置し、参照 path を更新 |
 
 ---
 
