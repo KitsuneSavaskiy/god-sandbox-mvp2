@@ -811,7 +811,7 @@ button.event-first-sandbox__emote:disabled {
   background-size: var(--resident-sheet-width) var(--resident-sheet-height);
   filter: drop-shadow(0 12px 12px rgba(28, 42, 22, 0.28));
   image-rendering: auto;
-  transform: scaleX(var(--resident-sprite-scale-x, 1)) scale(var(--resident-display-scale));
+  transform: scale(var(--resident-display-scale));
   transform-origin: center bottom;
 }
 

@@ -126,7 +126,6 @@ type ResidentSpriteMetadata = {
   rows: number;
   row: number;
   frames: number;
-  flipX: boolean;
 };
 
 type ResidentViewModel = ActiveResidentPreview & {
@@ -1997,10 +1996,7 @@ function resolveResidentSpriteSheetMetadata(
   const active = useExtended ? extendedMetadata : motionMetadata;
   if (!active) return null;
 
-  const slots = active.motions as Record<
-    string,
-    { row: number; frames: number; flipX?: boolean } | undefined
-  >;
+  const slots = active.motions as Record<string, { row: number; frames: number } | undefined>;
   const slot = slots[motion] ?? slots.idle;
   return {
     frameWidth: active.frameWidth,
@@ -2009,7 +2005,6 @@ function resolveResidentSpriteSheetMetadata(
     rows: active.rows,
     row: slot?.row ?? 0,
     frames: slot?.frames ?? active.columns,
-    flipX: Boolean(slot?.flipX),
   };
 }
 
@@ -2081,7 +2076,6 @@ function createResidentStyle(resident: ResidentViewModel): CSSProperties {
       ? `-${metadata.row * metadata.frameHeight}px`
       : undefined,
     "--resident-sprite-frames": metadata?.frames,
-    "--resident-sprite-scale-x": metadata?.flipX ? -1 : 1,
 } as CSSProperties;
 }
 

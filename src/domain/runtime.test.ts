@@ -724,7 +724,6 @@ function testRuntimeSelectorsAndCommands(): void {
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions.review?.row, 7);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-left"]?.row, 2);
   assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"]?.row, 1);
-  assert.equal(ryoAssetBundle.spriteSheet.metadata?.motions["walk-right"]?.flipX, true);
   // Extended motions share the same PO preview PNG.
   assert.equal(ryoAssetBundle.extendedSheet.assetId, "ryo-sprite-sheet-extended");
   assert.equal(ryoAssetBundle.extendedSheet.ready, true);

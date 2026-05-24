@@ -135,7 +135,7 @@
         width: calc(var(--frame-width) * var(--frame-max-span));
         height: var(--frame-height);
         overflow: hidden;
-        transform: scaleX(var(--sprite-flip-x, 1)) scale(var(--preview-scale));
+        transform: scale(var(--preview-scale));
         transform-origin: center bottom;
       }
 
@@ -212,7 +212,7 @@
     <script>
       const motions = [
         ["idle", 0, "待機。足元と頭がセル内に収まるかを見る。"],
-        ["walk-right", 1, "右歩き。元rowは左向きのため、表示時に左右反転して確認する。", 6, 1, true],
+        ["walk-right", 1, "右歩き。横移動時に隣セルを拾わないかを見る。"],
         ["walk-left", 2, "左歩き。横移動時に足が切れないかを見る。"],
         ["waving", 3, "手振り。手と髪がセル外へ出ないかを見る。"],
         ["jumping", 4, "ジャンプ。上下の余白が残るかを見る。"],
@@ -228,13 +228,13 @@
       ];
 
       const grid = document.querySelector("#motionGrid");
-      for (const [name, row, note, motionFrames = 6, frameMaxSpan = 1, flipX = false] of motions) {
+      for (const [name, row, note, motionFrames = 6, frameMaxSpan = 1] of motions) {
         const card = document.createElement("article");
         card.className = "motion-card";
         card.innerHTML = `
           <div class="sprite-box" style="--frame-max-span: ${frameMaxSpan};">
             <div class="sprite-frame" style="--frame-max-span: ${frameMaxSpan};">
-              <div class="sprite" style="--row: ${row}; --motion-frames: ${motionFrames}; --sprite-flip-x: ${flipX ? -1 : 1};"></div>
+              <div class="sprite" style="--row: ${row}; --motion-frames: ${motionFrames};"></div>
             </div>
           </div>
           <div>
