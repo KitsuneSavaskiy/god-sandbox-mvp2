@@ -51,7 +51,7 @@ const copyByMode: Record<CharacterEditorMode, { title: string; body: string; act
   },
   new: {
     title: "新しい住民を迎える",
-    body: "保存すると、見た目画像とプロフィールをもとにスプライトの準備が自動で始まります。今の箱庭の4人はすぐには変わらず、入れ替えはあとで選べます。",
+    body: "保存するとまず住民一覧に追加されます。Sidekick設定済みなら制作依頼を渡せます。今の箱庭の4人は自動では入れ替わりません。",
     action: "住民一覧に保存",
   },
   edit: {
