@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Event art background PO preview</title>
+    <title>Event art and dialogue PO preview</title>
     <style>
       :root {
         color: #241d17;
@@ -20,7 +20,7 @@
       }
 
       main {
-        width: min(1200px, calc(100% - 32px));
+        width: min(1220px, calc(100% - 32px));
         margin: 0 auto;
         padding: 28px 0 44px;
       }
@@ -33,7 +33,9 @@
 
       h1,
       h2,
-      p {
+      h3,
+      p,
+      ul {
         margin: 0;
       }
 
@@ -42,8 +44,12 @@
         line-height: 1.15;
       }
 
+      h2 {
+        font-size: clamp(1.2rem, 3vw, 1.65rem);
+      }
+
       .lead {
-        max-width: 760px;
+        max-width: 860px;
         color: #5f4c38;
         line-height: 1.7;
       }
@@ -52,7 +58,7 @@
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
         gap: 10px;
-        margin: 20px 0 22px;
+        margin: 20px 0 26px;
       }
 
       .check {
@@ -65,9 +71,21 @@
         line-height: 1.55;
       }
 
+      .section {
+        display: grid;
+        gap: 14px;
+        margin-top: 28px;
+      }
+
+      .section-note {
+        max-width: 820px;
+        color: #6a563f;
+        line-height: 1.65;
+      }
+
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 18px;
       }
 
@@ -75,8 +93,12 @@
         overflow: hidden;
         border: 1px solid rgba(55, 39, 26, 0.16);
         border-radius: 22px;
-        background: rgba(255, 252, 246, 0.92);
+        background: rgba(255, 252, 246, 0.94);
         box-shadow: 0 18px 42px rgba(73, 52, 28, 0.14);
+      }
+
+      .card--fallback {
+        border-style: dashed;
       }
 
       .art-frame {
@@ -101,7 +123,7 @@
         top: 12px;
         border-radius: 999px;
         padding: 5px 10px;
-        background: rgba(255, 252, 246, 0.84);
+        background: rgba(255, 252, 246, 0.86);
         color: #4d3a29;
         font-size: 0.78rem;
         font-weight: 700;
@@ -110,43 +132,88 @@
 
       .caption {
         display: grid;
-        gap: 8px;
+        gap: 10px;
         padding: 14px 16px 16px;
       }
 
-      .caption h2 {
-        font-size: 1.05rem;
+      .caption h3 {
+        font-size: 1.1rem;
       }
 
-      .caption p {
+      .template-id {
+        color: #866c50;
+        font-size: 0.78rem;
+      }
+
+      .flavor {
         color: #604d38;
-        font-size: 0.92rem;
-        line-height: 1.55;
+        font-size: 0.94rem;
+        line-height: 1.6;
       }
 
-      code {
-        overflow-wrap: anywhere;
+      .path {
         color: #6b3d16;
         font-family: "Cascadia Mono", "Consolas", monospace;
+        font-size: 0.78rem;
+        overflow-wrap: anywhere;
+      }
+
+      .dialogue-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .dialogue-group {
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: rgba(244, 236, 222, 0.78);
+      }
+
+      .dialogue-group strong {
+        display: block;
+        margin-bottom: 6px;
+        color: #5d452e;
         font-size: 0.82rem;
       }
 
-      .fallback {
-        border-style: dashed;
+      .dialogue-group ul {
+        display: grid;
+        gap: 4px;
+        padding-left: 1.15em;
+        color: #49382a;
+        font-size: 0.9rem;
+        line-height: 1.45;
+      }
+
+      .fallback-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 14px;
+      }
+
+      .mini-card {
+        display: grid;
+        gap: 8px;
+        border: 1px solid rgba(55, 39, 26, 0.14);
+        border-radius: 18px;
+        padding: 14px;
+        background: rgba(255, 252, 246, 0.9);
+        box-shadow: 0 12px 30px rgba(73, 52, 28, 0.1);
       }
 
       @media (max-width: 560px) {
         main {
-          width: min(100% - 20px, 1200px);
+          width: min(100% - 20px, 1220px);
           padding-top: 18px;
         }
 
-        .grid {
+        .grid,
+        .fallback-grid {
           grid-template-columns: 1fr;
-          gap: 14px;
         }
 
-        .caption {
+        .caption,
+        .mini-card {
           padding: 12px;
         }
       }
@@ -155,108 +222,215 @@
   <body>
     <main>
       <header>
-        <h1>Event art background PO preview</h1>
+        <h1>Event art and dialogue PO preview</h1>
         <p class="lead">
-          MVP 7イベントのプレースホルダー画像を、PO確認用のPNG本画像に差し替えた状態です。
-          各カードで「イベント内容と絵が合っているか」「箱庭の雰囲気に合うか」「文字や不要なUIが焼き込まれていないか」を確認してください。
+          MVP 7イベントのPNG背景差し替えと、#319で入ったイベント名・フレーバーテキスト・イベント別キャラ発話を同時に確認するページです。
+          画像と文章が同じ出来事として自然に読めるかを見てください。
         </p>
       </header>
 
       <section class="checklist" aria-label="PO confirmation checklist">
-        <div class="check">確認1: イベント名と画像の内容が大きくズレていない。</div>
-        <div class="check">確認2: キャラ名、場所ラベル、状態ラベル、UI文字が画像内にない。</div>
-        <div class="check">確認3: event window内で背景として見ても主役を邪魔しない。</div>
-        <div class="check">確認4: fallback画像は、個別画像がないイベントでも違和感が少ない。</div>
+        <div class="check">確認1: イベント名、画像、フレーバーが同じ出来事として合っている。</div>
+        <div class="check">確認2: 発話が短く、キャラがその場で感じた一言として自然。</div>
+        <div class="check">確認3: 画像内にキャラ名、場所ラベル、状態ラベル、UI文字がない。</div>
+        <div class="check">確認4: 成功/失敗の発話が、結果表示で使っても違和感が少ない。</div>
       </section>
 
-      <section class="grid" aria-label="Event art previews">
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/moving-stone/started.png" alt="謎の動く石 event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>謎の動く石</h2>
-            <p><code>/art/events/moving-stone/started.png</code></p>
-          </div>
-        </article>
+      <section class="section" aria-label="PNG event art and dialogue">
+        <h2>PNG背景ありのMVP 7イベント</h2>
+        <p class="section-note">
+          ここにある7件は、今回プレースホルダーSVGからPNG本画像へ差し替えたイベントです。
+        </p>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/shrine-prayer-wish/started.png" alt="お参りと願い event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>お参りと願い</h2>
-            <p><code>/art/events/shrine-prayer-wish/started.png</code></p>
-          </div>
-        </article>
+        <div class="grid">
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/moving-stone/started.png" alt="謎の動く石 event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">moving-stone</p>
+              <h3>謎の動く石</h3>
+              <p class="flavor">昨日とは違う場所に、小さな石が移動している。誰も動かした覚えはない。</p>
+              <p class="path">/art/events/moving-stone/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>この石、昨日ここにあった？</li><li>足あともないのに、変だね。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>次は、もっとよく見てみる。</li><li>石のまわり、少し冷たい。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>動く前の気配、分かったかも。</li><li>また、見失っちゃった。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/strange-grass-found/started.png" alt="変な草を拾う event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>変な草を拾う</h2>
-            <p><code>/art/events/strange-grass-found/started.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/shrine-prayer-wish/started.png" alt="お参りと願い event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">shrine-prayer-wish</p>
+              <h3>お参りと願い</h3>
+              <p class="flavor">小さな祠の前で、胸の奥にある願いが言葉を探している。</p>
+              <p class="path">/art/events/shrine-prayer-wish/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>何をお願いしようかな。</li><li>声に出すの、少し照れるね。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>ちゃんと、言えそうな気がする。</li><li>願いって、形があるのかな。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>今の願い、大事にしたい。</li><li>まだ、言葉にならないな。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/shared-nap-place/started.png" alt="同じ場所で昼寝 event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>同じ場所で昼寝</h2>
-            <p><code>/art/events/shared-nap-place/started.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/strange-grass-found/started.png" alt="変な草を拾う event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">strange-grass-found</p>
+              <h3>変な草を拾う</h3>
+              <p class="flavor">見慣れない草が、草むらの中で不思議に光っている。</p>
+              <p class="path">/art/events/strange-grass-found/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>この草、見たことない。</li><li>なんだか、いい匂いがする。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>持って帰って調べてみる？</li><li>そっと触ったほうがよさそう。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>扱い方、少し分かったよ。</li><li>うう、匂いが強すぎる。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/mysterious-footprints/started.png" alt="謎の足あと event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>謎の足あと</h2>
-            <p><code>/art/events/mysterious-footprints/started.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/shared-nap-place/started.png" alt="同じ場所で昼寝 event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">shared-nap-place</p>
+              <h3>同じ場所で昼寝</h3>
+              <p class="flavor">木陰のやわらかい場所で、眠気がゆっくり広がっている。</p>
+              <p class="path">/art/events/shared-nap-place/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>ここ、ちょうどいい日陰だね。</li><li>少しだけ、休んでいこう。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>なんだか、安心するね。</li><li>起こさないようにしよう。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>いい夢を見た気がする。</li><li>あ、先に起きてたんだ。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/legendary-big-fish/started.png" alt="伝説の大きな魚 event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>伝説の大きな魚</h2>
-            <p><code>/art/events/legendary-big-fish/started.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/mysterious-footprints/started.png" alt="謎の足あと event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">mysterious-footprints</p>
+              <h3>謎の足あと</h3>
+              <p class="flavor">広場に残された足あとが、どこかへ続いている。けれど主の姿は見えない。</p>
+              <p class="path">/art/events/mysterious-footprints/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>この足あと、誰のだろう。</li><li>途中で向きが変わってる。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>跡をたどってみよう。</li><li>消える前に見ておきたい。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>向かった先、分かったよ。</li><li>途中で消えちゃった。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card">
-          <div class="art-frame">
-            <img src="../art/events/shrine-fox-offering/started.png" alt="祠の油揚げ event art" />
-            <span class="badge">started</span>
-          </div>
-          <div class="caption">
-            <h2>祠の油揚げ</h2>
-            <p><code>/art/events/shrine-fox-offering/started.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/legendary-big-fish/started.png" alt="伝説の大きな魚 event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">legendary-big-fish</p>
+              <h3>伝説の大きな魚</h3>
+              <p class="flavor">水面の奥で、大きな影がゆっくり揺れた。見間違いとは思えない。</p>
+              <p class="path">/art/events/legendary-big-fish/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>今、水の中で何か動いた。</li><li>あれ、魚にしては大きいよ。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>静かにしてたら、見えるかな。</li><li>水面をよく見てみよう。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>見えた、本当に大きかった。</li><li>波だけが残ってる。</li></ul></div>
+              </div>
+            </div>
+          </article>
 
-        <article class="card fallback">
-          <div class="art-frame">
-            <img src="../art/events/_fallback/generic-event.png" alt="fallback event art" />
-            <span class="badge">fallback</span>
-          </div>
-          <div class="caption">
-            <h2>汎用fallback</h2>
-            <p><code>/art/events/_fallback/generic-event.png</code></p>
-          </div>
-        </article>
+          <article class="card">
+            <div class="art-frame">
+              <img src="../art/events/shrine-fox-offering/started.png" alt="祠の油揚げ event art" />
+              <span class="badge">started PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">shrine-fox-offering</p>
+              <h3>祠の油揚げ</h3>
+              <p class="flavor">祠のそばに、油揚げがそっと置かれている。誰かが来た気配だけが残っている。</p>
+              <p class="path">/art/events/shrine-fox-offering/started.png</p>
+              <div class="dialogue-grid">
+                <div class="dialogue-group"><strong>発生時</strong><ul><li>これ、誰が置いたのかな。</li><li>なんだか、いい匂いがする。</li></ul></div>
+                <div class="dialogue-group"><strong>介入後</strong><ul><li>そっとしておいた方がいいかな。</li><li>誰か、近くにいる気がする。</li></ul></div>
+                <div class="dialogue-group"><strong>成功 / 失敗</strong><ul><li>祠の空気が変わった。</li><li>いつの間にか消えてる。</li></ul></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card card--fallback">
+            <div class="art-frame">
+              <img src="../art/events/_fallback/generic-event.png" alt="fallback event art" />
+              <span class="badge">fallback PNG</span>
+            </div>
+            <div class="caption">
+              <p class="template-id">fallback</p>
+              <h3>汎用fallback</h3>
+              <p class="flavor">固有画像がないイベントで使う汎用背景です。</p>
+              <p class="path">/art/events/_fallback/generic-event.png</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" aria-label="Authored dialogue for daily events">
+        <h2>固有画像なしの日常系5イベント</h2>
+        <p class="section-note">
+          ここにある5件は #319 の発話確認対象です。固有PNG背景はまだなく、画像が必要な場合はfallback背景を使います。
+        </p>
+
+        <div class="fallback-grid">
+          <article class="mini-card">
+            <p class="template-id">daily-sandbox-observation</p>
+            <h3>小さな日常</h3>
+            <p class="flavor">いつもの箱庭に、少しだけ違う空気が流れている。</p>
+            <div class="dialogue-group"><strong>発生時</strong><ul><li>今日は、風がやわらかいね。</li><li>なんだか、少し違う日みたい。</li></ul></div>
+            <div class="dialogue-group"><strong>介入後</strong><ul><li>今の感じ、覚えておきたいな。</li><li>少しだけ、前に進めそう。</li></ul></div>
+          </article>
+
+          <article class="mini-card">
+            <p class="template-id">small-disagreement</p>
+            <h3>言葉の行き違い</h3>
+            <p class="flavor">何気ない一言が、少しだけ心の距離を揺らしている。</p>
+            <div class="dialogue-group"><strong>発生時</strong><ul><li>今の、そういう意味じゃなくて。</li><li>うまく伝わらなかったかも。</li></ul></div>
+            <div class="dialogue-group"><strong>介入後</strong><ul><li>少し、落ち着いて話せそう。</li><li>もう一度、言い直してみる。</li></ul></div>
+          </article>
+
+          <article class="mini-card">
+            <p class="template-id">shared-work</p>
+            <h3>共同作業</h3>
+            <p class="flavor">小さな作業を通して、誰かと呼吸を合わせる時間が生まれている。</p>
+            <div class="dialogue-group"><strong>発生時</strong><ul><li>ここ、手伝ってくれる？</li><li>一緒なら、早く終わりそう。</li></ul></div>
+            <div class="dialogue-group"><strong>介入後</strong><ul><li>息が合ってきた気がする。</li><li>ひとりより、ずっと楽だね。</li></ul></div>
+          </article>
+
+          <article class="mini-card">
+            <p class="template-id">quiet-trial</p>
+            <h3>静かな試練</h3>
+            <p class="flavor">誰にも見えにくい場所で、小さな勇気が試されている。</p>
+            <div class="dialogue-group"><strong>発生時</strong><ul><li>これ、ちゃんとできるかな。</li><li>少しだけ、怖いかも。</li></ul></div>
+            <div class="dialogue-group"><strong>介入後</strong><ul><li>もう少し、やってみる。</li><li>逃げないでいられそう。</li></ul></div>
+          </article>
+
+          <article class="mini-card">
+            <p class="template-id">small-sadness</p>
+            <h3>小さな沈黙</h3>
+            <p class="flavor">言葉にならない気持ちが、静かな空気の中に残っている。</p>
+            <div class="dialogue-group"><strong>発生時</strong><ul><li>今日は、少し静かにしたい。</li><li>なんでもない、と思う。</li></ul></div>
+            <div class="dialogue-group"><strong>介入後</strong><ul><li>少しだけ、軽くなった。</li><li>ここにいても、いいのかな。</li></ul></div>
+          </article>
+        </div>
       </section>
     </main>
   </body>
