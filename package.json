@@ -18,7 +18,12 @@
     "sidekick:watch": "node tools/sidekick/job-watcher.mjs",
     "sidekick:event-image": "node tools/sidekick/event-image-request.mjs",
     "security:git-boundary": "node tools/security/check-git-boundary.mjs --base origin/main",
-    "security:pr-text": "node tools/security/check-pr-text-boundary.mjs"
+    "security:pr-text": "node tools/security/check-pr-text-boundary.mjs",
+    "assetgen:server": "node tools/app-server/asset-generation-server.mjs",
+    "assetgen:guard": "node tools/security/check-no-image-api-key-usage.mjs",
+    "assetgen:intake": "node tools/sidekick/character-asset-bundle-intake.mjs",
+    "assetgen:expressions": "node tools/sidekick/portrait-expression-intake.mjs",
+    "assetgen:derive-icon": "node tools/sidekick/derive-icon-from-sprite.mjs"
   },
   "dependencies": {
     "react": "latest",
