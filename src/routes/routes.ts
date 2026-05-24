@@ -9,6 +9,7 @@ export type AppRouteId =
   | "character-editor"
   | "sidekick-setup"
   | "dialogue-preview"
+  | "assetgen"
   | "not-found";
 
 export interface AppRoute {
@@ -56,6 +57,10 @@ export function parseRoute(pathname: string): AppRoute {
 
   if (pathname === "/dialogue-preview") {
     return { id: "dialogue-preview", path: "/dialogue-preview", label: "発話プレビュー" };
+  }
+
+  if (pathname === "/assetgen") {
+    return { id: "assetgen", path: "/assetgen", label: "キャラ素材生成" };
   }
 
   const passportMatch = pathname.match(/^\/passports\/([^/]+)$/);
