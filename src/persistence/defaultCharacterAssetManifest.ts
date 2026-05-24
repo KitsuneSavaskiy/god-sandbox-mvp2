@@ -61,8 +61,8 @@ const RYO_PO_PREVIEW_COMBINED_MOTION_METADATA: SpriteSheetMetadata = {
   rows: 14,
   motions: {
     idle: { row: 0, frames: 6 },
-    "walk-right": { row: 2, frames: 6 },
-    "walk-left": { row: 1, frames: 6 },
+    "walk-right": { row: 1, frames: 6 },
+    "walk-left": { row: 2, frames: 6 },
     waving: { row: 3, frames: 6 },
     jumping: { row: 4, frames: 6 },
     failed: { row: 5, frames: 6 },
