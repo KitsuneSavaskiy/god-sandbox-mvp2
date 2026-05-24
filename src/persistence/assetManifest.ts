@@ -24,6 +24,7 @@ export type SpriteSheetKind = "motion" | "extended";
 export type SpriteSheetMotionSlot = {
   row: number;
   frames: number;
+  flipX?: boolean;
 };
 
 export type SpriteSheetMetadata = {
