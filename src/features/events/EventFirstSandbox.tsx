@@ -31,6 +31,7 @@ import {
   createObservedDialogueCandidates,
   selectVisibleObservedDialogueCandidates,
 } from "../../domain/dialogue.js";
+import { resolveEventPresentation } from "../../domain/eventPresentation.js";
 import type {
   CharacterId,
   DialogueTrigger,
@@ -437,6 +438,10 @@ export function EventFirstSandbox({
     useState<SandboxBackgroundState | null>(null);
 
   const currentEvent = selectCurrentEvent(runtimeState);
+  const eventPresentation = useMemo(
+    () => resolveEventPresentation(currentEvent.templateId),
+    [currentEvent.templateId],
+  );
   const observationPreset = selectObservationPreset(runtimeState);
   const activeCharacters = selectActiveCharacters(runtimeState);
   const eventArt = resolveEventArt(currentEvent.templateId);
@@ -1699,8 +1704,20 @@ export function EventFirstSandbox({
             </div>
           ) : (
             <div className="event-first-sandbox__event-window-body">
+              <div className="event-first-sandbox__event-presentation">
+                <h3
+                  id="event-first-sandbox-event-window-title"
+                  className="event-first-sandbox__event-title"
+                >
+                  {eventPresentation.displayName}
+                </h3>
+                <p className="event-first-sandbox__event-flavor">
+                  {eventPresentation.flavorText}
+                </p>
+                <p className="event-first-sandbox__event-summary">{currentEvent.summary}</p>
+              </div>
               <div className="event-first-sandbox__event-window-status">
-                <strong id="event-first-sandbox-event-window-title">見守り中</strong>
+                <strong>見守り中</strong>
                 <span>出来事の絵を確認してから、関わり方を選びます。</span>
               </div>
               <div className="event-first-sandbox__event-art-frame">
