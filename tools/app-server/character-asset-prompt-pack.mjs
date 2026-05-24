@@ -144,32 +144,37 @@ export async function buildPromptPack(params) {
     buildStandingBasePrompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
   );
 
-  // --- Expression prompts (always generated regardless of lanes) ---
-  const expressions = ["neutral", "happy", "angry", "sad", "surprised"];
-  for (const expr of expressions) {
-    const exprPath = path.join(expressionsDir, `${expr}.prompt.md`);
-    write(exprPath, buildExpressionPrompt({ CHARACTER, expression: expr, portraitPath }));
+  // --- Expression prompts — only if portrait-expressions lane is active ---
+  if (lanes.includes("portrait-expressions")) {
+    const expressions = ["neutral", "happy", "angry", "sad", "surprised"];
+    for (const expr of expressions) {
+      const exprPath = path.join(expressionsDir, `${expr}.prompt.md`);
+      write(exprPath, buildExpressionPrompt({ CHARACTER, expression: expr, portraitPath }));
+    }
   }
 
-  // --- Sprite sheet prompts (based on previewMode) ---
-  if (previewMode === "po-combined") {
-    const combinedPath = path.join(spritesDir, "combined.prompt.md");
-    write(
-      combinedPath,
-      buildCombinedSpritePrompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
-    );
-  } else {
-    // canonical-two-sheet
-    const sheet1Path = path.join(spritesDir, "sheet1.prompt.md");
-    const sheet2Path = path.join(spritesDir, "sheet2.prompt.md");
-    write(
-      sheet1Path,
-      buildSheet1Prompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
-    );
-    write(
-      sheet2Path,
-      buildSheet2Prompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
-    );
+  // --- Sprite sheet prompts — only if resident-sprite-sheet lane is active ---
+  // derived-icon is output metadata only; no prompt file to generate
+  if (lanes.includes("resident-sprite-sheet")) {
+    if (previewMode === "po-combined") {
+      const combinedPath = path.join(spritesDir, "combined.prompt.md");
+      write(
+        combinedPath,
+        buildCombinedSpritePrompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
+      );
+    } else {
+      // canonical-two-sheet
+      const sheet1Path = path.join(spritesDir, "sheet1.prompt.md");
+      const sheet2Path = path.join(spritesDir, "sheet2.prompt.md");
+      write(
+        sheet1Path,
+        buildSheet1Prompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
+      );
+      write(
+        sheet2Path,
+        buildSheet2Prompt({ CHARACTER, personality: personality.trim(), tone: tone.trim(), ageNum, portraitPath }),
+      );
+    }
   }
 
   return { packDir: path.relative(root, packDir), files: writtenFiles };
@@ -239,7 +244,7 @@ Keep all elements identical to the standing base except the facial expression.
 }
 
 function buildCombinedSpritePrompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
-  return `# Combined Sprite Sheet Prompt — ${CHARACTER} (PO Preview)
+  return `# Combined Sprite Sheet Prompt — ${CHARACTER} (PO Combined / po-combined)
 
 ## Character Reference
 - Portrait: ${portraitPath}
@@ -249,18 +254,23 @@ function buildCombinedSpritePrompt({ CHARACTER, personality, tone, ageNum, portr
 - Age: ${ageNum}
 
 ## Sheet Layout
-Single combined sheet: 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
+Single combined sheet: 826×1904 px (7 columns × 14 rows, each frame 118×136 px)
 
-Row mapping (PO combined layout):
-- Row 0: Walk-down (8 frames)
-- Row 1: Walk-left (8 frames)
-- Row 2: Walk-right (8 frames)
-- Row 3: Walk-up (8 frames)
-- Row 4: Idle-down (4 frames, cols 0–3)
-- Row 5: Idle-left (4 frames, cols 0–3)
-- Row 6: Idle-right (4 frames, cols 0–3)
-- Row 7: Idle-up (4 frames, cols 0–3)
-- Row 8: Expressions (neutral / happy / angry / sad / surprised — cols 0–4)
+Row mapping (po-combined layout):
+- row 0: idle (7 frames)
+- row 1: walk-right (7 frames)
+- row 2: walk-left (7 frames)
+- row 3: waving (7 frames)
+- row 4: jumping (7 frames)
+- row 5: failed (7 frames)
+- row 6: waiting (7 frames)
+- row 7: review (7 frames)
+- row 8: walk-up / walk-back (7 frames)
+- row 9: walk-down / walk-forward (7 frames)
+- row 10: emote-happy (7 frames)
+- row 11: emote-angry (7 frames)
+- row 12: emote-sad (7 frames)
+- row 13: emote-surprised (7 frames)
 
 ## Generation Instructions
 - Same character identity as [${CHARACTER}]
@@ -273,7 +283,7 @@ Row mapping (PO combined layout):
 }
 
 function buildSheet1Prompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
-  return `# Sprite Sheet 1 — Motion — ${CHARACTER} (Canonical Two-Sheet)
+  return `# Sprite Sheet 1 — Motion (resident-sprite-sheet.png) — ${CHARACTER} (Canonical Two-Sheet)
 
 ## Character Reference
 - Portrait: ${portraitPath}
@@ -283,12 +293,18 @@ function buildSheet1Prompt({ CHARACTER, personality, tone, ageNum, portraitPath 
 - Age: ${ageNum}
 
 ## Sheet Layout
-Sheet 1 (motion): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
+Sheet 1 (motion-sheet, resident-sprite-sheet.png): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
 
-Row mapping:
-- Rows 0–3: Walk cycle (down, left, right, up) — 8 frames each
-- Rows 4–7: Idle animation (down, left, right, up) — 4 frames each (cols 0–3)
-- Row 8: Reserved (fully transparent)
+Row mapping (canonical motion-sheet):
+- row 0: idle (8 frames)
+- row 1: walk-right (8 frames)
+- row 2: walk-left (8 frames)
+- row 3: waving (8 frames)
+- row 4: jumping (8 frames)
+- row 5: failed (8 frames)
+- row 6: waiting (8 frames)
+- row 7: running (8 frames)
+- row 8: review (8 frames)
 
 ## Generation Instructions
 - Same character identity as [${CHARACTER}]
@@ -301,7 +317,7 @@ Row mapping:
 }
 
 function buildSheet2Prompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
-  return `# Sprite Sheet 2 — Extended / Expressions — ${CHARACTER} (Canonical Two-Sheet)
+  return `# Sprite Sheet 2 — Extended (resident-sprite-sheet-extended.png) — ${CHARACTER} (Canonical Two-Sheet)
 
 ## Character Reference
 - Portrait: ${portraitPath}
@@ -311,25 +327,29 @@ function buildSheet2Prompt({ CHARACTER, personality, tone, ageNum, portraitPath 
 - Age: ${ageNum}
 
 ## Sheet Layout
-Sheet 2 (extended): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
+Sheet 2 (extended-sheet, resident-sprite-sheet-extended.png): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
 
-Row mapping:
-- Row 0: Expression stills (neutral, happy, angry, sad, surprised — cols 0–4)
-- Row 1: Run cycle (down) — 8 frames
-- Row 2: Run cycle (up) — 8 frames
-- Row 3: Sit/crouch (down, left, right, up — cols 0–3)
-- Rows 4–8: Reserved (fully transparent)
+Row mapping (canonical extended-sheet):
+- row 0: walk-up (8 frames)
+- row 1: walk-down (8 frames)
+- row 2: walk-forward (8 frames)
+- row 3: walk-back (8 frames)
+- row 4: emote-happy (8 frames)
+- row 5: emote-angry (8 frames)
+- row 6: emote-sad (8 frames)
+- row 7: emote-surprised (8 frames)
+- row 8: spare (transparent or duplicate row 7)
 
 ## Consistency Requirements (mandatory)
 - same character identity as [${CHARACTER}]
 - same hair, costume, body shape, pose, camera angle, lighting
 - transparent background (alpha channel)
-- only facial expression changes (for expression row)
+- only facial expression changes (for emote rows)
 - no labels, no text, no frame markers, no watermarks
 
 ## Generation Instructions
-- Keep all non-expression elements identical to Sheet 1
-- Expression row: only facial expression changes between columns
+- Keep all non-emote elements identical to Sheet 1
+- Emote rows: only facial expression changes between columns
 - No labels, no text, no frame markers, no watermarks
 - Fill unused cells with fully transparent pixels
 `;

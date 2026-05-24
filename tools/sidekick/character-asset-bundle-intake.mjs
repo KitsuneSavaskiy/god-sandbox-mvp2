@@ -12,7 +12,7 @@
  * Both .godsandbox/jobs/ and assets/generated/ are gitignored.
  *
  * Usage:
- *   npm run sidekick:bundle-intake -- --slug ryo --name "Ryo" --personality "明るい" \
+ *   npm run assetgen:intake -- --slug ryo --name "Ryo" --personality "明るい" \
  *     --tone "タメ口" --age 17 --portrait <path> \
  *     [--lanes resident-sprite-sheet,portrait-expressions,derived-icon] \
  *     [--preview-mode po-combined|canonical-two-sheet] \

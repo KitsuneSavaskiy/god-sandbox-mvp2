@@ -23,7 +23,8 @@
     "assetgen:guard": "node tools/security/check-no-image-api-key-usage.mjs",
     "assetgen:intake": "node tools/sidekick/character-asset-bundle-intake.mjs",
     "assetgen:expressions": "node tools/sidekick/portrait-expression-intake.mjs",
-    "assetgen:derive-icon": "node tools/sidekick/derive-icon-from-sprite.mjs"
+    "assetgen:derive-icon": "node tools/sidekick/derive-icon-from-sprite.mjs",
+    "assetgen:test": "node tools/app-server/test-dry-run.mjs"
   },
   "dependencies": {
     "react": "latest",

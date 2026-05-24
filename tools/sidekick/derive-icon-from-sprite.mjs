@@ -7,7 +7,12 @@
  *
  * Sprite sheet spec:
  *   1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
- *   Default: row 0 (walk-down), frame 0 (front-facing)
+ *
+ * Sheet kinds and defaults:
+ *   --kind extended  (default): Sheet 2 row 1 (walk-down), frame 0 — front-facing
+ *   --kind motion    with --allow-idle-fallback: Sheet 1 row 0 (idle), frame 0
+ *   --kind motion    without --allow-idle-fallback: refuses to run (row 0 is idle)
+ *   --kind po-combined / combined: requires explicit --row, --frame-width, --frame-height, --columns
  *
  * Output (gitignored):
  *   assets/generated/residents/<slug>/incoming/icons/icon-candidate.png
@@ -17,7 +22,10 @@
  *   node tools/sidekick/derive-icon-from-sprite.mjs \\
  *     --slug <slug> \\
  *     --sprite-sheet <path> \\
+ *     [--kind extended|motion|po-combined|combined] \\
  *     [--row <n>] [--frame <n>] \\
+ *     [--frame-width <n>] [--frame-height <n>] [--columns <n>] \\
+ *     [--allow-idle-fallback] \\
  *     [--output-dir <dir>] \\
  *     [--dry-run]
  */
@@ -57,16 +65,23 @@ function printHelp() {
 Extracts a single frame from a resident sprite sheet as an icon candidate PNG.
 No AI generation — pure pixel extraction using node:zlib.
 
-Default: walk-down row (row 0), frame 0 (front-facing).
+Default (--kind extended): Sheet 2 row 1 (walk-down), frame 0 — front-facing.
+For --kind motion: requires --allow-idle-fallback (row 0 is idle, not walk-facing).
+For --kind po-combined / combined: requires explicit --row, --frame-width, --frame-height, --columns.
 
 Usage:
   node tools/sidekick/derive-icon-from-sprite.mjs \\
     --slug <slug> \\
     --sprite-sheet <path> \\
-    [--row <n>]         Row index (default: 0 = walk-down)
-    [--frame <n>]       Frame index within row (default: 0)
-    [--output-dir <dir>] Override output directory
-    [--dry-run]         Validate only; do not write files
+    [--kind extended|motion|po-combined|combined]   Sheet kind (default: extended)
+    [--row <n>]             Row index (kind-specific default)
+    [--frame <n>]           Frame index within row (default: 0)
+    [--frame-width <n>]     Frame width in px (required for po-combined/combined)
+    [--frame-height <n>]    Frame height in px (required for po-combined/combined)
+    [--columns <n>]         Number of columns (required for po-combined/combined)
+    [--allow-idle-fallback] Allow motion sheet row 0 (idle) as icon source
+    [--output-dir <dir>]    Override output directory
+    [--dry-run]             Validate only; do not write files
     [--help]
 
 Expected sheet dimensions: ${SHEET_WIDTH}×${SHEET_HEIGHT} px (${COLUMNS}×${ROWS} frames of ${FRAME_WIDTH}×${FRAME_HEIGHT})
@@ -79,19 +94,52 @@ Output (both gitignored):
 }
 
 function parseArgs(argv) {
-  const args = { row: 0, frame: 0 };
+  // row not given a default here — we determine it per --kind below
+  const args = { frame: 0, kind: "extended" };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const val = argv[i + 1];
     if (flag === "--slug" && val) { args.slug = val; i++; }
     else if (flag === "--sprite-sheet" && val) { args.spriteSheet = val; i++; }
+    else if (flag === "--kind" && val) { args.kind = val; i++; }
     else if (flag === "--row" && val) { args.row = parseInt(val, 10); i++; }
     else if (flag === "--frame" && val) { args.frame = parseInt(val, 10); i++; }
+    else if (flag === "--frame-width" && val) { args.frameWidth = parseInt(val, 10); i++; }
+    else if (flag === "--frame-height" && val) { args.frameHeight = parseInt(val, 10); i++; }
+    else if (flag === "--columns" && val) { args.columns = parseInt(val, 10); i++; }
+    else if (flag === "--allow-idle-fallback") { args.allowIdleFallback = true; }
     else if (flag === "--output-dir" && val) { args.outputDir = val; i++; }
     else if (flag === "--dry-run") { args.dryRun = true; }
     else if (flag === "--help" || flag === "-h") { args.help = true; }
   }
   return args;
+}
+
+/**
+ * SECURITY GUARD: Reject writes to public/art/**, src/**, or public/** (except warning).
+ * Only allows paths under assets/generated/ or .godsandbox/.
+ * @param {string} absPath
+ */
+function assertGeneratedOutputBoundary(absPath) {
+  const rel = path.relative(repoRoot, absPath).replaceAll("\\", "/");
+  if (rel.startsWith("public/art/")) {
+    console.error(`Error: SECURITY: Refusing to write to public/art/: ${rel}. Output must go to assets/generated/ or .godsandbox/ only.`);
+    process.exit(1);
+  }
+  if (rel.startsWith("src/")) {
+    console.error(`Error: SECURITY: Refusing to write to src/: ${rel}. Output must go to assets/generated/ or .godsandbox/ only.`);
+    process.exit(1);
+  }
+  if (rel.startsWith("public/")) {
+    // public/ (but not public/art/ — already caught above) — warn
+    console.warn(`Warning: Writing to public/ path: ${rel}. Only assets/generated/ and .godsandbox/ are the intended output boundaries.`);
+  }
+  if (!rel.startsWith("assets/generated/") && !rel.startsWith(".godsandbox/") && !rel.startsWith("public/")) {
+    // Allow public/ paths (with warning above), assets/generated/, .godsandbox/
+    // But reject anything else if it's not those
+    // Note: outputDir override is user-controlled; warn for unexpected paths but don't block
+    console.warn(`Warning: Output path "${rel}" is outside the expected assets/generated/ and .godsandbox/ boundaries.`);
+  }
 }
 
 function ensureDir(dirPath) {
@@ -458,12 +506,75 @@ async function main() {
     );
   }
 
-  const row = args.row ?? 0;
+  const kind = args.kind ?? "extended";
+  const validKinds = ["extended", "motion", "po-combined", "combined"];
+  if (!validKinds.includes(kind)) {
+    console.error(`Error: --kind "${kind}" is invalid. Valid: ${validKinds.join(", ")}`);
+    process.exit(1);
+  }
+
+  // po-combined / combined require explicit --row, --frame-width, --frame-height, --columns
+  if (kind === "po-combined" || kind === "combined") {
+    if (args.row === undefined || args.row === null || isNaN(args.row)) {
+      console.error(`Error: --kind ${kind} requires explicit --row.`);
+      process.exit(1);
+    }
+    if (!args.frameWidth || isNaN(args.frameWidth)) {
+      console.error(`Error: --kind ${kind} requires explicit --frame-width.`);
+      process.exit(1);
+    }
+    if (!args.frameHeight || isNaN(args.frameHeight)) {
+      console.error(`Error: --kind ${kind} requires explicit --frame-height.`);
+      process.exit(1);
+    }
+    if (!args.columns || isNaN(args.columns)) {
+      console.error(`Error: --kind ${kind} requires explicit --columns.`);
+      process.exit(1);
+    }
+  }
+
+  // Determine row based on kind
+  let row;
+  let iconSourceMotionKey;
+  let iconSourceReason;
+
+  if (kind === "extended") {
+    // Sheet 2 row 1 = walk-down, front-facing
+    row = args.row !== undefined ? args.row : 1;
+    iconSourceMotionKey = row === 1 ? "walk-down" : `row-${row}`;
+    iconSourceReason = row === 1
+      ? "Sheet 2 row 1 frame 0 (walk-down, front-facing)"
+      : `Sheet 2 row ${row} frame ${args.frame ?? 0}`;
+  } else if (kind === "motion") {
+    // Sheet 1 row 0 = idle — refuse unless --allow-idle-fallback
+    if (args.row === undefined) {
+      if (!args.allowIdleFallback) {
+        console.error(
+          "Error: motion sheet row 0 is idle, not a walk-facing frame; " +
+          "use --kind extended or add --allow-idle-fallback for explicit idle source",
+        );
+        process.exit(1);
+      }
+      row = 0;
+    } else {
+      row = args.row;
+    }
+    iconSourceMotionKey = row === 0 ? "idle" : `row-${row}`;
+    iconSourceReason = row === 0
+      ? "Sheet 1 row 0 frame 0 (idle, explicit fallback)"
+      : `Sheet 1 row ${row} frame ${args.frame ?? 0}`;
+  } else {
+    // po-combined / combined — explicit row required
+    row = args.row;
+    iconSourceMotionKey = `row-${row}`;
+    iconSourceReason = `${kind} row ${row} frame ${args.frame ?? 0}`;
+  }
+
   const frame = args.frame ?? 0;
 
-  // Compute actual frame dimensions from sheet size (use canonical if matches, else compute)
-  const actualFrameW = FRAME_WIDTH;
-  const actualFrameH = FRAME_HEIGHT;
+  // Compute actual frame dimensions
+  const actualFrameW = (kind === "po-combined" || kind === "combined") ? args.frameWidth : FRAME_WIDTH;
+  const actualFrameH = (kind === "po-combined" || kind === "combined") ? args.frameHeight : FRAME_HEIGHT;
 
   const xOffset = frame * actualFrameW;
   const yOffset = row * actualFrameH;
@@ -484,21 +595,16 @@ async function main() {
     process.exit(1);
   }
 
-  const motionKey = row === 0 ? "walk-down" : `row-${row}`;
-  const iconSourceReason =
-    row === 0 && frame === 0
-      ? "walk-down row frame 0 (front-facing)"
-      : `row ${row} frame ${frame}`;
-
   const sheetRelPath = path.relative(repoRoot, sheetResolved);
 
   // --- Dry-run ---
   if (args.dryRun) {
     console.log(`\n[dry-run] Derive Icon From Sprite Sheet`);
     console.log(`  slug:        ${args.slug}`);
+    console.log(`  kind:        ${kind}`);
     console.log(`  sheet:       ${sheetRelPath}`);
     console.log(`  dimensions:  ${sheetW}×${sheetH}`);
-    console.log(`  row:         ${row}  (${motionKey})`);
+    console.log(`  row:         ${row}  (${iconSourceMotionKey})`);
     console.log(`  frame:       ${frame}`);
     console.log(`  extract:     ${actualFrameW}×${actualFrameH} at (${xOffset}, ${yOffset})`);
     console.log(
@@ -513,8 +619,9 @@ async function main() {
 
   // --- Extract pixels ---
   console.log(`\nExtracting icon from sprite sheet...`);
+  console.log(`  kind:    ${kind}`);
   console.log(`  sheet:   ${sheetRelPath}  (${sheetW}×${sheetH})`);
-  console.log(`  row:     ${row}  (${motionKey})`);
+  console.log(`  row:     ${row}  (${iconSourceMotionKey})`);
   console.log(`  frame:   ${frame}`);
   console.log(`  region:  ${actualFrameW}×${actualFrameH} at offset (${xOffset}, ${yOffset})`);
 
@@ -538,15 +645,19 @@ async function main() {
     ? path.resolve(repoRoot, args.outputDir)
     : path.join(repoRoot, "assets", "generated", "residents", args.slug, "incoming", "icons");
 
-  ensureDir(outputDir);
-
   const iconPath = path.join(outputDir, "icon-candidate.png");
   const reportPath = path.join(outputDir, "icon-source-report.json");
+
+  // Apply path guard before any write
+  assertGeneratedOutputBoundary(iconPath);
+  assertGeneratedOutputBoundary(reportPath);
+
+  ensureDir(outputDir);
 
   writeFileSync(iconPath, iconBuffer);
 
   const report = {
-    iconSourceMotionKey: motionKey,
+    iconSourceMotionKey,
     iconSourceFrameIndex: frame,
     iconSourceReason,
     sourceSheetPath: sheetRelPath,

@@ -7,7 +7,7 @@
  * No external URLs are contacted — all work is dispatched via gen2-bridge.mjs.
  *
  * Job status files:   .godsandbox/jobs/local-app-server/<jobId>.json  (gitignored)
- * Pending sidekick:   .godsandbox/jobs/pending/<jobId>.json           (gitignored)
+ * Watcher handoff:    .godsandbox/jobs/<slug>-request.json            (gitignored, picked up by job-watcher.mjs)
  *
  * SECURITY: Never writes to public/art/**. A guard check runs before every write.
  *
@@ -21,7 +21,7 @@ import { randomBytes } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { createGen2Bridge } from "./gen2-bridge.mjs";
+import { createGen2Bridge, resolveGen2BridgeConfig } from "./gen2-bridge.mjs";
 import { buildPromptPack } from "./character-asset-prompt-pack.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -34,7 +34,9 @@ const VALID_BRIDGE_MODES = ["local-cli", "hot-folder", "manual-drop", "fake"];
 
 // .godsandbox/jobs/ is gitignored — safe for ephemeral job state
 const JOBS_APP_SERVER_DIR = path.join(repoRoot, ".godsandbox", "jobs", "local-app-server");
-const JOBS_PENDING_DIR = path.join(repoRoot, ".godsandbox", "jobs", "pending");
+const JOBS_WATCHER_DIR = path.join(repoRoot, ".godsandbox", "jobs");
+
+const MAX_BODY_BYTES = 1024 * 1024; // 1 MB
 
 // Loopback addresses that are always permitted
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
@@ -76,8 +78,22 @@ function generateJobId(prefix = "job") {
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
+    // Reject if Content-Length header alone exceeds limit
+    const contentLength = parseInt(req.headers["content-length"] ?? "0", 10);
+    if (!isNaN(contentLength) && contentLength > MAX_BODY_BYTES) {
+      return reject(Object.assign(new Error("Request body too large."), { statusCode: 413 }));
+    }
+
     const chunks = [];
-    req.on("data", (chunk) => chunks.push(chunk));
+    let totalBytes = 0;
+    req.on("data", (chunk) => {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_BODY_BYTES) {
+        req.destroy();
+        return reject(Object.assign(new Error("Request body too large."), { statusCode: 413 }));
+      }
+      chunks.push(chunk);
+    });
     req.on("end", () => {
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
@@ -188,8 +204,9 @@ async function handlePostCharacters(req, res) {
   let body;
   try {
     body = await readJsonBody(req);
-  } catch {
-    return sendJson(res, 400, { error: "Invalid JSON body." });
+  } catch (err) {
+    const code = err.statusCode === 413 ? 413 : 400;
+    return sendJson(res, code, { error: err.message || "Invalid JSON body." });
   }
 
   const validation = validateCharacterRequestBody(body);
@@ -199,12 +216,31 @@ async function handlePostCharacters(req, res) {
 
   const data = validation.data;
 
-  // Derive assetBundleId from displayName if not provided
-  const derivedId = (data.assetBundleId != null)
+  // Derive slug from assetBundleId or displayName
+  // lowercase, replace spaces with hyphens, strip non-alnum-hyphen, truncate 60, ensure starts with letter/digit
+  const slug = (data.assetBundleId != null)
     ? data.assetBundleId
-    : (data.displayName.toLowerCase().replace(/[^a-z0-9]/g, "-").replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-").slice(0, 60) || "character");
-  const assetBundleId = derivedId;
+    : (() => {
+        let s = data.displayName.toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "")
+          .replace(/^-+|-+$/g, "")
+          .replace(/-{2,}/g, "-")
+          .slice(0, 60);
+        // ensure starts with letter/digit
+        s = s.replace(/^[^a-z0-9]+/, "");
+        return s || "character";
+      })();
 
+  // Validate bridge config before creating job (returns 400 on env-var issues)
+  let bridgeConfig;
+  try {
+    bridgeConfig = resolveGen2BridgeConfig(data.gen2Bridge);
+  } catch (err) {
+    return sendJson(res, 400, { error: `gen2Bridge config error: ${err.message}` });
+  }
+
+  const assetBundleId = slug;
   const jobId = generateJobId(assetBundleId);
 
   // Build the job record
@@ -227,23 +263,23 @@ async function handlePostCharacters(req, res) {
     gen2Bridge: data.gen2Bridge,
   };
 
-  // Write status file — .godsandbox/jobs/ is gitignored
+  // Write status file — .godsandbox/jobs/local-app-server/ is gitignored
   const statusFilePath = path.join(JOBS_APP_SERVER_DIR, `${jobId}.json`);
   safeWriteFile(statusFilePath, JSON.stringify(job, null, 2) + "\n");
 
-  // Write pending sidekick request — .godsandbox/jobs/pending/ is gitignored
-  const pendingFilePath = path.join(JOBS_PENDING_DIR, `${jobId}.json`);
+  // Write watcher-compatible request file — .godsandbox/jobs/<slug>-request.json
+  // Fields match what job-watcher.mjs expects: { slug, displayName, personality, tone, age, portraitPath }
+  const watcherFilePath = path.join(JOBS_WATCHER_DIR, `${slug}-request.json`);
   safeWriteFile(
-    pendingFilePath,
+    watcherFilePath,
     JSON.stringify(
       {
-        jobId,
-        assetBundleId,
-        requestedAt: new Date().toISOString(),
-        characterProfile: job.characterProfile,
-        lanes: data.lanes,
-        previewMode: data.previewMode,
-        gen2Bridge: data.gen2Bridge,
+        slug,
+        displayName: data.displayName,
+        personality: data.personality,
+        tone: data.tone,
+        age: data.age,
+        portraitPath: data.portraitPath,
       },
       null,
       2,
@@ -251,14 +287,14 @@ async function handlePostCharacters(req, res) {
   );
 
   // Dispatch to gen2 bridge and build prompt pack asynchronously
-  dispatchJob(jobId, assetBundleId, job, data, statusFilePath).catch((err) => {
+  dispatchJob(jobId, assetBundleId, job, data, bridgeConfig, statusFilePath).catch((err) => {
     console.error(`[asset-gen-server] Job ${jobId} dispatch error: ${err.message}`);
   });
 
   sendJson(res, 202, { jobId, status: "pending" });
 }
 
-async function dispatchJob(jobId, assetBundleId, job, data, statusFilePath) {
+async function dispatchJob(jobId, assetBundleId, job, data, bridgeConfig, statusFilePath) {
   try {
     // Build prompt pack
     const pack = await buildPromptPack({
@@ -278,8 +314,8 @@ async function dispatchJob(jobId, assetBundleId, job, data, statusFilePath) {
       promptPackFiles: pack.files,
     });
 
-    // Prepare gen2 bridge handoff
-    const bridge = createGen2Bridge({ mode: data.gen2Bridge });
+    // Prepare gen2 bridge handoff (config comes from env vars, not HTTP body)
+    const bridge = createGen2Bridge(bridgeConfig);
     const handoff = await bridge.prepareJob(job);
 
     updateJobStatus(statusFilePath, {
@@ -448,8 +484,8 @@ Endpoints:
   POST /api/local/asset-generation/jobs/:jobId/cancel
 
 Job files go to:
-  .godsandbox/jobs/local-app-server/<jobId>.json  (gitignored)
-  .godsandbox/jobs/pending/<jobId>.json           (gitignored)
+  .godsandbox/jobs/local-app-server/<jobId>.json  (gitignored, for GET /jobs/:jobId)
+  .godsandbox/jobs/<slug>-request.json            (gitignored, picked up by job-watcher.mjs)
 `);
 }
 
@@ -491,7 +527,7 @@ function main() {
 
   // Ensure job dirs exist — these are gitignored
   ensureDir(JOBS_APP_SERVER_DIR);
-  ensureDir(JOBS_PENDING_DIR);
+  ensureDir(JOBS_WATCHER_DIR);
 
   if (args.dryRun) {
     // Dry-run: validate config then exit immediately
@@ -504,7 +540,8 @@ function main() {
   server.listen(port, host, () => {
     console.log(`[asset-gen-server] Listening on http://${host}:${port}`);
     console.log(`[asset-gen-server] loopbackOnly: ${LOOPBACK_HOSTS.has(host)}`);
-    console.log(`[asset-gen-server] Job dir: .godsandbox/jobs/local-app-server/ (gitignored)`);
+    console.log(`[asset-gen-server] Job dir: .godsandbox/jobs/ (gitignored)`);
+    console.log(`[asset-gen-server] Status dir: .godsandbox/jobs/local-app-server/ (gitignored)`);
   });
 
   server.on("error", (err) => {

@@ -65,15 +65,18 @@ GodSandbox Web アプリ自体は画像生成 API を直接呼びません。
 
 ## GEN2 Bridge モード
 
-| モード | 用途 | handoff |
-|--------|------|---------|
-| `fake` | テスト・ドライラン | validation-only メタデータ JSON を書く。`candidateEligible: false` 固定。 |
-| `hot-folder` | GEN2 hot-folder 連携 | config.hotFolderPath にジョブファイルをドロップ。出力フォルダをポーリング。 |
-| `manual-drop` | 手動ドロップ待機 | config.dropFolderPath に人間がファイルを置くまで待機。 |
-| `local-cli` | ローカル CLI 実行 | config.cliCommand を child_process.spawn で実行。 |
+| モード | 用途 | handoff | 必要な環境変数 |
+|--------|------|---------|--------------|
+| `fake` | テスト・ドライラン | validation-only メタデータ JSON を書く。`candidateEligible: false` 固定。 | なし |
+| `hot-folder` | GEN2 hot-folder 連携 | `GODSANDBOX_GEN2_HOT_FOLDER` に指定したフォルダにジョブファイルをドロップ。出力フォルダをポーリング。 | `GODSANDBOX_GEN2_HOT_FOLDER`（必須）、`GODSANDBOX_GEN2_HOT_FOLDER_OUTPUT`（省略可） |
+| `manual-drop` | 手動ドロップ待機 | `GODSANDBOX_GEN2_MANUAL_DROP_FOLDER` に人間がファイルを置くまで待機。 | `GODSANDBOX_GEN2_MANUAL_DROP_FOLDER`（必須） |
+| `local-cli` | ローカル CLI 実行 | `GODSANDBOX_GEN2_LOCAL_CLI_COMMAND` の CLI を child_process.spawn で実行。 | `GODSANDBOX_GEN2_LOCAL_CLI_COMMAND`（必須、JSON 配列文字列 `["gen2", "--run"]` またはスペース区切り） |
 
 > **Fake bridge の出力は PO ビジュアルレビュー対象外です。**  
 > `validationOnly: true, candidateEligible: false` を常に書き、実候補と区別します。
+
+> **非 fake モードの起動前に環境変数を設定してください。**  
+> 環境変数が未設定の場合、POST /api/local/asset-generation/characters は 400 を返します。
 
 ---
 
@@ -89,8 +92,9 @@ planned → queued → running → candidate-ready → alpha-checked
 
 ### derived-icon の制約
 
-- **AI 生成禁止**。Sprite Sheet の walk-down row frame 0 から切り出し。
-- `derive-icon-from-sprite.mjs` が PNG デコード→切り出し→再エンコードを pure Node.js で実行。
+- **AI 生成禁止**。Sheet 2 (extended) の **row 1 (walk-down) frame 0** から切り出し（デフォルト）。
+- `derive-icon-from-sprite.mjs --kind extended` が PNG デコード→切り出し→再エンコードを pure Node.js で実行。
+- `--kind extended` がデフォルト。Sheet 1 (motion) を使う場合は `--allow-idle-fallback` が必要（row 0 は idle）。
 - `icon-source-report.json` で切り出し元を記録。`candidateOnly: true` 必須。
 - `resident-sprite-sheet` が `candidate-ready` 以上に達するまで実行禁止。
 
@@ -134,15 +138,33 @@ curl -s -X POST http://127.0.0.1:8787/api/local/asset-generation/characters \
   }'
 
 # 4. ジョブ確認
-ls .godsandbox/jobs/pending/
+#   watcher 互換ファイル: .godsandbox/jobs/<slug>-request.json
+#   (job-watcher.mjs はこのファイルを検知します。pending/ は使いません)
+ls .godsandbox/jobs/test-request.json
+ls .godsandbox/jobs/local-app-server/
 ls assets/generated/residents/test/prompt-pack/
 
-# 5. 表情候補インテーク (dry-run)
+# 5. 非 fake bridge を使う場合は先に環境変数を設定する
+# hot-folder 例:
+export GODSANDBOX_GEN2_HOT_FOLDER=/tmp/gen2-hot
+export GODSANDBOX_GEN2_HOT_FOLDER_OUTPUT=/tmp/gen2-hot/output
+# local-cli 例:
+export GODSANDBOX_GEN2_LOCAL_CLI_COMMAND='["node", "tools/gen2/run.mjs"]'
+# manual-drop 例:
+export GODSANDBOX_GEN2_MANUAL_DROP_FOLDER=/tmp/gen2-manual
+
+# 6. 表情候補インテーク (dry-run)
 npm run assetgen:expressions -- --slug test --source-dir /tmp/expressions --dry-run
 
-# 6. アイコン切り出し (dry-run、sprite sheet 必要)
-npm run assetgen:derive-icon -- --slug test --sprite-sheet <sheet-path> --dry-run
+# 7. アイコン切り出し (dry-run、sprite sheet 必要)
+#   デフォルト: --kind extended (Sheet 2 row 1 = walk-down, front-facing)
+npm run assetgen:derive-icon -- --slug test --sprite-sheet <sheet-path> --kind extended --dry-run
 ```
+
+### po-combined スプライトシートの仕様
+
+po-combined モードのキャンバスは **826×1904 px / フレーム 118×136 / 14 行 / 7 列** です。  
+canonical-two-sheet (Sheet 2 / extended) のアイコンソースは **row 1 (walk-down) frame 0** です。
 
 ---
 

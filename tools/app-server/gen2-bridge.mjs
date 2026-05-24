@@ -48,6 +48,62 @@ function assertNoExternalUrl(bridgeName) {
 }
 
 /**
+ * Resolves Gen2 bridge configuration from environment variables.
+ * Validates that required env vars are present for the requested mode.
+ * Does NOT accept folder paths or CLI commands from HTTP request bodies.
+ *
+ * @param {"local-cli"|"hot-folder"|"manual-drop"|"fake"} requestedMode
+ * @returns {{ mode: string, cliCommand?: string[], hotFolderPath?: string, outputFolderPath?: string, dropFolderPath?: string }}
+ * @throws {Error} if required env vars are missing for the mode
+ */
+export function resolveGen2BridgeConfig(requestedMode) {
+  const mode = requestedMode ?? "fake";
+
+  switch (mode) {
+    case "local-cli": {
+      const raw = process.env.GODSANDBOX_GEN2_LOCAL_CLI_COMMAND;
+      if (!raw) {
+        throw new Error("GODSANDBOX_GEN2_LOCAL_CLI_COMMAND env var required for local-cli bridge mode");
+      }
+      let cliCommand;
+      try {
+        cliCommand = JSON.parse(raw);
+        if (!Array.isArray(cliCommand) || cliCommand.length === 0) {
+          throw new Error("must be a non-empty JSON array");
+        }
+      } catch {
+        // Fallback: split on spaces
+        cliCommand = raw.split(/\s+/).filter(Boolean);
+      }
+      return { mode, cliCommand };
+    }
+
+    case "hot-folder": {
+      const hotFolderPath = process.env.GODSANDBOX_GEN2_HOT_FOLDER;
+      if (!hotFolderPath) {
+        throw new Error("GODSANDBOX_GEN2_HOT_FOLDER env var required for hot-folder bridge mode");
+      }
+      const outputFolderPath = process.env.GODSANDBOX_GEN2_HOT_FOLDER_OUTPUT ?? null;
+      return { mode, hotFolderPath, outputFolderPath };
+    }
+
+    case "manual-drop": {
+      const dropFolderPath = process.env.GODSANDBOX_GEN2_MANUAL_DROP_FOLDER;
+      if (!dropFolderPath) {
+        throw new Error("GODSANDBOX_GEN2_MANUAL_DROP_FOLDER env var required for manual-drop bridge mode");
+      }
+      return { mode, dropFolderPath };
+    }
+
+    case "fake":
+      return { mode };
+
+    default:
+      throw new Error(`Unknown gen2 bridge mode: "${mode}". Valid: local-cli, hot-folder, manual-drop, fake`);
+  }
+}
+
+/**
  * @param {object} config
  * @param {"local-cli"|"hot-folder"|"manual-drop"|"fake"} config.mode
  * @returns {Gen2LocalCliBridge|Gen2HotFolderBridge|Gen2ManualDropBridge|FakeGen2Bridge}
@@ -85,10 +141,11 @@ export class Gen2LocalCliBridge {
   constructor(config) {
     // GUARD: no external URLs permitted in this bridge
     assertNoExternalUrl("Gen2LocalCliBridge");
-    this._cliCommand = config.cliCommand;
-    if (!this._cliCommand || typeof this._cliCommand !== "string") {
-      throw new Error("Gen2LocalCliBridge requires config.cliCommand (string).");
+    // cliCommand must be an array (resolved from env var via resolveGen2BridgeConfig)
+    if (!config.cliCommand || !Array.isArray(config.cliCommand) || config.cliCommand.length === 0) {
+      throw new Error("Gen2LocalCliBridge requires config.cliCommand (non-empty string array from env var).");
     }
+    this._cliCommand = config.cliCommand;
     this._outputDir = config.outputDir ?? null;
   }
 
@@ -118,7 +175,7 @@ export class Gen2LocalCliBridge {
       ) + "\n",
     );
 
-    const [cmd, ...cmdArgs] = this._cliCommand.split(/\s+/);
+    const [cmd, ...cmdArgs] = this._cliCommand;
     const allArgs = [...cmdArgs, "--job-file", promptPackagePath];
 
     const exitCode = await new Promise((resolve, reject) => {
@@ -175,8 +232,9 @@ export class Gen2HotFolderBridge {
   constructor(config) {
     // GUARD: no external URLs permitted in this bridge
     assertNoExternalUrl("Gen2HotFolderBridge");
+    // hotFolderPath comes from env var GODSANDBOX_GEN2_HOT_FOLDER (via resolveGen2BridgeConfig)
     if (!config.hotFolderPath || typeof config.hotFolderPath !== "string") {
-      throw new Error("Gen2HotFolderBridge requires config.hotFolderPath (string).");
+      throw new Error("Gen2HotFolderBridge requires config.hotFolderPath (from GODSANDBOX_GEN2_HOT_FOLDER env var).");
     }
     this._hotFolderPath = path.resolve(config.hotFolderPath);
     this._outputFolderPath = config.outputFolderPath
@@ -259,8 +317,9 @@ export class Gen2ManualDropBridge {
   constructor(config) {
     // GUARD: no external URLs permitted in this bridge
     assertNoExternalUrl("Gen2ManualDropBridge");
+    // dropFolderPath comes from env var GODSANDBOX_GEN2_MANUAL_DROP_FOLDER (via resolveGen2BridgeConfig)
     if (!config.dropFolderPath || typeof config.dropFolderPath !== "string") {
-      throw new Error("Gen2ManualDropBridge requires config.dropFolderPath (string).");
+      throw new Error("Gen2ManualDropBridge requires config.dropFolderPath (from GODSANDBOX_GEN2_MANUAL_DROP_FOLDER env var).");
     }
     this._dropFolderPath = path.resolve(config.dropFolderPath);
   }
