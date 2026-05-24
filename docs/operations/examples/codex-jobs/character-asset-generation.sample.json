@@ -1,0 +1,32 @@
+{
+  "_comment": "Documentation sample only. Not a real job. Do not add personal paths, secrets, API keys, or real image paths.",
+  "jobVersion": "godsandbox-sidekick-job/v1",
+  "jobId": "sample-char-20260524-000000",
+  "jobType": "character-asset-bundle-v1",
+  "createdAt": "2026-05-24T00:00:00.000Z",
+  "source": "local-app-server",
+  "assetBundleId": "sample-char",
+  "characterProfile": {
+    "displayName": "サンプル",
+    "personality": "明るい",
+    "tone": "タメ口",
+    "age": 18,
+    "portraitRef": "assets/generated/residents/sample-char/reference/portrait-reference.png"
+  },
+  "requestedLanes": [
+    "resident-sprite-sheet",
+    "portrait-expressions"
+  ],
+  "previewMode": "po-combined",
+  "gen2Bridge": "fake",
+  "status": "pending",
+  "notes": [
+    "This is a documentation sample, not a real job.",
+    "Real .godsandbox/jobs/** files are local-only and gitignored.",
+    "portraitRef is a repo-relative path; real paths are never committed.",
+    "gen2Bridge: fake means FakeGen2Bridge is used — output is validation-only, not PO-reviewable.",
+    "derived-icon lane is not listed here; it depends on resident-sprite-sheet reaching candidate-ready first.",
+    "Watcher handoff: the server writes .godsandbox/jobs/<jobId>-request.json for job-watcher.mjs to pick up. One file per job — slug collisions never overwrite.",
+    "Status file for GET /jobs/:jobId: .godsandbox/jobs/local-app-server/<jobId>.json"
+  ]
+}
