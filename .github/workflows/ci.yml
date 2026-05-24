@@ -89,3 +89,12 @@ jobs:
           else
             echo "No build script yet."
           fi
+
+      - name: Trigger Cloudflare build hook
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          CLOUDFLARE_DEPLOY_HOOK_URL: "https://api.cloudflare.com/client/v4/workers/builds/deploy_hooks/ca80b385-91b2-4c1d-a390-702929372ceb"
+        run: |
+          response=$(curl --silent --show-error --fail -X POST "$CLOUDFLARE_DEPLOY_HOOK_URL")
+          echo "$response"
+          node --input-type=module -e "const chunks=[]; for await (const c of process.stdin) chunks.push(c); const payload=JSON.parse(Buffer.concat(chunks).toString('utf8')); if (payload.success !== true) { console.error('Cloudflare deploy hook did not report success=true'); process.exit(1); }" <<< "$response"
