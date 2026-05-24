@@ -6,43 +6,43 @@ export type EventArtViewModel = {
   visualSourceKind: "preauthored_event_art" | "fallback";
 };
 
-const FALLBACK_SRC = "/art/events/_fallback/generic-event.svg";
+const FALLBACK_SRC = "/art/events/_fallback/generic-event.png";
 const FALLBACK_ASSET_ID = "event-art-fallback-generic";
 
 const EVENT_ART_MAP: Record<string, { assetId: string; src: string; alt: string }> = {
   "moving-stone": {
     assetId: "event-art-moving-stone-started",
-    src: "/art/events/moving-stone/started.svg",
+    src: "/art/events/moving-stone/started.png",
     alt: "謎の動く石",
   },
   "shrine-prayer-wish": {
     assetId: "event-art-shrine-prayer-wish-started",
-    src: "/art/events/shrine-prayer-wish/started.svg",
+    src: "/art/events/shrine-prayer-wish/started.png",
     alt: "お参りと願い",
   },
   "strange-grass-found": {
     assetId: "event-art-strange-grass-found-started",
-    src: "/art/events/strange-grass-found/started.svg",
+    src: "/art/events/strange-grass-found/started.png",
     alt: "変な草を拾う",
   },
   "shared-nap-place": {
     assetId: "event-art-shared-nap-place-started",
-    src: "/art/events/shared-nap-place/started.svg",
+    src: "/art/events/shared-nap-place/started.png",
     alt: "同じ場所で昼寝",
   },
   "mysterious-footprints": {
     assetId: "event-art-mysterious-footprints-started",
-    src: "/art/events/mysterious-footprints/started.svg",
+    src: "/art/events/mysterious-footprints/started.png",
     alt: "謎の足あと",
   },
   "legendary-big-fish": {
     assetId: "event-art-legendary-big-fish-started",
-    src: "/art/events/legendary-big-fish/started.svg",
+    src: "/art/events/legendary-big-fish/started.png",
     alt: "伝説の大きな魚",
   },
   "shrine-fox-offering": {
     assetId: "event-art-shrine-fox-offering-started",
-    src: "/art/events/shrine-fox-offering/started.svg",
+    src: "/art/events/shrine-fox-offering/started.png",
     alt: "祠の油揚げ",
   },
 };

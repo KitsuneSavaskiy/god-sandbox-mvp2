@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Event art background PO preview</title>
+    <style>
+      :root {
+        color: #241d17;
+        font-family:
+          "Yu Gothic", "Hiragino Sans", "Meiryo", system-ui, sans-serif;
+        background: #f5efe5;
+      }
+
+      body {
+        margin: 0;
+        background:
+          radial-gradient(circle at 12% 8%, rgba(240, 198, 119, 0.24), transparent 34%),
+          linear-gradient(135deg, #f8f1e6 0%, #efe2ce 48%, #e7d4b9 100%);
+      }
+
+      main {
+        width: min(1200px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 28px 0 44px;
+      }
+
+      header {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 20px;
+      }
+
+      h1,
+      h2,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(1.55rem, 4vw, 2.4rem);
+        line-height: 1.15;
+      }
+
+      .lead {
+        max-width: 760px;
+        color: #5f4c38;
+        line-height: 1.7;
+      }
+
+      .checklist {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        margin: 20px 0 22px;
+      }
+
+      .check {
+        border: 1px solid rgba(82, 61, 39, 0.16);
+        border-radius: 16px;
+        padding: 12px 14px;
+        background: rgba(255, 252, 246, 0.78);
+        box-shadow: 0 10px 28px rgba(88, 63, 34, 0.08);
+        font-size: 0.94rem;
+        line-height: 1.55;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        overflow: hidden;
+        border: 1px solid rgba(55, 39, 26, 0.16);
+        border-radius: 22px;
+        background: rgba(255, 252, 246, 0.92);
+        box-shadow: 0 18px 42px rgba(73, 52, 28, 0.14);
+      }
+
+      .art-frame {
+        position: relative;
+        aspect-ratio: 1672 / 941;
+        overflow: hidden;
+        background:
+          linear-gradient(rgba(30, 23, 17, 0.08), rgba(30, 23, 17, 0.08)),
+          #d8c3a3;
+      }
+
+      .art-frame img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .badge {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        border-radius: 999px;
+        padding: 5px 10px;
+        background: rgba(255, 252, 246, 0.84);
+        color: #4d3a29;
+        font-size: 0.78rem;
+        font-weight: 700;
+        box-shadow: 0 8px 18px rgba(38, 27, 18, 0.16);
+      }
+
+      .caption {
+        display: grid;
+        gap: 8px;
+        padding: 14px 16px 16px;
+      }
+
+      .caption h2 {
+        font-size: 1.05rem;
+      }
+
+      .caption p {
+        color: #604d38;
+        font-size: 0.92rem;
+        line-height: 1.55;
+      }
+
+      code {
+        overflow-wrap: anywhere;
+        color: #6b3d16;
+        font-family: "Cascadia Mono", "Consolas", monospace;
+        font-size: 0.82rem;
+      }
+
+      .fallback {
+        border-style: dashed;
+      }
+
+      @media (max-width: 560px) {
+        main {
+          width: min(100% - 20px, 1200px);
+          padding-top: 18px;
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+
+        .caption {
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Event art background PO preview</h1>
+        <p class="lead">
+          MVP 7イベントのプレースホルダー画像を、PO確認用のPNG本画像に差し替えた状態です。
+          各カードで「イベント内容と絵が合っているか」「箱庭の雰囲気に合うか」「文字や不要なUIが焼き込まれていないか」を確認してください。
+        </p>
+      </header>
+
+      <section class="checklist" aria-label="PO confirmation checklist">
+        <div class="check">確認1: イベント名と画像の内容が大きくズレていない。</div>
+        <div class="check">確認2: キャラ名、場所ラベル、状態ラベル、UI文字が画像内にない。</div>
+        <div class="check">確認3: event window内で背景として見ても主役を邪魔しない。</div>
+        <div class="check">確認4: fallback画像は、個別画像がないイベントでも違和感が少ない。</div>
+      </section>
+
+      <section class="grid" aria-label="Event art previews">
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/moving-stone/started.png" alt="謎の動く石 event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>謎の動く石</h2>
+            <p><code>/art/events/moving-stone/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/shrine-prayer-wish/started.png" alt="お参りと願い event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>お参りと願い</h2>
+            <p><code>/art/events/shrine-prayer-wish/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/strange-grass-found/started.png" alt="変な草を拾う event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>変な草を拾う</h2>
+            <p><code>/art/events/strange-grass-found/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/shared-nap-place/started.png" alt="同じ場所で昼寝 event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>同じ場所で昼寝</h2>
+            <p><code>/art/events/shared-nap-place/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/mysterious-footprints/started.png" alt="謎の足あと event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>謎の足あと</h2>
+            <p><code>/art/events/mysterious-footprints/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/legendary-big-fish/started.png" alt="伝説の大きな魚 event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>伝説の大きな魚</h2>
+            <p><code>/art/events/legendary-big-fish/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="art-frame">
+            <img src="../art/events/shrine-fox-offering/started.png" alt="祠の油揚げ event art" />
+            <span class="badge">started</span>
+          </div>
+          <div class="caption">
+            <h2>祠の油揚げ</h2>
+            <p><code>/art/events/shrine-fox-offering/started.png</code></p>
+          </div>
+        </article>
+
+        <article class="card fallback">
+          <div class="art-frame">
+            <img src="../art/events/_fallback/generic-event.png" alt="fallback event art" />
+            <span class="badge">fallback</span>
+          </div>
+          <div class="caption">
+            <h2>汎用fallback</h2>
+            <p><code>/art/events/_fallback/generic-event.png</code></p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
