@@ -11,6 +11,7 @@ import type {
   WorldEvent,
 } from "./models.js";
 import { resolveFaithBand } from "./character.js";
+import { resolveEventDialogueLines } from "./eventPresentation.js";
 import { resolveVoiceProfile } from "./voiceProfile.js";
 import { validateGeneratedNarrativeCandidate } from "./generatedContentSafety.js";
 
@@ -262,7 +263,18 @@ export function createObservedDialogueCandidates(
   const fixtureTrigger = isObservedDialogueFixtureTrigger(input.trigger)
     ? input.trigger
     : "idle_timer";
-  const lines = OBSERVED_DIALOGUE_FIXTURES[fixtureTrigger];
+  const eventSpecificLines =
+    input.event &&
+    (fixtureTrigger === "event_started" || fixtureTrigger === "intervention_applied")
+      ? resolveEventDialogueLines({
+          templateId: input.event.templateId,
+          trigger: fixtureTrigger,
+        })
+      : [];
+  const lines =
+    eventSpecificLines.length > 0
+      ? eventSpecificLines
+      : OBSERVED_DIALOGUE_FIXTURES[fixtureTrigger];
   const characters = resolveObservedDialogueCharacters(input, fixtureTrigger);
 
   if (characters.length === 0 || lines.length === 0) {
