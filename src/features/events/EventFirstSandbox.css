@@ -1154,6 +1154,39 @@ button.event-first-sandbox__emote:disabled {
   padding: 16px;
 }
 
+.event-first-sandbox__event-presentation {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(72, 95, 59, 0.12);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.66), transparent 28%),
+    rgba(255, 252, 242, 0.82);
+}
+
+.event-first-sandbox__event-title {
+  margin: 0;
+  color: #314329;
+  font-size: clamp(1.08rem, 2.6vw, 1.32rem);
+  font-weight: 950;
+  letter-spacing: 0.01em;
+}
+
+.event-first-sandbox__event-flavor,
+.event-first-sandbox__event-summary {
+  margin: 0;
+  color: #53624a;
+  font-size: clamp(0.88rem, 2.4vw, 0.98rem);
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.event-first-sandbox__event-summary {
+  color: #405b34;
+}
+
 .event-first-sandbox__event-window-status {
   display: grid;
   gap: 5px;

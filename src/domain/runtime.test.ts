@@ -82,6 +82,11 @@ import {
   validateDialogue,
   type ParsedCandidateRaw,
 } from "./dialogue.js";
+import {
+  EVENT_PRESENTATION_CONTENT,
+  resolveEventDialogueLines,
+  resolveEventPresentation,
+} from "./eventPresentation.js";
 import type {
   ConversationLogEntry,
   DialogueCandidate,
@@ -2311,6 +2316,130 @@ function testObservedDialogueRuntimeSmokeTests(): void {
   assert.equal(visibleTexts.includes("ステータス"), false);
 }
 
+function testAuthoredEventPresentationAndDialogue(): void {
+  const authoredIds = EVENT_PRESENTATION_CONTENT.map((content) => content.templateId);
+  const templateIds = EVENT_TEMPLATES.map((template) => template.id);
+  assert.equal(authoredIds.length, templateIds.length);
+  for (const templateId of templateIds) {
+    assert.ok(authoredIds.includes(templateId));
+  }
+
+  const mvpEventIds = new Set([
+    "moving-stone",
+    "shrine-prayer-wish",
+    "strange-grass-found",
+    "shared-nap-place",
+    "mysterious-footprints",
+    "legendary-big-fish",
+    "shrine-fox-offering",
+  ]);
+
+  for (const template of EVENT_TEMPLATES) {
+    const presentation = resolveEventPresentation(template.id);
+    assert.ok(presentation.displayName.length > 0);
+    assert.ok(presentation.flavorText.length > 0);
+    assert.equal(presentation.displayName.includes(template.id), false);
+
+    const startedLines = resolveEventDialogueLines({
+      templateId: template.id,
+      trigger: "event_started",
+    });
+    const interventionLines = resolveEventDialogueLines({
+      templateId: template.id,
+      trigger: "intervention_applied",
+    });
+    assert.ok(startedLines.length > 0);
+    assert.ok(interventionLines.length > 0);
+
+    const content = EVENT_PRESENTATION_CONTENT.find((item) => item.templateId === template.id);
+    assert.ok(content);
+    const allLines = [
+      ...startedLines,
+      ...interventionLines,
+      ...(content?.successDialogueLines ?? []),
+      ...(content?.failureDialogueLines ?? []),
+    ];
+    for (const line of allLines) {
+      assert.equal(validateDialogue(line).ok, true);
+    }
+
+    if (mvpEventIds.has(template.id)) {
+      assert.ok((content?.successDialogueLines?.length ?? 0) > 0);
+      assert.ok((content?.failureDialogueLines?.length ?? 0) > 0);
+    }
+  }
+
+  const fallbackPresentation = resolveEventPresentation("unknown-template");
+  assert.ok(fallbackPresentation.displayName.length > 0);
+  assert.ok(fallbackPresentation.flavorText.length > 0);
+  const fallbackLines = resolveEventDialogueLines({
+    templateId: "unknown-template",
+    trigger: "event_started",
+  });
+  assert.ok(fallbackLines.length > 0);
+  assert.equal(validateDialogue(fallbackLines[0]).ok, true);
+
+  const charA = character("chr_a", "Aki");
+  const charB = character("chr_b", "Beni");
+  const charC = character("chr_c", "Caro");
+  const unknownEvent: WorldEvent = {
+    ...event("evt_unknown_authored"),
+    templateId: "unknown-template",
+    participantCharacterIds: ["chr_a"],
+  };
+  const unknownCandidates = createObservedDialogueCandidates({
+    trigger: "event_started",
+    characters: [charA, charB, charC],
+    event: unknownEvent,
+    restrictEventParticipants: true,
+    now,
+    seed: "unknown-authored-event-dialogue",
+    maxCandidates: 3,
+  });
+  assert.ok(unknownCandidates.length > 0);
+  assert.ok(unknownCandidates.every((candidate) => candidate.characterId === "chr_a"));
+  assert.ok(unknownCandidates.every((candidate) => fallbackLines.includes(candidate.text)));
+
+  const movingStoneEvent: WorldEvent = {
+    ...event("evt_authored"),
+    templateId: "moving-stone",
+    participantCharacterIds: ["chr_a"],
+  };
+  const authoredLines = resolveEventDialogueLines({
+    templateId: "moving-stone",
+    trigger: "event_started",
+  });
+  const eventSpecificCandidates = createObservedDialogueCandidates({
+    trigger: "event_started",
+    characters: [charA, charB, charC],
+    event: movingStoneEvent,
+    restrictEventParticipants: true,
+    now,
+    seed: "authored-event-dialogue",
+    maxCandidates: 3,
+  });
+  assert.ok(eventSpecificCandidates.length > 0);
+  assert.ok(eventSpecificCandidates.every((candidate) => candidate.characterId === "chr_a"));
+  assert.ok(eventSpecificCandidates.every((candidate) => authoredLines.includes(candidate.text)));
+
+  const interventionLines = resolveEventDialogueLines({
+    templateId: "moving-stone",
+    trigger: "intervention_applied",
+  });
+  const interventionCandidates = createObservedDialogueCandidates({
+    trigger: "intervention_applied",
+    characters: [charA, charB, charC],
+    event: movingStoneEvent,
+    restrictEventParticipants: true,
+    now,
+    seed: "authored-event-intervention-dialogue",
+    maxCandidates: 3,
+  });
+  assert.ok(interventionCandidates.length > 0);
+  assert.ok(interventionCandidates.every((candidate) => candidate.characterId === "chr_a"));
+  assert.ok(interventionCandidates.every((candidate) => interventionLines.includes(candidate.text)));
+}
+
 function testPassportBoundarySmokeTests(): void {
   // Use faith=73 (distinctive odd value; default is 30, avoids timestamp/common-number false negatives)
   const ws = worldState();
@@ -2844,6 +2973,7 @@ const tests: Array<[string, () => void]> = [
   ["faith hiding smoke tests (PBI 8a)", testFaithHidingSmokeTests],
   ["dialogue handoff smoke tests (PBI 8a)", testDialogueHandoffSmokeTests],
   ["observed dialogue runtime smoke tests (PBI 8a)", testObservedDialogueRuntimeSmokeTests],
+  ["authored event presentation and dialogue (PBI 9i)", testAuthoredEventPresentationAndDialogue],
   ["passport boundary smoke tests (PBI 8a)", testPassportBoundarySmokeTests],
   ["event outcome foundation (PBI 9a-core)", testEventOutcomeFoundation],
   ["god point phase recovery (PBI 9f)", testGodPointPhaseRecovery],
