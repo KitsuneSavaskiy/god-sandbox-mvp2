@@ -9,10 +9,66 @@
 }
 
 .new-character-tutorial-surface__body p,
-.new-character-tutorial-surface__body ol {
+.new-character-tutorial-surface__body ol,
+.new-character-tutorial-surface__body ul {
   margin: 0;
   color: #41513a;
   line-height: 1.65;
+}
+
+.new-character-tutorial-surface__lead {
+  font-size: 1rem;
+}
+
+.new-character-tutorial-surface__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.new-character-tutorial-surface__card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(88, 112, 71, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(150deg, rgba(255, 255, 248, 0.96), rgba(235, 243, 221, 0.82));
+}
+
+.new-character-tutorial-surface__card h3 {
+  margin: 0;
+  color: #24301f;
+  font-size: 0.98rem;
+}
+
+.new-character-tutorial-surface__step {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #587047;
+  color: #fffdf3;
+  font-weight: 700;
+}
+
+.new-character-tutorial-surface__sidekick {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: #fff8e7;
+  border: 1px solid rgba(168, 122, 42, 0.22);
+}
+
+.new-character-tutorial-surface__sidekick strong {
+  color: #5c4313;
+}
+
+.new-character-tutorial-surface__guardrails {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.2rem;
 }
 
 .new-character-tutorial-surface__body ol {
@@ -26,6 +82,10 @@
 }
 
 @media (max-width: 760px) {
+  .new-character-tutorial-surface__cards {
+    grid-template-columns: 1fr;
+  }
+
   .new-character-tutorial-surface__actions .ui-button {
     width: 100%;
   }
