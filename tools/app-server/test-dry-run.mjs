@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
-import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -214,6 +214,133 @@ async function test5_noExpressionFilesWhenLaneExcluded() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 6: validatePortraitPathFilesystem — absolute / traversal / missing / invalid PNG
+// ---------------------------------------------------------------------------
+
+async function test6_portraitPathValidation() {
+  const { validatePortraitPathFilesystem } = await import("./portrait-path-validator.mjs");
+
+  const tmpRoot = path.join(os.tmpdir(), `godsandbox-pv-test-${Date.now()}`);
+  mkdirSync(tmpRoot, { recursive: true });
+
+  // 1. Absolute path → rejected
+  const absErr = validatePortraitPathFilesystem("/etc/passwd", tmpRoot);
+  assert.ok(absErr && absErr.includes("absolute"), `Absolute path should be rejected. Got: ${absErr}`);
+
+  // 2. Traversal → rejected
+  const travErr = validatePortraitPathFilesystem("assets/../../etc/passwd", tmpRoot);
+  assert.ok(travErr && travErr.includes(".."), `Traversal path should be rejected. Got: ${travErr}`);
+
+  // 3. Repo boundary escape via resolved path — only possible if OS resolves symlinks outside,
+  //    but a direct "../../outside" should be caught by the traversal check first.
+  //    Use a crafted path that bypasses the '..' check via encoded form (the impl blocks split-based):
+  //    Actually this case is already covered by check 2. Skip; test missing file instead.
+
+  // 4. Non-existent file → rejected
+  const missingErr = validatePortraitPathFilesystem("assets/generated/nobody/portrait.png", tmpRoot);
+  assert.ok(missingErr && missingErr.includes("does not exist"), `Missing file should be rejected. Got: ${missingErr}`);
+
+  // 5. File exists but is not a PNG (invalid signature) → rejected
+  const notPngPath = path.join(tmpRoot, "fake.png");
+  writeFileSync(notPngPath, "not a png file at all");
+  const sigErr = validatePortraitPathFilesystem("fake.png", tmpRoot);
+  assert.ok(sigErr && sigErr.includes("PNG"), `Non-PNG file should be rejected. Got: ${sigErr}`);
+
+  // 6. Valid PNG signature → accepted (null)
+  const validPngPath = path.join(tmpRoot, "valid.png");
+  // Write minimal valid PNG signature (8 bytes only — enough for the check)
+  const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  writeFileSync(validPngPath, pngSig);
+  const okErr = validatePortraitPathFilesystem("valid.png", tmpRoot);
+  assert.strictEqual(okErr, null, `Valid PNG should pass validation. Got: ${okErr}`);
+
+  console.log("[PASS] test6: validatePortraitPathFilesystem rejects absolute/traversal/missing/invalid PNG");
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: generateJobId produces unique IDs (watcher files don't collide)
+// ---------------------------------------------------------------------------
+
+async function test7_generateJobIdIsUnique() {
+  const { generateJobId } = await import("./asset-generation-server.mjs");
+
+  const id1 = generateJobId("test-slug");
+  const id2 = generateJobId("test-slug");
+
+  assert.notStrictEqual(id1, id2, "generateJobId must produce unique IDs for the same prefix");
+  assert.ok(id1.startsWith("test-slug-"), `jobId should start with the prefix. Got: ${id1}`);
+  // Verify format: prefix-YYYYMMDDHHMMSS-<8hex>
+  assert.match(id1, /^[a-z0-9][a-z0-9_-]+-\d{14}-[0-9a-f]{8}$/,
+    `jobId should match expected format. Got: ${id1}`);
+
+  console.log("[PASS] test7: generateJobId produces unique IDs — watcher files per-jobId won't collide on same slug");
+}
+
+// ---------------------------------------------------------------------------
+// Test 8: Gen2LocalCliBridge throws when CLI exits with non-zero code
+// ---------------------------------------------------------------------------
+
+async function test8_localCliBridgeThrowsOnNonZeroExit() {
+  const { Gen2LocalCliBridge } = await import("./gen2-bridge.mjs");
+
+  // Write a small script that exits non-zero — accepts any args (the bridge appends --job-file <path>)
+  const exitScript = path.join(os.tmpdir(), `gs-test-exit1-${Date.now()}.mjs`);
+  writeFileSync(exitScript, "process.exit(1);\n");
+
+  const bridge = new Gen2LocalCliBridge({
+    cliCommand: ["node", exitScript],
+  });
+
+  const fakeJob = {
+    jobId: `test-cli-fail-${Date.now()}`,
+    assetBundleId: "test-cli",
+    lanes: ["resident-sprite-sheet"],
+  };
+
+  await assert.rejects(
+    () => bridge.prepareJob(fakeJob),
+    (err) => {
+      assert.ok(
+        err.message.includes("exit code") && (err.message.includes("1") || err.message.includes("code")),
+        `Error should mention exit code. Got: ${err.message}`,
+      );
+      return true;
+    },
+    "Gen2LocalCliBridge.prepareJob should throw when CLI exits with non-zero code",
+  );
+
+  console.log("[PASS] test8: Gen2LocalCliBridge.prepareJob throws on non-zero CLI exit");
+}
+
+// ---------------------------------------------------------------------------
+// Test 9: docs architecture section uses the correct watcher path (no pending/)
+// ---------------------------------------------------------------------------
+
+async function test9_docsWatcherPathCorrect() {
+  const { readFileSync } = await import("node:fs");
+  const docsPath = path.join(repoRoot, "docs/operations/sprint9-5-local-gen2-asset-generation.md");
+  const docsContent = readFileSync(docsPath, "utf8");
+
+  // Architecture diagram block ends before "## APIキー境界"
+  const archEnd = docsContent.indexOf("## APIキー境界");
+  assert.ok(archEnd > 0, "Could not find '## APIキー境界' section in docs");
+  const archSection = docsContent.slice(0, archEnd);
+
+  assert.ok(
+    !archSection.includes("pending/"),
+    `Architecture section must not reference 'pending/' path (stale). Found in:\n${archSection}`,
+  );
+
+  // Implementation uses <jobId>-request.json — docs must reflect this
+  assert.ok(
+    archSection.includes("jobId") && archSection.includes("-request.json"),
+    `Architecture section should reference '<jobId>-request.json' pattern.\nSection:\n${archSection}`,
+  );
+
+  console.log("[PASS] test9: docs architecture uses '<jobId>-request.json' (no stale 'pending/')");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
@@ -228,6 +355,10 @@ async function main() {
     test3_poCombinedPromptContent,
     test4_canonicalTwoSheetPromptContent,
     test5_noExpressionFilesWhenLaneExcluded,
+    test6_portraitPathValidation,
+    test7_generateJobIdIsUnique,
+    test8_localCliBridgeThrowsOnNonZeroExit,
+    test9_docsWatcherPathCorrect,
   ];
 
   for (const test of tests) {
@@ -241,7 +372,7 @@ async function main() {
     }
   }
 
-  console.log(`\n${passed + failed} tests: ${passed} passed, ${failed} failed`);
+  console.log(`\n${passed + failed}/9 tests: ${passed} passed, ${failed} failed`);
 
   if (failed > 0) {
     process.exit(1);

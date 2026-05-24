@@ -7,7 +7,8 @@
  * No external URLs are contacted — all work is dispatched via gen2-bridge.mjs.
  *
  * Job status files:   .godsandbox/jobs/local-app-server/<jobId>.json  (gitignored)
- * Watcher handoff:    .godsandbox/jobs/<slug>-request.json            (gitignored, picked up by job-watcher.mjs)
+ * Watcher handoff:    .godsandbox/jobs/<jobId>-request.json           (gitignored, picked up by job-watcher.mjs)
+ *                     One file per job — slug collisions never overwrite an existing watcher file.
  *
  * SECURITY: Never writes to public/art/**. A guard check runs before every write.
  *
@@ -23,6 +24,7 @@ import { fileURLToPath } from "node:url";
 
 import { createGen2Bridge, resolveGen2BridgeConfig } from "./gen2-bridge.mjs";
 import { buildPromptPack } from "./character-asset-prompt-pack.mjs";
+import { validatePortraitPathFilesystem } from "./portrait-path-validator.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -66,7 +68,7 @@ function safeWriteFile(filePath, content) {
   writeFileSync(filePath, content);
 }
 
-function generateJobId(prefix = "job") {
+export function generateJobId(prefix = "job") {
   const ts = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
   const rand = randomBytes(4).toString("hex");
   return `${prefix}-${ts}-${rand}`;
@@ -216,6 +218,12 @@ async function handlePostCharacters(req, res) {
 
   const data = validation.data;
 
+  // Filesystem validation: absolute path, traversal, repo boundary, existence, PNG signature
+  const portraitError = validatePortraitPathFilesystem(data.portraitPath, repoRoot);
+  if (portraitError) {
+    return sendJson(res, 422, { error: "Portrait path validation failed.", details: [portraitError] });
+  }
+
   // Derive slug from assetBundleId or displayName
   // lowercase, replace spaces with hyphens, strip non-alnum-hyphen, truncate 60, ensure starts with letter/digit
   const slug = (data.assetBundleId != null)
@@ -267,13 +275,15 @@ async function handlePostCharacters(req, res) {
   const statusFilePath = path.join(JOBS_APP_SERVER_DIR, `${jobId}.json`);
   safeWriteFile(statusFilePath, JSON.stringify(job, null, 2) + "\n");
 
-  // Write watcher-compatible request file — .godsandbox/jobs/<slug>-request.json
+  // Write watcher-compatible request file — .godsandbox/jobs/<jobId>-request.json
+  // Using jobId (not slug) as filename so concurrent jobs with the same slug don't overwrite each other.
   // Fields match what job-watcher.mjs expects: { slug, displayName, personality, tone, age, portraitPath }
-  const watcherFilePath = path.join(JOBS_WATCHER_DIR, `${slug}-request.json`);
+  const watcherFilePath = path.join(JOBS_WATCHER_DIR, `${jobId}-request.json`);
   safeWriteFile(
     watcherFilePath,
     JSON.stringify(
       {
+        jobId,
         slug,
         displayName: data.displayName,
         personality: data.personality,
@@ -484,8 +494,8 @@ Endpoints:
   POST /api/local/asset-generation/jobs/:jobId/cancel
 
 Job files go to:
-  .godsandbox/jobs/local-app-server/<jobId>.json  (gitignored, for GET /jobs/:jobId)
-  .godsandbox/jobs/<slug>-request.json            (gitignored, picked up by job-watcher.mjs)
+  .godsandbox/jobs/local-app-server/<jobId>.json   (gitignored, for GET /jobs/:jobId)
+  .godsandbox/jobs/<jobId>-request.json            (gitignored, picked up by job-watcher.mjs)
 `);
 }
 
@@ -550,4 +560,7 @@ function main() {
   });
 }
 
-main();
+// Guard: only run when executed directly, not when imported by tests
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

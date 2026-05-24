@@ -26,7 +26,7 @@
     "portraitRef is a repo-relative path; real paths are never committed.",
     "gen2Bridge: fake means FakeGen2Bridge is used — output is validation-only, not PO-reviewable.",
     "derived-icon lane is not listed here; it depends on resident-sprite-sheet reaching candidate-ready first.",
-    "Watcher handoff: the server writes .godsandbox/jobs/<slug>-request.json (not pending/) for job-watcher.mjs to pick up.",
+    "Watcher handoff: the server writes .godsandbox/jobs/<jobId>-request.json for job-watcher.mjs to pick up. One file per job — slug collisions never overwrite.",
     "Status file for GET /jobs/:jobId: .godsandbox/jobs/local-app-server/<jobId>.json"
   ]
 }

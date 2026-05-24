@@ -31,7 +31,7 @@ GodSandbox Web アプリ自体は画像生成 API を直接呼びません。
         └─ POST /api/local/asset-generation/jobs/:jobId/cancel
 
 [Codex Sidekick / Job Watcher]
-        │ .godsandbox/jobs/pending/<jobId>.json を検知
+        │ .godsandbox/jobs/<jobId>-request.json を検知
         ▼
 [characterAssetBundleIntake]
         │ sidekick:intake + prompt-pack + lane-state.json
@@ -138,9 +138,10 @@ curl -s -X POST http://127.0.0.1:8787/api/local/asset-generation/characters \
   }'
 
 # 4. ジョブ確認
-#   watcher 互換ファイル: .godsandbox/jobs/<slug>-request.json
+#   watcher 互換ファイル: .godsandbox/jobs/<jobId>-request.json
 #   (job-watcher.mjs はこのファイルを検知します。pending/ は使いません)
-ls .godsandbox/jobs/test-request.json
+#   jobId は自動生成されるため、glob で確認します
+ls .godsandbox/jobs/*-request.json
 ls .godsandbox/jobs/local-app-server/
 ls assets/generated/residents/test/prompt-pack/
 

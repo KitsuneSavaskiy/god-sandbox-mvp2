@@ -184,6 +184,13 @@ export class Gen2LocalCliBridge {
       proc.on("error", reject);
     });
 
+    if (exitCode !== 0) {
+      throw new Error(
+        `Gen2 local-cli command failed with exit code ${exitCode}. ` +
+          `Command: ${this._cliCommand.join(" ")}`,
+      );
+    }
+
     return { handoffPath: jobDir, handoffType: "local-cli", exitCode };
   }
 
