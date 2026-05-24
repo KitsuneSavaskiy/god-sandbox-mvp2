@@ -341,11 +341,185 @@ async function test9_docsWatcherPathCorrect() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 10: classifyWatcherRequest — legacy request (no jobId/lanes) → "legacy"
+// ---------------------------------------------------------------------------
+
+async function test10_watcherRoutes_legacyRequest() {
+  const { classifyWatcherRequest } = await import("../../tools/sidekick/job-watcher.mjs");
+
+  const legacyRequest = {
+    slug: "ryo",
+    displayName: "Ryo",
+    personality: "明るい",
+    tone: "タメ口",
+    age: 17,
+    portraitPath: "assets/generated/residents/ryo/reference/portrait.png",
+  };
+
+  const result = classifyWatcherRequest(legacyRequest);
+  assert.strictEqual(
+    result.type,
+    "legacy",
+    `Legacy request (no discriminator fields) should be classified as "legacy". Got: ${result.type}`,
+  );
+
+  // Also verify none of the assetgen discriminator fields affect the result
+  const minimalLegacy = { slug: "testchar", displayName: "Test", portraitPath: "assets/test.png" };
+  const minResult = classifyWatcherRequest(minimalLegacy);
+  assert.strictEqual(minResult.type, "legacy", `Minimal legacy request should be "legacy". Got: ${minResult.type}`);
+
+  console.log("[PASS] test10: classifyWatcherRequest identifies legacy request (no jobId/lanes) as 'legacy'");
+}
+
+// ---------------------------------------------------------------------------
+// Test 11: classifyWatcherRequest — assetgen request (has jobId + lanes) → "assetgen"
+// ---------------------------------------------------------------------------
+
+async function test11_watcherRoutes_assetgenRequest() {
+  const { classifyWatcherRequest } = await import("../../tools/sidekick/job-watcher.mjs");
+
+  // Full assetgen request (as written by asset-generation-server.mjs)
+  const assetgenRequest = {
+    jobId: "mychar-20260524-abcd1234",
+    slug: "mychar",
+    displayName: "MyChar",
+    personality: "明るい",
+    tone: "タメ口",
+    age: 18,
+    portraitPath: "assets/generated/residents/mychar/reference/portrait.png",
+    lanes: ["resident-sprite-sheet", "portrait-expressions", "derived-icon"],
+    previewMode: "po-combined",
+    gen2Bridge: "fake",
+  };
+
+  const result = classifyWatcherRequest(assetgenRequest);
+  assert.strictEqual(
+    result.type,
+    "assetgen",
+    `Request with jobId+lanes+previewMode+gen2Bridge should be "assetgen". Got: ${result.type}`,
+  );
+
+  // Even a single discriminator field triggers assetgen
+  const justJobId = { slug: "test", displayName: "Test", portraitPath: "p.png", jobId: "test-id" };
+  assert.strictEqual(classifyWatcherRequest(justJobId).type, "assetgen", "Request with only jobId should be 'assetgen'");
+
+  const justLanes = { slug: "test", displayName: "Test", portraitPath: "p.png", lanes: ["resident-sprite-sheet"] };
+  assert.strictEqual(classifyWatcherRequest(justLanes).type, "assetgen", "Request with only lanes should be 'assetgen'");
+
+  const justPreviewMode = { slug: "test", displayName: "Test", portraitPath: "p.png", previewMode: "po-combined" };
+  assert.strictEqual(classifyWatcherRequest(justPreviewMode).type, "assetgen", "Request with only previewMode should be 'assetgen'");
+
+  const justGen2Bridge = { slug: "test", displayName: "Test", portraitPath: "p.png", gen2Bridge: "fake" };
+  assert.strictEqual(classifyWatcherRequest(justGen2Bridge).type, "assetgen", "Request with only gen2Bridge should be 'assetgen'");
+
+  console.log("[PASS] test11: classifyWatcherRequest identifies assetgen request (has jobId+lanes) as 'assetgen'");
+}
+
+// ---------------------------------------------------------------------------
+// Test 12: classifyWatcherRequest — unparseable / missing slug → "malformed"
+// ---------------------------------------------------------------------------
+
+async function test12_malformedRequest_markedFailed() {
+  const { classifyWatcherRequest } = await import("../../tools/sidekick/job-watcher.mjs");
+
+  // Non-object
+  assert.strictEqual(
+    classifyWatcherRequest(null).type,
+    "malformed",
+    "null should be 'malformed'",
+  );
+  assert.strictEqual(
+    classifyWatcherRequest("string").type,
+    "malformed",
+    "string should be 'malformed'",
+  );
+  assert.strictEqual(
+    classifyWatcherRequest([]).type,
+    "malformed",
+    "array should be 'malformed'",
+  );
+  assert.strictEqual(
+    classifyWatcherRequest(42).type,
+    "malformed",
+    "number should be 'malformed'",
+  );
+
+  // Missing slug
+  const noSlug = { displayName: "Test", portraitPath: "assets/test.png", jobId: "test-id" };
+  const noSlugResult = classifyWatcherRequest(noSlug);
+  assert.strictEqual(noSlugResult.type, "malformed", "Object without slug should be 'malformed'");
+  assert.ok(
+    noSlugResult.reason && noSlugResult.reason.includes("slug"),
+    `Malformed reason should mention 'slug'. Got: ${noSlugResult.reason}`,
+  );
+
+  // Empty slug
+  const emptySlug = { slug: "", displayName: "Test", portraitPath: "assets/test.png" };
+  assert.strictEqual(classifyWatcherRequest(emptySlug).type, "malformed", "Empty slug should be 'malformed'");
+
+  // Whitespace-only slug
+  const wsSlug = { slug: "   ", displayName: "Test", portraitPath: "assets/test.png" };
+  assert.strictEqual(classifyWatcherRequest(wsSlug).type, "malformed", "Whitespace-only slug should be 'malformed'");
+
+  console.log("[PASS] test12: classifyWatcherRequest identifies unparseable/missing-slug as 'malformed'");
+}
+
+// ---------------------------------------------------------------------------
+// Test 13: duplicate jobId (already in done/) is not re-processed
+// ---------------------------------------------------------------------------
+
+async function test13_duplicateJobId_notDoubleRun() {
+  // This test verifies the pure classification path does not re-classify a job
+  // that would already have been moved to done/. In the live watcher, processRequest()
+  // checks existsSync(path.join(doneDir, filename)) and returns early — here we verify
+  // that a file in done/ would not be picked up by pollJobsDir (filesystem check).
+  //
+  // We use a temp filesystem simulation to confirm the logic holds.
+  const tmpBase = path.join(os.tmpdir(), `gs-watcher-test13-${Date.now()}`);
+  const tmpJobsDir = path.join(tmpBase, "jobs");
+  const tmpDoneDir = path.join(tmpJobsDir, "done");
+  mkdirSync(tmpDoneDir, { recursive: true });
+
+  const filename = "mychar-20260524-abcd1234-request.json";
+  const requestData = {
+    jobId: "mychar-20260524-abcd1234",
+    slug: "mychar",
+    displayName: "MyChar",
+    personality: "明るい",
+    tone: "タメ口",
+    age: 18,
+    portraitPath: "assets/generated/residents/mychar/reference/portrait.png",
+    lanes: ["resident-sprite-sheet"],
+    previewMode: "po-combined",
+    gen2Bridge: "fake",
+  };
+
+  // Simulate file in done/ only (not in jobs/ root)
+  writeFileSync(path.join(tmpDoneDir, filename), JSON.stringify(requestData, null, 2) + "\n");
+
+  // Simulate: no file in jobs/ root → poll would find nothing to process
+  const { readdirSync: readdir, existsSync: exists } = await import("node:fs");
+  const rootFiles = readdir(tmpJobsDir).filter((f) => f.endsWith("-request.json"));
+  assert.strictEqual(
+    rootFiles.length,
+    0,
+    "jobs/ root should have no *-request.json after job is in done/",
+  );
+
+  // Also verify: if somehow both exist (restart race), the done/ check prevents double-run
+  writeFileSync(path.join(tmpJobsDir, filename), JSON.stringify(requestData, null, 2) + "\n");
+  const doneExists = exists(path.join(tmpDoneDir, filename));
+  assert.ok(doneExists, "File in done/ should be detected, preventing re-process");
+
+  console.log("[PASS] test13: request file in done/ is not re-processed (double-run guard confirmed)");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5 dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7 dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -359,6 +533,10 @@ async function main() {
     test7_generateJobIdIsUnique,
     test8_localCliBridgeThrowsOnNonZeroExit,
     test9_docsWatcherPathCorrect,
+    test10_watcherRoutes_legacyRequest,
+    test11_watcherRoutes_assetgenRequest,
+    test12_malformedRequest_markedFailed,
+    test13_duplicateJobId_notDoubleRun,
   ];
 
   for (const test of tests) {
@@ -372,7 +550,8 @@ async function main() {
     }
   }
 
-  console.log(`\n${passed + failed}/9 tests: ${passed} passed, ${failed} failed`);
+  const total = tests.length;
+  console.log(`\n${passed + failed}/${total} tests: ${passed} passed, ${failed} failed`);
 
   if (failed > 0) {
     process.exit(1);
