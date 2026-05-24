@@ -515,11 +515,139 @@ async function test13_duplicateJobId_notDoubleRun() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 14: missing incoming folder gives a clear error, not a crash
+// ---------------------------------------------------------------------------
+
+async function test14_missingIncomingFolder_clearsError() {
+  const { spawnSync } = await import("node:child_process");
+
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "build-asset-review-pack.mjs");
+
+  const result = spawnSync(
+    "node",
+    [toolPath, "--slug", "nonexistent-slug-that-does-not-exist", "--dry-run"],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  // Should exit non-zero
+  assert.notStrictEqual(
+    result.status,
+    0,
+    `Expected non-zero exit for missing incoming dir. Got: ${result.status}`,
+  );
+
+  // Should NOT produce a stack trace (no crash)
+  const combinedOutput = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    !combinedOutput.includes("at async") && !combinedOutput.includes("    at "),
+    `Expected clean error message (no stack trace), but got stack trace:\n${combinedOutput.slice(0, 600)}`,
+  );
+
+  // Should contain a human-readable error
+  assert.ok(
+    combinedOutput.toLowerCase().includes("does not exist") ||
+    combinedOutput.toLowerCase().includes("incoming") ||
+    combinedOutput.toLowerCase().includes("error"),
+    `Expected error message about missing directory. Got:\n${combinedOutput.slice(0, 400)}`,
+  );
+
+  console.log("[PASS] test14: missing incoming folder gives clear error, not a crash");
+}
+
+// ---------------------------------------------------------------------------
+// Test 15: icon-source-report in incoming/icons/ subdir → validationOnlyBridge: true
+// ---------------------------------------------------------------------------
+
+async function test15_fakeMetadataShownAsValidationOnly() {
+  const tmpDir = path.join(os.tmpdir(), `godsandbox-rp-test-${Date.now()}`);
+  const slug = "test-validation-only";
+  const incomingDir = path.join(tmpDir, "incoming");
+  const outputDir = path.join(tmpDir, "review-pack");
+
+  // Create directory layout matching actual tool output
+  mkdirSync(path.join(incomingDir, "expressions"), { recursive: true });
+  mkdirSync(path.join(incomingDir, "icons"), { recursive: true });
+
+  // Valid PNG signature (8 bytes)
+  const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  writeFileSync(path.join(incomingDir, "expressions", "neutral.png"), pngSig);
+
+  // icon-source-report.json in canonical subdir (incoming/icons/) with candidateEligible: false
+  writeFileSync(
+    path.join(incomingDir, "icons", "icon-source-report.json"),
+    JSON.stringify({ candidateEligible: false, iconSourceMotionKey: "walk-down" }, null, 2),
+  );
+
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "build-asset-review-pack.mjs");
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", slug,
+      "--incoming-dir", incomingDir,
+      "--output-dir", outputDir,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  if (result.status !== 0) {
+    throw new Error(
+      `Tool exited with ${result.status}:\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+    );
+  }
+
+  const summaryPath = path.join(outputDir, "review-summary.json");
+  assert.ok(existsSync(summaryPath), `review-summary.json should be written to ${summaryPath}`);
+
+  const { readFileSync: readFile } = await import("node:fs");
+  const summary = JSON.parse(readFile(summaryPath, "utf8"));
+
+  assert.strictEqual(summary.candidateOnly, true, "review-summary.json should have candidateOnly: true");
+  assert.strictEqual(summary.readyPromotionAllowed, false, "review-summary.json should have readyPromotionAllowed: false");
+  assert.strictEqual(summary.validationOnlyBridge, true,
+    `review-summary.json should have validationOnlyBridge: true when icons/icon-source-report has candidateEligible: false. Got: ${JSON.stringify(summary)}`);
+
+  console.log("[PASS] test15: icons/icon-source-report.json (subdir) with candidateEligible: false → validationOnlyBridge: true");
+}
+
+// ---------------------------------------------------------------------------
+// Test 16: assertOutputBoundary with public/art path throws
+// ---------------------------------------------------------------------------
+
+async function test16_publicArtOutputRejected() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "build-asset-review-pack.mjs");
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", "test-security",
+      "--output-dir", "public/art/test-output",
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.notStrictEqual(result.status, 0, "Should exit non-zero when output-dir is public/art/");
+
+  const combinedOutput = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    combinedOutput.includes("SECURITY") || combinedOutput.includes("Refusing") || combinedOutput.includes("public/art"),
+    `Expected SECURITY error about public/art, got:\n${combinedOutput.slice(0, 400)}`,
+  );
+
+  console.log("[PASS] test16: assertOutputBoundary with public/art path throws SECURITY error");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7 dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8 dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -537,6 +665,9 @@ async function main() {
     test11_watcherRoutes_assetgenRequest,
     test12_malformedRequest_markedFailed,
     test13_duplicateJobId_notDoubleRun,
+    test14_missingIncomingFolder_clearsError,
+    test15_fakeMetadataShownAsValidationOnly,
+    test16_publicArtOutputRejected,
   ];
 
   for (const test of tests) {
