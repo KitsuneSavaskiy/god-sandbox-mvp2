@@ -93,8 +93,31 @@ jobs:
       - name: Trigger Cloudflare build hook
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          CLOUDFLARE_DEPLOY_HOOK_URL: "https://api.cloudflare.com/client/v4/workers/builds/deploy_hooks/ca80b385-91b2-4c1d-a390-702929372ceb"
+          CLOUDFLARE_DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
         run: |
-          response=$(curl --silent --show-error --fail -X POST "$CLOUDFLARE_DEPLOY_HOOK_URL")
+          if [ -z "$CLOUDFLARE_DEPLOY_HOOK_URL" ]; then
+            echo "CLOUDFLARE_DEPLOY_HOOK_URL secret is not set. Please add it in repository settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          if ! response=$(curl --silent --show-error --fail --max-time 30 -X POST "$CLOUDFLARE_DEPLOY_HOOK_URL"); then
+            echo "Cloudflare deploy hook request failed (timeout/network/non-2xx)."
+            exit 1
+          fi
           echo "$response"
-          node --input-type=module -e "const chunks=[]; for await (const c of process.stdin) chunks.push(c); const payload=JSON.parse(Buffer.concat(chunks).toString('utf8')); if (payload.success !== true) { console.error('Cloudflare deploy hook did not report success=true'); process.exit(1); }" <<< "$response"
+          RESPONSE="$response" node <<'NODE'
+          let payload;
+          try {
+            payload = JSON.parse(process.env.RESPONSE ?? "{}");
+          } catch {
+            console.error("Failed to parse deploy hook response as JSON.");
+            console.error(process.env.RESPONSE ?? "");
+            process.exit(1);
+          }
+
+          if (payload.success !== true) {
+            console.error("Cloudflare deploy hook did not report success=true. Response:");
+            console.error(JSON.stringify(payload));
+            console.error("Check Cloudflare Workers build/deploy logs for this hook.");
+            process.exit(1);
+          }
+          NODE
