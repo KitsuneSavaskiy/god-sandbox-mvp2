@@ -580,7 +580,10 @@ function PrimaryRouteSurface({
       return (
         <NewCharacterTutorialSurface
           isFirstVisit
+          sidekickIsConnected={sidekickIsConnected}
+          sidekickFolderName={sidekickFolderName}
           onAcknowledge={onAcknowledgeNewcomerTutorial}
+          onOpenSidekickSetup={() => onNavigate("/sidekick-setup")}
           onReturnToSandbox={() => onNavigate("/sandbox")}
         />
       );
@@ -590,7 +593,9 @@ function PrimaryRouteSurface({
       <CharacterEditor
         character={character}
         mode={mode}
+        sidekickIsConnected={sidekickIsConnected}
         onCancel={onCancelEditor}
+        onOpenSidekickSetup={() => onNavigate("/sidekick-setup")}
         onSave={onSaveCharacter}
       />
     );

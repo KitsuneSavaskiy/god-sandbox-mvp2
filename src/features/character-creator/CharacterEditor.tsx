@@ -15,7 +15,9 @@ type CharacterEditorMode = "initial" | "new" | "edit";
 type CharacterEditorProps = {
   character?: Character;
   mode: CharacterEditorMode;
+  sidekickIsConnected?: boolean;
   onCancel: () => void;
+  onOpenSidekickSetup?: () => void;
   onSave: (draft: CharacterDraft, portraitFile?: File) => void;
 };
 
@@ -49,7 +51,7 @@ const copyByMode: Record<CharacterEditorMode, { title: string; body: string; act
   },
   new: {
     title: "新しい住民を迎える",
-    body: "保存すると、見た目画像とプロフィールをもとにスプライトの準備が自動で始まります。今の箱庭の4人はすぐには変わらず、入れ替えはあとで選べます。",
+    body: "保存するとまず住民一覧に追加されます。Sidekick設定済みなら制作依頼を渡せます。今の箱庭の4人は自動では入れ替わりません。",
     action: "住民一覧に保存",
   },
   edit: {
@@ -59,7 +61,14 @@ const copyByMode: Record<CharacterEditorMode, { title: string; body: string; act
   },
 };
 
-export function CharacterEditor({ character, mode, onCancel, onSave }: CharacterEditorProps) {
+export function CharacterEditor({
+  character,
+  mode,
+  sidekickIsConnected = false,
+  onCancel,
+  onOpenSidekickSetup,
+  onSave,
+}: CharacterEditorProps) {
   const initialDraft = useMemo(
     () =>
       character
@@ -162,6 +171,30 @@ export function CharacterEditor({ character, mode, onCancel, onSave }: Character
         <h2 id="character-editor-title">{copy.title}</h2>
         <p>{copy.body}</p>
       </div>
+
+      {mode === "new" ? (
+        <aside className="character-editor__sidekick-guide" aria-label="制作候補の案内">
+          <div>
+            <strong>
+              {sidekickIsConnected
+                ? "保存すると制作依頼を渡せます"
+                : "サイドキック設定はあとからでも大丈夫です"}
+            </strong>
+            <p>
+              見た目画像と5項目をもとに、Codex サイドキックが箱庭アニメや立ち絵候補の準備を助けます。
+              候補は自動採用されず、確認してから使います。
+            </p>
+            <small>
+              サイドキックを使わない場合も、通常画像と標準文で箱庭は動きます。
+            </small>
+          </div>
+          {!sidekickIsConnected && onOpenSidekickSetup ? (
+            <Button type="button" variant="ghost" onClick={onOpenSidekickSetup}>
+              サイドキック設定を見る
+            </Button>
+          ) : null}
+        </aside>
+      ) : null}
 
       <form className="character-editor__form" onSubmit={handleSubmit}>
         <div className="character-editor__grid">

@@ -19,6 +19,33 @@
   gap: 16px;
 }
 
+.character-editor__sidekick-guide {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(168, 122, 42, 0.22);
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 248, 231, 0.96), rgba(235, 243, 221, 0.72));
+}
+
+.character-editor__sidekick-guide div {
+  display: grid;
+  gap: 5px;
+}
+
+.character-editor__sidekick-guide strong {
+  color: #4f3d18;
+}
+
+.character-editor__sidekick-guide p,
+.character-editor__sidekick-guide small {
+  margin: 0;
+  color: #607057;
+  line-height: 1.6;
+}
+
 .character-editor__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -174,6 +201,11 @@
     grid-template-columns: 1fr;
   }
 
+  .character-editor__sidekick-guide {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .character-editor__actions .ui-button {
     flex: 1 1 140px;
   }
@@ -193,7 +225,8 @@
   }
 
   .character-editor__file-button,
-  .character-editor__image-save-guide .ui-button {
+  .character-editor__image-save-guide .ui-button,
+  .character-editor__sidekick-guide .ui-button {
     width: 100%;
   }
 }
