@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -13,6 +14,7 @@ import {
 } from "../../application/characterAssetBundles.js";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
+  grantRuntimeGodPoints,
   recoverRuntimeGodPointsByPhaseTicks,
 } from "../../application/growthBalanceService.js";
 import {
@@ -48,6 +50,23 @@ import {
   type SandboxExperienceStage,
   type TutorialState,
 } from "../tutorial/tutorialStateMachine.js";
+import { MusicGardenPanel } from "../music-garden/MusicGardenPanel.js";
+import { MusicGardenVisualizer } from "../music-garden/MusicGardenVisualizer.js";
+import { parseMidi } from "../music-garden/musicGardenMidi.js";
+import {
+  activateNotes,
+  createInitialMusicGardenState,
+  resetPlayback as musicResetPlayback,
+  resetSession as musicResetSession,
+  tickElapsed,
+  type MusicGardenState,
+} from "../music-garden/musicGardenModel.js";
+import { MusicGardenAudio } from "../music-garden/musicGardenAudio.js";
+import {
+  handleNoteClick as musicHandleNoteClick,
+  handleNoteExpiry as rewardHandleNoteExpiry,
+  streakReward,
+} from "../music-garden/musicGardenReward.js";
 import { resolveEventArt } from "./eventArt.js";
 import { createEventParticipantOverlayViewModels } from "./eventParticipantOverlay.js";
 import { createVisibleChangePatchForSandboxUi } from "./interventionOutcomeViewModel.js";
@@ -398,6 +417,10 @@ export function EventFirstSandbox({
     sandboxDayPhases.indexOf("noon"),
   );
   const [eventArtError, setEventArtError] = useState(false);
+  const [musicState, setMusicState] = useState<MusicGardenState>(createInitialMusicGardenState);
+  const [musicResetKey, setMusicResetKey] = useState(0);
+  const musicAudioRef = useRef<MusicGardenAudio>(new MusicGardenAudio());
+  const musicRuntimeStateRef = useRef(runtimeState);
   const apostleMotionRef = useRef(apostleMotion);
   const residentEmoteRef = useRef<EmoteKind[]>([]);
   const residentMovementsRef = useRef<ResidentMovementState[]>(residentMovements);
@@ -812,6 +835,7 @@ export function EventFirstSandbox({
 
   useEffect(() => {
     runtimeStateRef.current = runtimeState;
+    musicRuntimeStateRef.current = runtimeState;
   }, [runtimeState]);
 
   useEffect(() => {
@@ -1060,6 +1084,126 @@ export function EventFirstSandbox({
     });
   }
 
+  // Music Garden: sync rewardsEnabled with event window state
+  useEffect(() => {
+    const rewardsEnabled = !eventWindowOpen && !latestOutcome;
+    setMusicState((prev) => ({ ...prev, rewardsEnabled }));
+  }, [eventWindowOpen, latestOutcome]);
+
+  // Music Garden: animation loop for tick and note activation
+  useEffect(() => {
+    if (!musicState.isPlaying) return;
+    let lastTime = performance.now();
+    let rafId = 0;
+
+    function frame(now: number) {
+      const delta = now - lastTime;
+      lastTime = now;
+      setMusicState((prev) => {
+        if (!prev.isPlaying) return prev;
+        const ticked = tickElapsed(prev, delta);
+        const activated = activateNotes(ticked);
+        musicAudioRef.current.scheduleNotes(activated.notes, activated.elapsedMs);
+        return activated;
+      });
+      rafId = requestAnimationFrame(frame);
+    }
+
+    rafId = requestAnimationFrame(frame);
+    musicAudioRef.current.resume();
+
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [musicState.isPlaying]);
+
+  const handleMidiFileLoad = useCallback((buffer: ArrayBuffer, fileName: string) => {
+    musicAudioRef.current.stop();
+    // Empty buffer is synthesised by the panel for non-MIDI file selection
+    if (buffer.byteLength === 0) {
+      setMusicState((prev) => ({
+        ...prev,
+        errorMessage: `${fileName}: .mid / .midi ファイルを選んでください`,
+        isPlaying: false,
+      }));
+      return;
+    }
+    // Show loading state immediately so the UI stays responsive, then parse
+    // on the next macrotask (parseMidi is synchronous and can take ~100ms on
+    // large files, which would visibly block the main thread if called inline).
+    setMusicState((prev) => ({
+      ...prev,
+      isPlaying: false,
+      errorMessage: null,
+      warnings: ["読み込み中…"],
+    }));
+    setTimeout(() => {
+      const outcome = parseMidi(buffer);
+      if (!outcome.ok) {
+        setMusicState((prev) => ({ ...prev, errorMessage: outcome.error, warnings: [], isPlaying: false }));
+        return;
+      }
+      const { notes, warnings } = outcome.result;
+      const newState = musicResetSession(notes, warnings);
+      setMusicState(newState);
+      setMusicResetKey((k) => k + 1);
+      musicAudioRef.current.resetSchedule();
+    }, 0);
+  }, []);
+
+  const handleMusicPlay = useCallback(() => {
+    // Call prepareForPlay from the direct user-gesture handler to satisfy
+    // browser autoplay policy before the animation loop starts.
+    musicAudioRef.current.prepareForPlay();
+    setMusicState((prev) => {
+      if (!prev.notes.length) return prev;
+      return { ...prev, isPlaying: true };
+    });
+  }, []);
+
+  const handleMusicPause = useCallback(() => {
+    setMusicState((prev) => ({ ...prev, isPlaying: false }));
+    musicAudioRef.current.pause();
+  }, []);
+
+  const handleMusicReset = useCallback(() => {
+    musicAudioRef.current.stop();
+    setMusicState((prev) => musicResetPlayback(prev));
+    setMusicResetKey((k) => k + 1);
+    musicAudioRef.current.resetSchedule();
+  }, []);
+
+  const handleMusicNoteClick = useCallback(
+    (noteId: string) => {
+      setMusicState((prev) => {
+        const afterClick = musicHandleNoteClick(prev, noteId);
+        if (afterClick.currentNoteStreak !== prev.currentNoteStreak) {
+          const { musicState: afterReward, worldState: newWorld } = streakReward(
+            afterClick,
+            musicRuntimeStateRef.current,
+          );
+          if (newWorld !== musicRuntimeStateRef.current) {
+            musicRuntimeStateRef.current = newWorld;
+            onRuntimeStateChange(newWorld);
+          }
+          return afterReward;
+        }
+        return afterClick;
+      });
+    },
+    [onRuntimeStateChange],
+  );
+
+  // handleNoteExpiry is handled entirely by the reward layer (which checks
+  // rewardsEnabled and note.clicked). The visualizer only calls this when
+  // rewardsEnabled=true, providing a consistent double-guard.
+  const handleMusicNoteExpire = useCallback(
+    (noteId: string) => {
+      setMusicState((prev) => rewardHandleNoteExpiry(prev, noteId));
+    },
+    [],
+  );
+
   function handleTutorialContinue() {
     setTutorialState((current) => advanceTutorialStep(current, "continue"));
   }
@@ -1307,6 +1451,15 @@ export function EventFirstSandbox({
         </div>
         <div className="event-first-sandbox__sky" />
         <div className="event-first-sandbox__ground" />
+        <MusicGardenVisualizer
+          notes={musicState.notes}
+          elapsedMs={musicState.elapsedMs}
+          dimmed={sandboxPaused}
+          rewardsEnabled={musicState.rewardsEnabled}
+          resetKey={musicResetKey}
+          onNoteClick={handleMusicNoteClick}
+          onNoteExpire={handleMusicNoteExpire}
+        />
 
         {activeResidents.map((resident) => {
           const visibleEmote = resolveVisibleResidentEmote({
@@ -1674,6 +1827,14 @@ export function EventFirstSandbox({
           onPrimaryAction={handleResultReviewed}
         />
       ) : null}
+      <MusicGardenPanel
+        state={musicState}
+        warnings={musicState.warnings}
+        onFileLoad={handleMidiFileLoad}
+        onPlay={handleMusicPlay}
+        onPause={handleMusicPause}
+        onReset={handleMusicReset}
+      />
     </section>
   );
 }
