@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * Character Asset Bundle Orchestrator
+ * Character Asset Bundle Initializer and Runbook Generator
  *
- * Prepares prompt packs, coordinates handoff, describes intake steps,
- * and prepares the review pack for a character asset bundle.
+ * Acquires the one-resident lock, writes a bundle-state.json with lifecycle
+ * state "planned", and prints the manual next-step commands for each lane.
+ * Does NOT invoke downstream tools (validator, intake, review pack) automatically.
+ * Those are separate commands run after GEN2 output is available.
  *
  * Does NOT generate art, call image APIs, use API keys, or write to public/art/**.
  * Does NOT mark assets as ready or promote candidates.
@@ -107,10 +109,11 @@ function assertOutputBoundary(outputPath) {
 // ---------------------------------------------------------------------------
 
 function printHelp() {
-  console.log(`Character Asset Bundle Orchestrator
+  console.log(`Character Asset Bundle Initializer and Runbook Generator
 
-Prepares prompt packs, coordinates handoff, calls intake tools, and prepares
-the review pack for a character asset bundle.
+Acquires the one-resident lock, writes bundle-state.json, and prints the
+manual next-step commands for each lane. Downstream tools (validator, intake,
+review pack) must be run separately after GEN2 output is available.
 
 Does NOT generate art, call image APIs, use API keys, or write to public/art/**.
 
