@@ -27,7 +27,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readPngHeader, hasPngSignature } from "./png-inspection-utils.mjs";
+import { readPngHeader, hasPngSignature, checkSheetMargins, checkSingleImageMargins } from "./png-inspection-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -232,29 +232,48 @@ function checkAlpha(filePath, label) {
 function validateResidentPoCombinedPreview(assetDir, contract, slug) {
   const filePath = path.join(assetDir, "resident-sprite-sheet-combined.png");
   const checks = [];
-  let identityConsistencyNeedsHumanReview = false;
+  const identityConsistencyNeedsHumanReview = false;
+  let marginChecked = false;
+  let marginViolated = false;
 
-  // 1. File exists
   const existsCheck = checkFileExists(filePath, "resident-sprite-sheet-combined.png");
   checks.push(existsCheck);
 
   if (existsCheck.passed) {
-    // 2. PNG signature
     checks.push(checkPngSignatureCheck(filePath, "resident-sprite-sheet-combined.png"));
-
-    // 3. Dimensions
-    checks.push(checkDimensions(
-      filePath,
-      contract.canvasWidth,
-      contract.canvasHeight,
-      "resident-sprite-sheet-combined.png",
-    ));
-
-    // 4. Alpha channel
+    checks.push(checkDimensions(filePath, contract.canvasWidth, contract.canvasHeight, "resident-sprite-sheet-combined.png"));
     checks.push(checkAlpha(filePath, "resident-sprite-sheet-combined.png"));
+
+    const cols = contract.columns ?? 7;
+    const rowCount = contract.rows ?? 14;
+    const fw = contract.frameWidth ?? 118;
+    const fh = contract.frameHeight ?? 136;
+    const safeMargins = contract.safeMargins ?? { top: 8, bottom: 8, left: 8, right: 8 };
+
+    const mr = checkSheetMargins(filePath, cols, rowCount, fw, fh, safeMargins);
+    if (mr.checked) {
+      marginChecked = true;
+      for (const v of mr.violations) {
+        marginViolated = true;
+        checks.push({
+          check: "pixel-margin",
+          scope: "frame-only",
+          label: `resident-sprite-sheet-combined.png row ${v.row} col ${v.column}`,
+          path: filePath,
+          passed: false,
+          side: v.side,
+          actual: v.actual,
+          required: v.required,
+          row: v.row,
+          column: v.column,
+          reason: `row ${v.row} col ${v.column}: ${v.side} margin ${v.actual}px < ${v.required}px required`,
+        });
+      }
+    }
   }
 
-  return { checks, identityConsistencyNeedsHumanReview };
+  const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
 }
 
 function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
@@ -264,62 +283,107 @@ function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
         {
           fileName: "resident-sprite-sheet.png",
           label: "resident-sprite-sheet.png (motion)",
+          sheetKind: "motion",
           canvasWidth: contract.sheets[0]?.canvasWidth,
           canvasHeight: contract.sheets[0]?.canvasHeight,
+          columns: contract.sheets[0]?.columns ?? 8,
+          rows: contract.sheets[0]?.rows ?? 9,
+          frameWidth: contract.sheets[0]?.frameWidth ?? 192,
+          frameHeight: contract.sheets[0]?.frameHeight ?? 208,
         },
         {
           fileName: "resident-sprite-sheet-extended.png",
           label: "resident-sprite-sheet-extended.png (extended)",
+          sheetKind: "extended",
           canvasWidth: contract.sheets[1]?.canvasWidth,
           canvasHeight: contract.sheets[1]?.canvasHeight,
+          columns: contract.sheets[1]?.columns ?? 8,
+          rows: contract.sheets[1]?.rows ?? 9,
+          frameWidth: contract.sheets[1]?.frameWidth ?? 192,
+          frameHeight: contract.sheets[1]?.frameHeight ?? 208,
         },
       ]
     : [
         {
           fileName: "resident-sprite-sheet.png",
           label: "resident-sprite-sheet.png (motion)",
+          sheetKind: "motion",
           canvasWidth: contract.canvasWidth,
           canvasHeight: contract.canvasHeight,
+          columns: contract.columns ?? 8,
+          rows: contract.rows ?? 9,
+          frameWidth: contract.frameWidth ?? 192,
+          frameHeight: contract.frameHeight ?? 208,
         },
         {
           fileName: "resident-sprite-sheet-extended.png",
           label: "resident-sprite-sheet-extended.png (extended)",
+          sheetKind: "extended",
           canvasWidth: contract.canvasWidth,
           canvasHeight: contract.canvasHeight,
+          columns: contract.columns ?? 8,
+          rows: contract.rows ?? 9,
+          frameWidth: contract.frameWidth ?? 192,
+          frameHeight: contract.frameHeight ?? 208,
         },
       ];
 
+  const safeMargins = contract.safeMargins ?? { top: 8, bottom: 8, left: 10, right: 10 };
   const checks = [];
   const identityConsistencyNeedsHumanReview = false;
+  let marginChecked = false;
+  let marginViolated = false;
 
-  for (const { fileName, label, canvasWidth, canvasHeight } of sheetSpecs) {
-    const filePath = path.join(assetDir, fileName);
-    const existsCheck = checkFileExists(filePath, label);
+  for (const spec of sheetSpecs) {
+    const filePath = path.join(assetDir, spec.fileName);
+    const existsCheck = checkFileExists(filePath, spec.label);
     checks.push(existsCheck);
 
     if (existsCheck.passed) {
-      checks.push(checkPngSignatureCheck(filePath, label));
-      checks.push(checkDimensions(filePath, canvasWidth, canvasHeight, label));
-      checks.push(checkAlpha(filePath, label));
+      checks.push(checkPngSignatureCheck(filePath, spec.label));
+      checks.push(checkDimensions(filePath, spec.canvasWidth, spec.canvasHeight, spec.label));
+      checks.push(checkAlpha(filePath, spec.label));
+
+      const mr = checkSheetMargins(filePath, spec.columns, spec.rows, spec.frameWidth, spec.frameHeight, safeMargins);
+      if (mr.checked) {
+        marginChecked = true;
+        for (const v of mr.violations) {
+          marginViolated = true;
+          checks.push({
+            check: "pixel-margin",
+            scope: "frame-only",
+            label: `${spec.label} row ${v.row} col ${v.column}`,
+            path: filePath,
+            sheetKind: spec.sheetKind,
+            passed: false,
+            side: v.side,
+            actual: v.actual,
+            required: v.required,
+            row: v.row,
+            column: v.column,
+            reason: `${spec.sheetKind} sheet row ${v.row} col ${v.column}: ${v.side} margin ${v.actual}px < ${v.required}px required`,
+          });
+        }
+      }
     }
   }
 
-  return { checks, identityConsistencyNeedsHumanReview };
+  const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
 }
 
 function validateExpressionSet(assetDir, contract, slug, isEventSet) {
   const checks = [];
   const identityConsistencyNeedsHumanReview = !isEventSet; // Portrait expressions need human review
-
   const scope = isEventSet ? "event-expression-only" : "expression-only";
-
-  // Look in <assetDir>/expressions/ first, then <assetDir>/ directly
   const expressionsSubDir = isEventSet
     ? path.join(assetDir, "event-expressions")
     : path.join(assetDir, "expressions");
   const expressionDir = existsSync(expressionsSubDir) ? expressionsSubDir : assetDir;
-
+  const safeMargins = contract.safeMargins ?? { top: 8, bottom: 8, left: 8, right: 8 };
   const validDimensions = [];
+  let marginChecked = false;
+  let marginViolated = false;
 
   for (const expr of contract.requiredExpressions) {
     const filePath = path.join(expressionDir, `${expr}.png`);
@@ -333,15 +397,32 @@ function validateExpressionSet(assetDir, contract, slug, isEventSet) {
       checks.push(sigCheck);
 
       if (sigCheck.passed) {
-        const alphaCheck = checkAlpha(filePath, label);
-        checks.push(alphaCheck);
+        checks.push(checkAlpha(filePath, label));
 
-        // Collect dimensions for consistency check
         try {
           const header = readPngHeader(filePath);
           validDimensions.push({ file: filePath, width: header.width, height: header.height });
         } catch {
-          // Already handled by alpha check
+          // Handled by alpha check
+        }
+
+        const mr = checkSingleImageMargins(filePath, safeMargins);
+        if (mr.checked) {
+          marginChecked = true;
+          for (const v of mr.violations) {
+            marginViolated = true;
+            checks.push({
+              check: "pixel-margin",
+              scope,
+              label,
+              path: filePath,
+              passed: false,
+              side: v.side,
+              actual: v.actual,
+              required: v.required,
+              reason: `${label}: ${v.side} margin ${v.actual}px < ${v.required}px required`,
+            });
+          }
         }
       }
     }
@@ -377,7 +458,8 @@ function validateExpressionSet(assetDir, contract, slug, isEventSet) {
     }
   }
 
-  return { checks, identityConsistencyNeedsHumanReview };
+  const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
 }
 
 // ---------------------------------------------------------------------------
@@ -414,13 +496,21 @@ function buildPromptPatch(check, contractId) {
         `File "${path.basename(filePath ?? "")}" has ${actual} but the reference is ${expected}. ` +
         `Regenerate all expressions at a consistent canvas size.`;
 
+    case "pixel-margin":
+      return `Character content enters the ${check.side} safe margin zone. ` +
+        `The ${check.side} margin is ${check.actual}px but must be ≥${check.required}px. ` +
+        `Ensure no visible pixels appear within ${check.required}px of the ${check.side} edge.`;
+
     default:
       return reason ?? `Check failed: ${checkType}. Review the asset and regenerate as needed.`;
   }
 }
 
 function determineScopeForCheck(check, contractId) {
-  const { check: checkType, label } = check;
+  const { check: checkType } = check;
+
+  // pixel-margin checks carry their scope directly
+  if (checkType === "pixel-margin") return check.scope ?? "frame-only";
 
   // Expression-related contracts
   if (contractId === "portrait-expression-set-v1") return "expression-only";
@@ -454,7 +544,7 @@ function buildRetryPlan(checks, slug, contractId) {
 // Report + retry plan writer
 // ---------------------------------------------------------------------------
 
-function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun) {
+function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus = "not-run") {
   const generatedAt = new Date().toISOString();
   const passCount = checks.filter((c) => c.passed).length;
   const failCount = checks.filter((c) => !c.passed).length;
@@ -473,7 +563,7 @@ function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanRev
     failCount,
     hardGatePassed,
     qualityGateStatus,
-    marginCheckStatus: "not-run",
+    marginCheckStatus,
     checks,
     ...(identityConsistencyNeedsHumanReview ? { identityConsistencyNeedsHumanReview: true } : {}),
   };
@@ -588,30 +678,35 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
 
   let checks;
   let identityConsistencyNeedsHumanReview = false;
+  let marginCheckStatus = "not-run";
 
   switch (contractId) {
     case "resident-po-combined-preview-v1": {
       const result = validateResidentPoCombinedPreview(resolvedAssetDir, contract, slug);
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
+      marginCheckStatus = result.marginCheckStatus;
       break;
     }
     case "resident-canonical-two-sheet-v1": {
       const result = validateResidentCanonicalTwoSheet(resolvedAssetDir, contract, slug);
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
+      marginCheckStatus = result.marginCheckStatus;
       break;
     }
     case "portrait-expression-set-v1": {
       const result = validateExpressionSet(resolvedAssetDir, contract, slug, false);
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
+      marginCheckStatus = result.marginCheckStatus;
       break;
     }
     case "event-standing-expression-set-v1": {
       const result = validateExpressionSet(resolvedAssetDir, contract, slug, true);
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
+      marginCheckStatus = result.marginCheckStatus;
       break;
     }
     default:
@@ -627,7 +722,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
     "qa",
   );
 
-  return writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun);
+  return writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus);
 }
 
 // ---------------------------------------------------------------------------

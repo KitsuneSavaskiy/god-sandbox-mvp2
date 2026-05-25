@@ -24,6 +24,7 @@
  */
 
 import { readFileSync } from "node:fs";
+import { inflateSync } from "node:zlib";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -117,27 +118,179 @@ export function hasPngSignature(filePath) {
 }
 
 // ---------------------------------------------------------------------------
-// checkTransparentMargin (stub)
+// PNG full decode (used by pixel-level margin checks)
+// ---------------------------------------------------------------------------
+//
+// evaluate-sprite-frame-fit.mjs has equivalent logic but is a CLI that
+// auto-runs main() on load — importing it safely is not possible.
+// Both files use node:zlib inflateSync and the same 5-filter algorithm.
+
+function _readPngChunks(bytes) {
+  if (bytes.length < 8 || !bytes.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    throw new Error("PNG signature is invalid.");
+  }
+  const chunks = [];
+  let offset = 8;
+  while (offset < bytes.length) {
+    const length = bytes.readUInt32BE(offset);
+    const type = bytes.subarray(offset + 4, offset + 8).toString("ascii");
+    const data = bytes.subarray(offset + 8, offset + 8 + length);
+    chunks.push({ type, data });
+    offset += 12 + length;
+    if (type === "IEND") break;
+  }
+  return chunks;
+}
+
+function _unfilterRow(filter, current, previous, bpp) {
+  const output = Buffer.alloc(current.length);
+  for (let i = 0; i < current.length; i++) {
+    const left = i >= bpp ? output[i - bpp] : 0;
+    const up = previous ? previous[i] : 0;
+    const upLeft = (previous && i >= bpp) ? previous[i - bpp] : 0;
+    let v;
+    if (filter === 0)      v = current[i];
+    else if (filter === 1) v = current[i] + left;
+    else if (filter === 2) v = current[i] + up;
+    else if (filter === 3) v = current[i] + Math.floor((left + up) / 2);
+    else if (filter === 4) {
+      const p = left + up - upLeft;
+      const pa = Math.abs(p - left), pb = Math.abs(p - up), pc = Math.abs(p - upLeft);
+      const pred = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+      v = current[i] + pred;
+    } else {
+      throw new Error(`Unsupported PNG filter type: ${filter}`);
+    }
+    output[i] = v & 0xff;
+  }
+  return output;
+}
+
+/**
+ * Decode a PNG file to raw 8-bit RGBA pixel data (colorType=6 only).
+ *
+ * @param {string} filePath  Absolute path to the PNG file.
+ * @returns {{ width: number, height: number, rgba: Buffer }}
+ * @throws {Error} if the file cannot be decoded or is not 8-bit RGBA.
+ */
+export function readPngRgba(filePath) {
+  const bytes = readFileSync(filePath);
+  const chunks = _readPngChunks(bytes);
+  const ihdr = chunks.find((c) => c.type === "IHDR");
+  if (!ihdr) throw new Error("PNG IHDR chunk missing.");
+  const width = ihdr.data.readUInt32BE(0);
+  const height = ihdr.data.readUInt32BE(4);
+  if (ihdr.data[8] !== 8 || ihdr.data[9] !== 6) {
+    throw new Error("Only 8-bit RGBA PNG (colorType=6) is supported for pixel inspection.");
+  }
+  const idatData = Buffer.concat(chunks.filter((c) => c.type === "IDAT").map((c) => c.data));
+  if (idatData.length === 0) throw new Error("No IDAT chunks in PNG.");
+  const inflated = inflateSync(idatData);
+  const bpp = 4;
+  const stride = width * bpp;
+  const rgba = Buffer.alloc(width * height * bpp);
+  let offset = 0;
+  let prev = null;
+  for (let y = 0; y < height; y++) {
+    const filter = inflated[offset++];
+    const raw = inflated.subarray(offset, offset + stride);
+    offset += stride;
+    const line = _unfilterRow(filter, raw, prev, bpp);
+    line.copy(rgba, y * stride);
+    prev = line;
+  }
+  return { width, height, rgba };
+}
+
+// ---------------------------------------------------------------------------
+// Pixel-level margin checks
+// ---------------------------------------------------------------------------
+
+function _frameMarginViolations(rgba, imgWidth, x0, y0, fw, fh, safeMargins) {
+  let minX = fw, maxX = -1, minY = fh, maxY = -1;
+  for (let y = 0; y < fh; y++) {
+    for (let x = 0; x < fw; x++) {
+      if (rgba[((y0 + y) * imgWidth + (x0 + x)) * 4 + 3] > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX === -1) return []; // all transparent — no violation
+  const vv = [];
+  if (minX            < safeMargins.left)    vv.push({ side: "left",   actual: minX,          required: safeMargins.left });
+  if (fw - 1 - maxX   < safeMargins.right)   vv.push({ side: "right",  actual: fw - 1 - maxX, required: safeMargins.right });
+  if (minY            < safeMargins.top)     vv.push({ side: "top",    actual: minY,          required: safeMargins.top });
+  if (fh - 1 - maxY   < safeMargins.bottom)  vv.push({ side: "bottom", actual: fh - 1 - maxY, required: safeMargins.bottom });
+  return vv;
+}
+
+/**
+ * Check all frames in a sprite sheet PNG for safe-margin compliance.
+ * Returns { checked, passed, violations[] }.
+ * checked=false if the PNG cannot be decoded (caller keeps marginCheckStatus "not-run").
+ *
+ * @param {string} filePath
+ * @param {number} columns
+ * @param {number} rows
+ * @param {number} frameWidth
+ * @param {number} frameHeight
+ * @param {{ top: number, bottom: number, left: number, right: number }} safeMargins
+ * @returns {{ checked: boolean, passed: boolean, violations: Array<{row,column,side,actual,required}> }}
+ */
+export function checkSheetMargins(filePath, columns, rows, frameWidth, frameHeight, safeMargins) {
+  let png;
+  try { png = readPngRgba(filePath); } catch { return { checked: false, passed: false, violations: [] }; }
+  if (png.width !== columns * frameWidth || png.height !== rows * frameHeight) {
+    return { checked: false, passed: false, violations: [] };
+  }
+  const violations = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < columns; col++) {
+      for (const v of _frameMarginViolations(png.rgba, png.width, col * frameWidth, row * frameHeight, frameWidth, frameHeight, safeMargins)) {
+        violations.push({ row, column: col, ...v });
+      }
+    }
+  }
+  return { checked: true, passed: violations.length === 0, violations };
+}
+
+/**
+ * Check a single expression image PNG for safe-margin compliance.
+ * Returns { checked, passed, violations[] }.
+ * checked=false if the PNG cannot be decoded.
+ *
+ * @param {string} filePath
+ * @param {{ top: number, bottom: number, left: number, right: number }} safeMargins
+ * @returns {{ checked: boolean, passed: boolean, violations: Array<{side,actual,required}> }}
+ */
+export function checkSingleImageMargins(filePath, safeMargins) {
+  let png;
+  try { png = readPngRgba(filePath); } catch { return { checked: false, passed: false, violations: [] }; }
+  const violations = _frameMarginViolations(png.rgba, png.width, 0, 0, png.width, png.height, safeMargins);
+  return { checked: true, passed: violations.length === 0, violations };
+}
+
+// ---------------------------------------------------------------------------
+// checkTransparentMargin
 // ---------------------------------------------------------------------------
 
 /**
- * Checks whether all pixels within `margin` pixels of each edge are transparent.
+ * Checks whether all visible pixels respect the given margin from each edge.
+ * Now backed by full RGBA decode. Backward-compatible return shape.
  *
- * NOTE: Real PNG decompression without an external library requires implementing
- * zlib inflate and all 5 PNG filter types (None, Sub, Up, Average, Paeth).
- * That is already implemented in evaluate-sprite-frame-fit.mjs using node:zlib.
- *
- * For the asset-contract validator phase this is a stub — structural checks
- * (signature, dimensions, alpha channel flag) are the hard gates.
- * Pixel-level margin checks are advisory and require human review.
- *
- * @param {string} _filePath  Path to the PNG file (unused in stub).
- * @param {number} _margin    Pixel margin from each edge (unused in stub).
- * @returns {{ checked: boolean, passed?: boolean, reason?: string }}
+ * @param {string} filePath  Path to the PNG file.
+ * @param {number | { top: number, bottom: number, left: number, right: number }} margin
+ *   Uniform margin (number) or per-side object.
+ * @returns {{ checked: boolean, passed?: boolean, violations?: object[], reason?: string }}
  */
-export function checkTransparentMargin(_filePath, _margin) {
-  return {
-    checked: false,
-    reason: "pixel-decode-not-implemented",
-  };
+export function checkTransparentMargin(filePath, margin) {
+  const safeMargins = (typeof margin === "number")
+    ? { top: margin, bottom: margin, left: margin, right: margin }
+    : (margin ?? { top: 8, bottom: 8, left: 8, right: 8 });
+  const result = checkSingleImageMargins(filePath, safeMargins);
+  if (!result.checked) return { checked: false, reason: "pixel-decode-failed" };
+  return { checked: true, passed: result.passed, violations: result.violations };
 }
