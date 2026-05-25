@@ -27,7 +27,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readPngHeader, hasPngSignature, checkSheetMargins, checkSingleImageMargins } from "./png-inspection-utils.mjs";
+import { readPngHeader, hasPngSignature, checkSheetMargins, checkSingleImageMargins, checkImageHasContent } from "./png-inspection-utils.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -273,7 +273,7 @@ function validateResidentPoCombinedPreview(assetDir, contract, slug) {
   }
 
   const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
-  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus: "not-run" };
 }
 
 function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
@@ -369,7 +369,7 @@ function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
   }
 
   const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
-  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus: "not-run" };
 }
 
 function validateExpressionSet(assetDir, contract, slug, isEventSet) {
@@ -384,6 +384,8 @@ function validateExpressionSet(assetDir, contract, slug, isEventSet) {
   const validDimensions = [];
   let marginChecked = false;
   let marginViolated = false;
+  let contentChecked = false;
+  let contentFailed = false;
 
   for (const expr of contract.requiredExpressions) {
     const filePath = path.join(expressionDir, `${expr}.png`);
@@ -424,6 +426,22 @@ function validateExpressionSet(assetDir, contract, slug, isEventSet) {
             });
           }
         }
+
+        const cc = checkImageHasContent(filePath);
+        if (cc.checked) {
+          contentChecked = true;
+          if (!cc.hasContent) {
+            contentFailed = true;
+            checks.push({
+              check: "required-content",
+              scope,
+              label,
+              path: filePath,
+              passed: false,
+              reason: `${label}: image is fully transparent (no visible pixels)`,
+            });
+          }
+        }
       }
     }
   }
@@ -459,7 +477,8 @@ function validateExpressionSet(assetDir, contract, slug, isEventSet) {
   }
 
   const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
-  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus };
+  const contentCheckStatus = contentChecked ? (contentFailed ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus };
 }
 
 // ---------------------------------------------------------------------------
@@ -501,6 +520,10 @@ function buildPromptPatch(check, contractId) {
         `The ${check.side} margin is ${check.actual}px but must be ≥${check.required}px. ` +
         `Ensure no visible pixels appear within ${check.required}px of the ${check.side} edge.`;
 
+    case "required-content":
+      return `The file "${path.basename(filePath ?? "")}" is fully transparent — no visible pixels detected. ` +
+        `Regenerate this asset; the final image must contain non-transparent character content.`;
+
     default:
       return reason ?? `Check failed: ${checkType}. Review the asset and regenerate as needed.`;
   }
@@ -509,8 +532,9 @@ function buildPromptPatch(check, contractId) {
 function determineScopeForCheck(check, contractId) {
   const { check: checkType } = check;
 
-  // pixel-margin checks carry their scope directly
+  // pixel-margin and required-content checks carry their scope directly
   if (checkType === "pixel-margin") return check.scope ?? "frame-only";
+  if (checkType === "required-content") return check.scope ?? "expression-only";
 
   // Expression-related contracts
   if (contractId === "portrait-expression-set-v1") return "expression-only";
@@ -544,7 +568,7 @@ function buildRetryPlan(checks, slug, contractId) {
 // Report + retry plan writer
 // ---------------------------------------------------------------------------
 
-function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus = "not-run") {
+function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus = "not-run", contentCheckStatus = "not-run") {
   const generatedAt = new Date().toISOString();
   const passCount = checks.filter((c) => c.passed).length;
   const failCount = checks.filter((c) => !c.passed).length;
@@ -564,6 +588,7 @@ function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanRev
     hardGatePassed,
     qualityGateStatus,
     marginCheckStatus,
+    contentCheckStatus,
     checks,
     ...(identityConsistencyNeedsHumanReview ? { identityConsistencyNeedsHumanReview: true } : {}),
   };
@@ -679,6 +704,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
   let checks;
   let identityConsistencyNeedsHumanReview = false;
   let marginCheckStatus = "not-run";
+  let contentCheckStatus = "not-run";
 
   switch (contractId) {
     case "resident-po-combined-preview-v1": {
@@ -686,6 +712,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
       marginCheckStatus = result.marginCheckStatus;
+      contentCheckStatus = result.contentCheckStatus ?? "not-run";
       break;
     }
     case "resident-canonical-two-sheet-v1": {
@@ -693,6 +720,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
       marginCheckStatus = result.marginCheckStatus;
+      contentCheckStatus = result.contentCheckStatus ?? "not-run";
       break;
     }
     case "portrait-expression-set-v1": {
@@ -700,6 +728,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
       marginCheckStatus = result.marginCheckStatus;
+      contentCheckStatus = result.contentCheckStatus ?? "not-run";
       break;
     }
     case "event-standing-expression-set-v1": {
@@ -707,6 +736,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
       checks = result.checks;
       identityConsistencyNeedsHumanReview = result.identityConsistencyNeedsHumanReview;
       marginCheckStatus = result.marginCheckStatus;
+      contentCheckStatus = result.contentCheckStatus ?? "not-run";
       break;
     }
     default:
@@ -722,7 +752,7 @@ export async function validateAssetContract({ slug, contractId, assetDir, dryRun
     "qa",
   );
 
-  return writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus);
+  return writeReports(slug, contractId, checks, identityConsistencyNeedsHumanReview, outputDir, dryRun, marginCheckStatus, contentCheckStatus);
 }
 
 // ---------------------------------------------------------------------------

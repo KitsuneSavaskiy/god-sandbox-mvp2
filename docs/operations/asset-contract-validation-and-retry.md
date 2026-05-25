@@ -1,6 +1,6 @@
 # Asset Contract Validation and Retry Plan
 
-Sprint 10-D — Pixel-level containment validation added.
+Sprint 10-E — Non-empty content checks added. Event-standing-expressions is a first-class validation lane.
 
 ## Overview
 
@@ -16,6 +16,7 @@ Semantic quality (pose consistency, character identity, row order) still require
 |---|---|---|
 | **Structural** | Always | Yes — file-exists, dimensions, alpha |
 | **Pixel-margin** | When file decodes as 8-bit RGBA | Yes — visible pixels inside safe margin zone |
+| **Required-content** | Expression sets — when file decodes as 8-bit RGBA | Yes — fully transparent file has no visible pixels |
 | **Human review** | Portrait expression sets | Flags `identityConsistencyNeedsHumanReview: true` |
 
 `marginCheckStatus` in the report reflects the pixel gate:
@@ -33,6 +34,7 @@ Semantic quality (pose consistency, character identity, row order) still require
 | `alpha-channel` | structural | Color type includes alpha (type 4 = grayscale+alpha, type 6 = RGBA) |
 | `canvas-size-consistency` | structural | All expression files in a set share the same canvas size |
 | `pixel-margin` | pixel | No visible pixel (alpha > 0) falls inside the safe margin zone of its frame |
+| `required-content` | pixel | At least one non-transparent pixel exists in the image (expression sets only) |
 
 ## What the validator does NOT check
 
@@ -109,6 +111,7 @@ Reports are written to `assets/generated/residents/<slug>/qa/` (gitignored).
   "hardGatePassed": false,
   "qualityGateStatus": "fail",
   "marginCheckStatus": "fail",
+  "contentCheckStatus": "not-run",
   "checks": [
     { "check": "file-exists", "path": "...", "passed": true },
     { "check": "png-signature", "path": "...", "passed": true },
@@ -124,7 +127,12 @@ Reports are written to `assets/generated/residents/<slug>/qa/` (gitignored).
 `marginCheckStatus` values:
 - `"pass"` — all frames scanned, no violations
 - `"fail"` — at least one `pixel-margin` check in `checks[]`
-- `"not-run"` — PNG could not be fully decoded (header-only file, non-RGBA, or decode error)
+- `"not-run"` — PNG could not be fully decoded (header-only file, non-RGBA, or decode error); or contract type does not run margin checks
+
+`contentCheckStatus` values (expression sets only):
+- `"pass"` — all decoded expression files have at least one visible pixel
+- `"fail"` — at least one `required-content` check in `checks[]` (fully transparent image)
+- `"not-run"` — PNG could not be fully decoded, or contract type does not run content checks (sprite sheets)
 
 For portrait expression sets, an additional field is included:
 ```json
@@ -167,9 +175,8 @@ Each failure in `retry-plan.json` has a `scope` field indicating what needs to b
 | `full-sheet` | The entire sprite sheet must be regenerated | `dimensions`, `alpha-channel`, `png-signature` |
 | `row-only` | Only specific rows need to be regenerated | (reserved) |
 | `frame-only` | A specific frame violates the safe margin — character content too close to cell edge | `pixel-margin` |
-| `expression-only` | Portrait expression file(s) need to be regenerated | `file-exists`, `alpha-channel`, `pixel-margin` |
-| `event-expression-only` | Event standing expression file(s) need to be regenerated | `file-exists`, `alpha-channel`, `pixel-margin` |
-| `event-expression-only` | Event standing expression file(s) need to be regenerated |
+| `expression-only` | Portrait expression file(s) need to be regenerated | `file-exists`, `alpha-channel`, `pixel-margin`, `required-content` |
+| `event-expression-only` | Event standing expression file(s) need to be regenerated | `file-exists`, `alpha-channel`, `pixel-margin`, `required-content` |
 
 ## identityConsistencyNeedsHumanReview
 

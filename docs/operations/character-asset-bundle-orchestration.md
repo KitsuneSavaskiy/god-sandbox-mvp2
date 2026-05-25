@@ -1,6 +1,6 @@
 # Character Asset Bundle Orchestration
 
-Status: Sprint 10-C — operational guide for `run-character-asset-bundle.mjs`
+Status: Sprint 10-E — operational guide for `run-character-asset-bundle.mjs`
 
 ## Overview
 
@@ -99,17 +99,33 @@ Release the lock manually with `--force-unlock` when the bundle is complete or a
 
 ## Lanes
 
-| Lane | Description |
-|---|---|
-| `resident-sprite-sheet` | Sprite sheet for the resident character |
-| `portrait-expressions` | 5 portrait expression PNGs (neutral, happy, angry, sad, surprised) |
-| `event-standing-expressions` | 8 event standing expression PNGs (see below) |
-| `derived-icon` | Icon derived from sprite sheet (depends on `resident-sprite-sheet`) |
-| `review-pack` | HTML review pack for PO inspection |
+| Lane | Prompt files generated | Description |
+|---|---|---|
+| `resident-sprite-sheet` | `sprites/combined.prompt.md` (po-combined) or `sprites/sheet1.prompt.md` + `sprites/sheet2.prompt.md` (canonical) | Sprite sheet for the resident character |
+| `portrait-expressions` | `expressions/neutral.prompt.md` … `expressions/surprised.prompt.md` (5 files) | 5 portrait expression PNGs (neutral, happy, angry, sad, surprised) |
+| `event-standing-expressions` | `event-expressions/neutral.prompt.md` … `event-expressions/shocked.prompt.md` (8 files) | 8 event standing expression PNGs (see below) |
+| `derived-icon` | — (no prompt file; depends on `resident-sprite-sheet`) | Icon derived from sprite sheet |
+| `review-pack` | — (no prompt file) | HTML review pack for PO inspection |
 
 ## Event Standing Expressions Lane
 
-When `event-standing-expressions` is included in `--lanes`, the orchestrator describes that it expects 8 expression PNG files in:
+When `event-standing-expressions` is included in `--lanes`, `character-asset-prompt-pack.mjs` generates 8 prompt files:
+
+```
+assets/generated/residents/<slug>/prompt-pack/event-expressions/
+  neutral.prompt.md
+  happy.prompt.md
+  angry.prompt.md
+  sad.prompt.md
+  surprised.prompt.md
+  worried.prompt.md
+  determined.prompt.md
+  shocked.prompt.md
+```
+
+Each prompt requires: same character identity, same costume, same pose, same camera angle, same crop, transparent background, only facial expression changes.
+
+After bridge-generated PNGs are placed, the orchestrator expects 8 expression PNG files in:
 
 ```
 assets/generated/residents/<slug>/incoming/event-expressions/

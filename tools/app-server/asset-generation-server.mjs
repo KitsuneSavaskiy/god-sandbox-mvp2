@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
-const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon"];
+export const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 const VALID_BRIDGE_MODES = ["local-cli", "hot-folder", "manual-drop", "fake"];
 

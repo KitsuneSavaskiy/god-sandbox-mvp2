@@ -1966,11 +1966,192 @@ async function test47_pixelMarginInRetryPlanHasScope() {
 }
 
 // ---------------------------------------------------------------------------
+// Sprint 10-E tests (48–51)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Test 48: event-standing-expressions lane generates 8 prompt files in event-expressions/
+// ---------------------------------------------------------------------------
+
+async function test48_eventStandingLaneGenerates8Prompts() {
+  const { buildPromptPack } = await import("./character-asset-prompt-pack.mjs");
+
+  const testRoot = path.join(os.tmpdir(), `godsandbox-pp-test48-${Date.now()}`);
+  mkdirSync(testRoot, { recursive: true });
+
+  const result = await buildPromptPack({
+    assetBundleId: "test-event48",
+    displayName: "TestChar",
+    personality: "calm",
+    tone: "gentle",
+    age: 25,
+    portraitPath: "assets/generated/residents/test-event48/reference/portrait.png",
+    lanes: ["event-standing-expressions"],
+    previewMode: "po-combined",
+    repoRoot: testRoot,
+  });
+
+  const EVENT_EXPRESSIONS = ["neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked"];
+
+  for (const expr of EVENT_EXPRESSIONS) {
+    const exprFile = result.files.find((f) => f.includes(`event-expressions/${expr}.prompt.md`));
+    assert.ok(
+      exprFile,
+      `buildPromptPack should produce event-expressions/${expr}.prompt.md. Got files: ${JSON.stringify(result.files)}`,
+    );
+  }
+
+  const eventPromptFiles = result.files.filter((f) => f.includes("event-expressions/"));
+  assert.strictEqual(
+    eventPromptFiles.length,
+    8,
+    `Expected 8 event expression prompt files, got ${eventPromptFiles.length}: ${JSON.stringify(eventPromptFiles)}`,
+  );
+
+  // Verify content mentions consistency requirements
+  const fs = await import("node:fs");
+  const neutralPath = path.join(testRoot, eventPromptFiles.find((f) => f.includes("neutral.prompt.md")));
+  const neutralContent = fs.readFileSync(neutralPath, "utf8");
+  assert.ok(
+    neutralContent.includes("same camera angle and crop"),
+    `Event expression prompt must require consistent camera angle and crop. Got: ${neutralContent.slice(0, 200)}`,
+  );
+  assert.ok(
+    neutralContent.includes("transparent background"),
+    `Event expression prompt must require transparent background`,
+  );
+
+  console.log("[PASS] test48: event-standing-expressions lane generates 8 prompt files in event-expressions/");
+}
+
+// ---------------------------------------------------------------------------
+// Test 49: asset-generation-server VALID_LANES includes event-standing-expressions
+// ---------------------------------------------------------------------------
+
+async function test49_serverValidLanesIncludesEventStanding() {
+  const { VALID_LANES } = await import("./asset-generation-server.mjs");
+
+  assert.ok(
+    Array.isArray(VALID_LANES),
+    `VALID_LANES must be an array. Got: ${typeof VALID_LANES}`,
+  );
+  assert.ok(
+    VALID_LANES.includes("event-standing-expressions"),
+    `VALID_LANES must include "event-standing-expressions". Got: ${JSON.stringify(VALID_LANES)}`,
+  );
+
+  console.log(`[PASS] test49: asset-generation-server VALID_LANES includes "event-standing-expressions"`);
+}
+
+// ---------------------------------------------------------------------------
+// Test 50: all-transparent portrait expression PNG fails content check
+// ---------------------------------------------------------------------------
+
+async function test50_allTransparentExpressionFailsContentCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+  const { CONTRACTS } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test50-${Date.now()}`);
+  const exprDir = path.join(tmpDir, "expressions");
+  mkdirSync(exprDir, { recursive: true });
+
+  // All 5 expressions are fully transparent
+  const transparentPng = makeRgbaPng(80, 100, () => [0, 0, 0, 0]);
+  for (const e of ["neutral", "happy", "angry", "sad", "surprised"]) {
+    writeFileSync(path.join(exprDir, `${e}.png`), transparentPng);
+  }
+
+  const result = await validateAssetContract({
+    slug: "test-slug-50",
+    contractId: "portrait-expression-set-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: CONTRACTS,
+  });
+
+  assert.strictEqual(
+    result.report.contentCheckStatus,
+    "fail",
+    `contentCheckStatus should be "fail" for all-transparent images. Got "${result.report.contentCheckStatus}"`,
+  );
+
+  const contentFailures = result.report.checks.filter((c) => c.check === "required-content");
+  assert.strictEqual(
+    contentFailures.length,
+    5,
+    `Expected 5 required-content failures (one per expression). Got ${contentFailures.length}`,
+  );
+
+  for (const f of contentFailures) {
+    assert.strictEqual(f.passed, false, `required-content check must be passed=false`);
+    assert.ok(
+      f.reason && f.reason.includes("transparent"),
+      `required-content reason must mention transparency. Got: "${f.reason}"`,
+    );
+  }
+
+  // retryPlan must include required-content failures with scope and promptPatch
+  const retryContentFailures = result.retryPlan.failures.filter((f) => f.check === "required-content");
+  assert.ok(
+    retryContentFailures.length >= 1,
+    `retryPlan must include required-content failures`,
+  );
+  assert.ok(
+    typeof retryContentFailures[0].promptPatch === "string" && retryContentFailures[0].promptPatch.length > 20,
+    `required-content failure must have non-empty promptPatch`,
+  );
+
+  console.log("[PASS] test50: all-transparent portrait expressions → contentCheckStatus=\"fail\", 5 required-content failures");
+}
+
+// ---------------------------------------------------------------------------
+// Test 51: expression PNG with visible pixel passes content check
+// ---------------------------------------------------------------------------
+
+async function test51_visiblePixelExpressionPassesContentCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+  const { CONTRACTS } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test51-${Date.now()}`);
+  const exprDir = path.join(tmpDir, "expressions");
+  mkdirSync(exprDir, { recursive: true });
+
+  // All expressions have a visible pixel well inside safe margins (x=40, y=50)
+  const withContentPng = makeRgbaPng(80, 100, (x, y) => (x === 40 && y === 50) ? [255, 0, 0, 255] : [0, 0, 0, 0]);
+  for (const e of ["neutral", "happy", "angry", "sad", "surprised"]) {
+    writeFileSync(path.join(exprDir, `${e}.png`), withContentPng);
+  }
+
+  const result = await validateAssetContract({
+    slug: "test-slug-51",
+    contractId: "portrait-expression-set-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: CONTRACTS,
+  });
+
+  assert.strictEqual(
+    result.report.contentCheckStatus,
+    "pass",
+    `contentCheckStatus should be "pass" when expressions have visible pixels. Got "${result.report.contentCheckStatus}"`,
+  );
+
+  const contentFailures = result.report.checks.filter((c) => c.check === "required-content");
+  assert.strictEqual(
+    contentFailures.length,
+    0,
+    `Expected 0 required-content failures for expressions with visible pixels. Got ${contentFailures.length}`,
+  );
+
+  console.log("[PASS] test51: portrait expressions with visible pixels → contentCheckStatus=\"pass\", 0 required-content failures");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening/10-D dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening/10-D/10-E dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -2022,6 +2203,10 @@ async function main() {
     test45_canonicalAllTransparentPassesMargin,
     test46_canonicalEdgePixelReportsSheetKind,
     test47_pixelMarginInRetryPlanHasScope,
+    test48_eventStandingLaneGenerates8Prompts,
+    test49_serverValidLanesIncludesEventStanding,
+    test50_allTransparentExpressionFailsContentCheck,
+    test51_visiblePixelExpressionPassesContentCheck,
   ];
 
   for (const test of tests) {

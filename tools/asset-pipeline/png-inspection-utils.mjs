@@ -278,6 +278,22 @@ export function checkSingleImageMargins(filePath, safeMargins) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Check whether a PNG has any non-transparent (visible) pixels.
+ * Returns { checked: false } if the PNG cannot be decoded as 8-bit RGBA.
+ *
+ * @param {string} filePath
+ * @returns {{ checked: boolean, hasContent?: boolean }}
+ */
+export function checkImageHasContent(filePath) {
+  let png;
+  try { png = readPngRgba(filePath); } catch { return { checked: false }; }
+  for (let i = 3; i < png.rgba.length; i += 4) {
+    if (png.rgba[i] > 0) return { checked: true, hasContent: true };
+  }
+  return { checked: true, hasContent: false };
+}
+
+/**
  * Checks whether all visible pixels respect the given margin from each edge.
  * Now backed by full RGBA decode. Backward-compatible return shape.
  *
