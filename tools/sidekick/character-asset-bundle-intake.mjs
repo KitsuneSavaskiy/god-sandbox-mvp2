@@ -31,6 +31,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
 const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
+const DEFAULT_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 
 const intakeScript = path.join(repoRoot, "tools", "sidekick", "sidekick-intake.mjs");
@@ -199,7 +200,7 @@ async function main() {
       throw new Error("--portrait is required.");
     }
 
-    const lanes = args.lanes ?? VALID_LANES.slice();
+    const lanes = args.lanes ?? DEFAULT_LANES.slice();
     for (const lane of lanes) {
       if (!VALID_LANES.includes(lane)) {
         throw new Error(`Invalid lane "${lane}". Valid: ${VALID_LANES.join(", ")}`);

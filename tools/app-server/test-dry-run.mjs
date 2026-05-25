@@ -2435,6 +2435,89 @@ async function test56_poCombinedWithContentPassesContentCheck() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 57: intake --dry-run without --lanes → event-standing-expressions NOT included
+// ---------------------------------------------------------------------------
+
+async function test57_intakeDefaultLanesExcludeEventStanding() {
+  const { spawnSync } = await import("node:child_process");
+
+  const intakeScript = path.join(repoRoot, "tools", "sidekick", "character-asset-bundle-intake.mjs");
+
+  const result = spawnSync(
+    "node",
+    [
+      intakeScript,
+      "--slug", "defaultlanestest",
+      "--name", "DefaultLanesTest",
+      "--personality", "calm",
+      "--tone", "gentle",
+      "--age", "20",
+      "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, `intake --dry-run should exit 0. stderr: ${result.stderr}`);
+
+  const out = result.stdout;
+  assert.ok(
+    !out.includes("event-standing-expressions"),
+    `Default lanes must NOT include event-standing-expressions.\nGot output: ${out}`,
+  );
+  assert.ok(
+    out.includes("resident-sprite-sheet"),
+    `Default lanes must include resident-sprite-sheet.\nGot output: ${out}`,
+  );
+  assert.ok(
+    out.includes("portrait-expressions"),
+    `Default lanes must include portrait-expressions.\nGot output: ${out}`,
+  );
+  assert.ok(
+    out.includes("derived-icon"),
+    `Default lanes must include derived-icon.\nGot output: ${out}`,
+  );
+
+  console.log("[PASS] test57: intake --dry-run default lanes exclude event-standing-expressions");
+}
+
+// ---------------------------------------------------------------------------
+// Test 58: intake --dry-run --lanes event-standing-expressions → accepted
+// ---------------------------------------------------------------------------
+
+async function test58_intakeAcceptsExplicitEventStandingLane() {
+  const { spawnSync } = await import("node:child_process");
+
+  const intakeScript = path.join(repoRoot, "tools", "sidekick", "character-asset-bundle-intake.mjs");
+
+  const result = spawnSync(
+    "node",
+    [
+      intakeScript,
+      "--slug", "eventlanetest",
+      "--name", "EventLaneTest",
+      "--personality", "calm",
+      "--tone", "gentle",
+      "--age", "20",
+      "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+      "--lanes", "event-standing-expressions",
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, `intake --dry-run with event-standing-expressions should exit 0. stderr: ${result.stderr}`);
+
+  const out = result.stdout;
+  assert.ok(
+    out.includes("event-standing-expressions"),
+    `Output must include event-standing-expressions.\nGot: ${out}`,
+  );
+
+  console.log("[PASS] test58: intake --dry-run accepts explicit --lanes event-standing-expressions");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
@@ -2500,6 +2583,8 @@ async function main() {
     test54_poCombinedAllTransparentFailsContentCheck,
     test55_canonicalAllTransparentFailsContentCheck,
     test56_poCombinedWithContentPassesContentCheck,
+    test57_intakeDefaultLanesExcludeEventStanding,
+    test58_intakeAcceptsExplicitEventStandingLane,
   ];
 
   for (const test of tests) {
