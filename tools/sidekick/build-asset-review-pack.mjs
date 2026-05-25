@@ -500,12 +500,18 @@ function buildIndexHtml({
   const hasRetryPlan = retryPlan && contractReport && (contractReport.failCount ?? 0) > 0;
   if (hasRetryPlan && retryPlan.failures && retryPlan.failures.length > 0) {
     const rows = retryPlan.failures.map((f) =>
-      `<tr><td>${escHtml(f.lane ?? "")}</td><td>${escHtml(f.reason ?? "")}</td><td>${escHtml(f.action ?? "")}</td></tr>`,
+      `<tr>` +
+      `<td>${escHtml(f.scope ?? "")}</td>` +
+      `<td><code>${escHtml(path.basename(f.filePath ?? ""))}</code></td>` +
+      `<td>${escHtml(f.check ?? "")}</td>` +
+      `<td>${escHtml(f.reason ?? "")}</td>` +
+      `<td>${escHtml(f.promptPatch ?? "")}</td>` +
+      `</tr>`,
     );
     retryPlanHtml = `<div class="card">
       <h2>リトライ計画</h2>
       <table class="lane-table">
-        <thead><tr><th>Lane</th><th>Reason</th><th>Action</th></tr></thead>
+        <thead><tr><th>Scope</th><th>File</th><th>Check</th><th>Reason</th><th>Action (Prompt Patch)</th></tr></thead>
         <tbody>${rows.join("\n        ")}</tbody>
       </table>
     </div>`;

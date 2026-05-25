@@ -31,7 +31,7 @@ export const CONTRACTS = {
     transparentBackgroundRequired: true,
     forbiddenArtifacts: ["labels","text","frame-markers","checkerboard","solid-background","grid-lines"],
     identityConsistencyRules: ["same-character-across-all-rows","consistent-costume","consistent-scale"],
-    safeMargins: { top: 4, bottom: 4, left: 4, right: 4 },
+    safeMargins: { top: 8, bottom: 8, left: 10, right: 10 },
   },
 
   "resident-po-combined-preview-v1": {
@@ -51,7 +51,7 @@ export const CONTRACTS = {
     transparentBackgroundRequired: true,
     forbiddenArtifacts: ["labels","text","frame-markers","checkerboard","solid-background","grid-lines"],
     identityConsistencyRules: ["same-character-across-all-rows","consistent-costume","consistent-scale"],
-    safeMargins: { top: 4, bottom: 4, left: 4, right: 4 },
+    safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
   },
 
   "portrait-expression-set-v1": {

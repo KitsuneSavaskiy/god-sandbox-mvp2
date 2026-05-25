@@ -258,21 +258,48 @@ function validateResidentPoCombinedPreview(assetDir, contract, slug) {
 }
 
 function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
-  const motionPath = path.join(assetDir, "resident-sprite-sheet.png");
-  const extendedPath = path.join(assetDir, "resident-sprite-sheet-extended.png");
+  // Registry format uses contract.sheets[]; inline fallback uses top-level canvasWidth/canvasHeight.
+  const sheetSpecs = contract.sheets
+    ? [
+        {
+          fileName: "resident-sprite-sheet.png",
+          label: "resident-sprite-sheet.png (motion)",
+          canvasWidth: contract.sheets[0]?.canvasWidth,
+          canvasHeight: contract.sheets[0]?.canvasHeight,
+        },
+        {
+          fileName: "resident-sprite-sheet-extended.png",
+          label: "resident-sprite-sheet-extended.png (extended)",
+          canvasWidth: contract.sheets[1]?.canvasWidth,
+          canvasHeight: contract.sheets[1]?.canvasHeight,
+        },
+      ]
+    : [
+        {
+          fileName: "resident-sprite-sheet.png",
+          label: "resident-sprite-sheet.png (motion)",
+          canvasWidth: contract.canvasWidth,
+          canvasHeight: contract.canvasHeight,
+        },
+        {
+          fileName: "resident-sprite-sheet-extended.png",
+          label: "resident-sprite-sheet-extended.png (extended)",
+          canvasWidth: contract.canvasWidth,
+          canvasHeight: contract.canvasHeight,
+        },
+      ];
+
   const checks = [];
   const identityConsistencyNeedsHumanReview = false;
 
-  for (const { filePath, label } of [
-    { filePath: motionPath, label: "resident-sprite-sheet.png" },
-    { filePath: extendedPath, label: "resident-sprite-sheet-extended.png" },
-  ]) {
+  for (const { fileName, label, canvasWidth, canvasHeight } of sheetSpecs) {
+    const filePath = path.join(assetDir, fileName);
     const existsCheck = checkFileExists(filePath, label);
     checks.push(existsCheck);
 
     if (existsCheck.passed) {
       checks.push(checkPngSignatureCheck(filePath, label));
-      checks.push(checkDimensions(filePath, contract.canvasWidth, contract.canvasHeight, label));
+      checks.push(checkDimensions(filePath, canvasWidth, canvasHeight, label));
       checks.push(checkAlpha(filePath, label));
     }
   }
@@ -432,6 +459,11 @@ function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanRev
   const passCount = checks.filter((c) => c.passed).length;
   const failCount = checks.filter((c) => !c.passed).length;
 
+  const hardGatePassed = failCount === 0;
+  const qualityGateStatus = failCount === 0
+    ? (identityConsistencyNeedsHumanReview ? "needs-human-review" : "pass")
+    : "fail";
+
   const report = {
     candidateOnly: true,
     slug,
@@ -439,6 +471,9 @@ function writeReports(slug, contractId, checks, identityConsistencyNeedsHumanRev
     generatedAt,
     passCount,
     failCount,
+    hardGatePassed,
+    qualityGateStatus,
+    marginCheckStatus: "not-run",
     checks,
     ...(identityConsistencyNeedsHumanReview ? { identityConsistencyNeedsHumanReview: true } : {}),
   };
@@ -614,11 +649,12 @@ Usage:
     [--help]
 
 Arguments:
-  --slug        Character slug (e.g. "ryo")
-  --contract    Contract ID (see below)
-  --asset-dir   Directory containing the asset(s) to validate
-  --dry-run     Print what would be validated; do not write files
-  --help        Show this help
+  --slug              Character slug (e.g. "ryo")
+  --contract          Contract ID (see below)
+  --asset-dir         Directory containing the asset(s) to validate
+  --dry-run           Print what would be validated; do not write files
+  --fail-on-violation Exit 2 if any check fails (failCount > 0). Default: exit 0.
+  --help              Show this help
 
 Contract IDs:
   resident-canonical-two-sheet-v1     Two-sheet 1536x1872 canonical sprite
@@ -634,8 +670,10 @@ Output (unless --dry-run):
 Security:
   Writing to public/art/** is refused with a SECURITY error.
 
-Exit code: 0 = ran successfully (check passCount/failCount for results)
-           1 = error (bad arguments, missing contract, security violation, etc.)
+Exit codes:
+  0 = ran successfully (check passCount/failCount in JSON for results)
+  1 = error (bad arguments, missing contract, security violation, etc.)
+  2 = validation failures found (only with --fail-on-violation)
 `);
 }
 
@@ -645,6 +683,7 @@ function parseArgs(argv) {
     contractId: null,
     assetDir: null,
     dryRun: false,
+    failOnViolation: false,
     help: false,
   };
 
@@ -652,6 +691,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--help" || arg === "-h") { opts.help = true; continue; }
     if (arg === "--dry-run") { opts.dryRun = true; continue; }
+    if (arg === "--fail-on-violation") { opts.failOnViolation = true; continue; }
     if (arg === "--slug" && argv[i + 1]) { opts.slug = argv[++i]; continue; }
     if (arg === "--contract" && argv[i + 1]) { opts.contractId = argv[++i]; continue; }
     if (arg === "--asset-dir" && argv[i + 1]) { opts.assetDir = argv[++i]; continue; }
@@ -718,16 +758,24 @@ async function main() {
   const { passCount, failCount } = report;
   const status = failCount === 0 ? "PASS" : "FAIL";
 
-  console.log(`\n${status}  passCount=${passCount}  failCount=${failCount}`);
+  console.log(`\n${status}  passCount=${passCount}  failCount=${failCount}  qualityGateStatus=${report.qualityGateStatus}`);
   if (failCount > 0) {
     console.log(`\nFailed checks:`);
     for (const check of report.checks.filter((c) => !c.passed)) {
       console.log(`  [${check.check}] ${check.reason ?? check.path}`);
     }
   }
+  if (report.marginCheckStatus === "not-run") {
+    console.log(`\nNote: marginCheckStatus=not-run — pixel-level margin checks require full PNG decode.`);
+    console.log(`      Run sprite:fit for detailed per-frame margin analysis.`);
+  }
 
-  // Exit 0 regardless of pass/fail — caller reads the JSON for detailed results.
-  // Non-zero exit is reserved for errors (bad args, contract not found, etc.).
+  if (opts.failOnViolation && failCount > 0) {
+    console.log(`\nExit 2: --fail-on-violation is set and failCount=${failCount}.`);
+    process.exit(2);
+  }
+
+  // Default: exit 0 regardless of pass/fail — caller reads the JSON for detailed results.
   process.exitCode = 0;
 }
 

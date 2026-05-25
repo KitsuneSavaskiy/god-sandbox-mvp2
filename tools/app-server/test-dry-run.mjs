@@ -1377,11 +1377,253 @@ async function test33_runBundleDryRunFakeBridgeWarning() {
 }
 
 // ---------------------------------------------------------------------------
+// Sprint 10 hardening patch tests (34–40)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Test 34: canonical two-sheet validator reads nested contract.sheets[]
+//          (dimensions must not be undefinedxundefined)
+// ---------------------------------------------------------------------------
+
+async function test34_canonicalValidatorReadsSheetSpecs() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+  const { getContract } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const contract = getContract("resident-canonical-two-sheet-v1");
+  const w = contract.sheets[0].canvasWidth;
+  const h = contract.sheets[0].canvasHeight;
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test34-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const goodPng = makePngHeaderBuffer(w, h, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet.png"), goodPng);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-extended.png"), goodPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-34",
+    contractId: "resident-canonical-two-sheet-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const dimChecks = result.report.checks.filter((c) => c.check === "dimensions");
+  assert.strictEqual(dimChecks.length, 2, `Expected 2 dimension checks, got ${dimChecks.length}`);
+  for (const dc of dimChecks) {
+    assert.strictEqual(dc.passed, true, `Dimension check should pass for ${w}x${h}: ${JSON.stringify(dc)}`);
+    assert.strictEqual(dc.expected, `${w}x${h}`, `Expected "${w}x${h}", got "${dc.expected}"`);
+    assert.notStrictEqual(dc.expected, "undefinedxundefined", `Expected must never be "undefinedxundefined"`);
+  }
+
+  console.log("[PASS] test34: canonical two-sheet validator reads nested contract.sheets[] (no undefinedxundefined)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 35: wrong canonical dimensions fail with correct expected (1536x1872),
+//          never undefinedxundefined
+// ---------------------------------------------------------------------------
+
+async function test35_canonicalWrongDimensionsShowsExpected() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test35-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const wrongPng = makePngHeaderBuffer(800, 800, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet.png"), wrongPng);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-extended.png"), wrongPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-35",
+    contractId: "resident-canonical-two-sheet-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const dimChecks = result.report.checks.filter((c) => c.check === "dimensions" && !c.passed);
+  assert.ok(dimChecks.length >= 1, `Expected at least 1 failing dimension check, got ${dimChecks.length}`);
+  for (const dc of dimChecks) {
+    assert.strictEqual(dc.expected, "1536x1872", `Expected "1536x1872", got "${dc.expected}"`);
+    assert.notStrictEqual(dc.expected, "undefinedxundefined", `Expected must never be "undefinedxundefined"`);
+  }
+
+  console.log("[PASS] test35: wrong canonical dimensions fail with expected=1536x1872 (not undefinedxundefined)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 36: registry safeMargins for canonical contract match resident-sprite-spec
+//          left/right >= 10px, top/bottom >= 8px
+// ---------------------------------------------------------------------------
+
+async function test36_canonicalSafeMarginsMatchSpec() {
+  const { getContract } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+  const contract = getContract("resident-canonical-two-sheet-v1");
+  const margins = contract.safeMargins;
+
+  assert.ok(margins.left >= 10, `safeMargins.left must be >= 10 (spec), got ${margins.left}`);
+  assert.ok(margins.right >= 10, `safeMargins.right must be >= 10 (spec), got ${margins.right}`);
+  assert.ok(margins.top >= 8, `safeMargins.top must be >= 8 (spec), got ${margins.top}`);
+  assert.ok(margins.bottom >= 8, `safeMargins.bottom must be >= 8 (spec), got ${margins.bottom}`);
+
+  console.log(`[PASS] test36: canonical safeMargins match resident-sprite-spec (left=${margins.left} right=${margins.right} top=${margins.top} bottom=${margins.bottom})`);
+}
+
+// ---------------------------------------------------------------------------
+// Test 37: review pack HTML renders retry plan with scope and promptPatch
+//          (not blank lane/action columns from old field names)
+// ---------------------------------------------------------------------------
+
+async function test37_reviewPackRendersRetryPlanScopeAndPromptPatch() {
+  const { spawnSync } = await import("node:child_process");
+  const { readFileSync: readFS, rmSync } = await import("node:fs");
+
+  const slug = `test37-${Date.now()}`;
+  const slugDir = path.join(repoRoot, "assets", "generated", "residents", slug);
+  const qaDir = path.join(slugDir, "qa");
+  const incomingDir = path.join(slugDir, "incoming");
+  const outputDir = path.join(os.tmpdir(), `gs-review-${slug}`);
+
+  mkdirSync(qaDir, { recursive: true });
+  mkdirSync(incomingDir, { recursive: true });
+  mkdirSync(outputDir, { recursive: true });
+
+  const UNIQUE_PATCH = "TEST_PROMPT_PATCH_SCOPE_FULLSHEET_XYZ";
+
+  writeFileSync(path.join(qaDir, "asset-contract-report.json"), JSON.stringify({
+    candidateOnly: true, slug, contractId: "resident-po-combined-preview-v1",
+    passCount: 0, failCount: 1, hardGatePassed: false, qualityGateStatus: "fail",
+    checks: [],
+  }));
+  writeFileSync(path.join(qaDir, "retry-plan.json"), JSON.stringify({
+    candidateOnly: true, slug, contractId: "resident-po-combined-preview-v1",
+    failures: [{
+      check: "dimensions",
+      filePath: "resident-sprite-sheet-combined.png",
+      reason: "Expected 826x1904, got 100x100",
+      scope: "full-sheet",
+      promptPatch: UNIQUE_PATCH,
+    }],
+    passCount: 0, failCount: 1,
+  }));
+
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "build-asset-review-pack.mjs");
+  const result = spawnSync("node", [
+    toolPath, "--slug", slug, "--output-dir", outputDir,
+  ], { cwd: repoRoot, encoding: "utf8" });
+
+  let html = "";
+  try { html = readFS(path.join(outputDir, "index.html"), "utf8"); } catch {}
+  try { rmSync(slugDir, { recursive: true, force: true }); } catch {}
+  try { rmSync(outputDir, { recursive: true, force: true }); } catch {}
+
+  assert.strictEqual(result.status, 0,
+    `review-pack should exit 0. stderr: ${result.stderr?.slice(0, 300)}`);
+  assert.ok(
+    html.includes(UNIQUE_PATCH),
+    `HTML should contain promptPatch text "${UNIQUE_PATCH}". HTML preview: ${html.slice(0, 200)}`,
+  );
+  assert.ok(
+    html.includes("full-sheet"),
+    `HTML should contain scope "full-sheet". HTML preview: ${html.slice(0, 200)}`,
+  );
+
+  console.log("[PASS] test37: review pack HTML renders retry plan scope and promptPatch (not blank lane/action)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 38: --fail-on-violation exits 2 when validation fails
+// ---------------------------------------------------------------------------
+
+async function test38_failOnViolationExitsNonZero() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "asset-pipeline", "validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test38-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const wrongPng = makePngHeaderBuffer(100, 100, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), wrongPng);
+
+  const result = spawnSync("node", [
+    toolPath,
+    "--slug", "test38",
+    "--contract", "resident-po-combined-preview-v1",
+    "--asset-dir", tmpDir,
+    "--dry-run",
+    "--fail-on-violation",
+  ], { cwd: repoRoot, encoding: "utf8" });
+
+  assert.strictEqual(
+    result.status, 2,
+    `--fail-on-violation should exit 2 when failCount > 0. Got exit ${result.status}\nstdout: ${result.stdout?.slice(0,300)}\nstderr: ${result.stderr?.slice(0,200)}`,
+  );
+
+  console.log("[PASS] test38: --fail-on-violation exits 2 when validation fails");
+}
+
+// ---------------------------------------------------------------------------
+// Test 39: report includes marginCheckStatus: "not-run" (never silent pass)
+// ---------------------------------------------------------------------------
+
+async function test39_marginCheckStatusNotRun() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test39-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const goodPng = makePngHeaderBuffer(826, 1904, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), goodPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-39",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus,
+    "not-run",
+    `marginCheckStatus must be "not-run" for structural-only validation. Got: "${result.report.marginCheckStatus}"`,
+  );
+  assert.notStrictEqual(
+    result.report.marginCheckStatus,
+    undefined,
+    "marginCheckStatus must be present in report (not missing)",
+  );
+
+  console.log("[PASS] test39: report.marginCheckStatus=\"not-run\" (pixel-level checks are never silently passed)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 40: hardGatePassed and qualityGateStatus are set correctly
+// ---------------------------------------------------------------------------
+
+async function test40_hardGateAndQualityGateStatusInReport() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test40-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const badPng = makePngHeaderBuffer(100, 100, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), badPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-40",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  assert.strictEqual(result.report.hardGatePassed, false,
+    `hardGatePassed should be false when failCount > 0`);
+  assert.strictEqual(result.report.qualityGateStatus, "fail",
+    `qualityGateStatus should be "fail" when failCount > 0, got "${result.report.qualityGateStatus}"`);
+
+  console.log("[PASS] test40: hardGatePassed=false and qualityGateStatus=\"fail\" when validation fails");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -1419,6 +1661,13 @@ async function main() {
     test31_eventIntakeRejectsNoAlpha,
     test32_eventIntakeAcceptsAlpha,
     test33_runBundleDryRunFakeBridgeWarning,
+    test34_canonicalValidatorReadsSheetSpecs,
+    test35_canonicalWrongDimensionsShowsExpected,
+    test36_canonicalSafeMarginsMatchSpec,
+    test37_reviewPackRendersRetryPlanScopeAndPromptPatch,
+    test38_failOnViolationExitsNonZero,
+    test39_marginCheckStatusNotRun,
+    test40_hardGateAndQualityGateStatusInReport,
   ];
 
   for (const test of tests) {
