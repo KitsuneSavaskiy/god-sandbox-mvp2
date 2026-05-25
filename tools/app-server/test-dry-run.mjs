@@ -860,11 +860,229 @@ async function test22_expressionContractsRequireAlphaAndTransparency() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 23: wrong PNG dimensions → validation report shows FAIL for dimensions check
+// ---------------------------------------------------------------------------
+
+function makePngHeaderBuffer(width, height, colorType = 6) {
+  const buf = Buffer.alloc(33);
+  // PNG signature
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf, 0);
+  // IHDR length = 13
+  buf.writeUInt32BE(13, 8);
+  // IHDR type
+  Buffer.from("IHDR").copy(buf, 12);
+  // width, height
+  buf.writeUInt32BE(width, 16);
+  buf.writeUInt32BE(height, 20);
+  // bit depth = 8, color type, compression=0, filter=0, interlace=0
+  buf[24] = 8; buf[25] = colorType; buf[26] = 0; buf[27] = 0; buf[28] = 0;
+  // CRC (skip for test — validator only reads bytes 0-25)
+  return buf;
+}
+
+async function test23_wrongDimensions_reportShowsFail() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test23-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  // Create PNG with header reporting 800x800 instead of 826x1904
+  const wrongPng = makePngHeaderBuffer(800, 800, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), wrongPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-23",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const { report } = result;
+
+  // Should have a dimension failure
+  assert.ok(
+    report.failCount > 0,
+    `Expected failCount > 0 for wrong dimensions. Got failCount=${report.failCount}`,
+  );
+
+  const dimCheck = report.checks.find((c) => c.check === "dimensions");
+  assert.ok(dimCheck, "Expected a dimensions check in the report");
+  assert.strictEqual(dimCheck.passed, false, "Dimensions check should fail for 800x800 vs 826x1904");
+  assert.ok(
+    dimCheck.actual === "800x800",
+    `Expected actual="800x800", got "${dimCheck.actual}"`,
+  );
+
+  console.log("[PASS] test23: wrong PNG dimensions → validation report shows FAIL for dimensions check");
+}
+
+// ---------------------------------------------------------------------------
+// Test 24: missing alpha channel → validation fails alpha check
+// ---------------------------------------------------------------------------
+
+async function test24_missingAlpha_reportShowsFail() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test24-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  // Create PNG with colorType=2 (RGB, no alpha) at correct 826x1904 dimensions
+  const rgbPng = makePngHeaderBuffer(826, 1904, 2);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), rgbPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-24",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const { report } = result;
+
+  const alphaCheck = report.checks.find((c) => c.check === "alpha-channel");
+  assert.ok(alphaCheck, "Expected an alpha-channel check in the report");
+  assert.strictEqual(alphaCheck.passed, false, "Alpha check should fail for colorType=2 (RGB)");
+  assert.ok(
+    report.failCount > 0,
+    `Expected failCount > 0 for missing alpha. Got failCount=${report.failCount}`,
+  );
+
+  console.log("[PASS] test24: missing alpha channel → validation fails alpha check");
+}
+
+// ---------------------------------------------------------------------------
+// Test 25: missing expression file → validation fails
+// ---------------------------------------------------------------------------
+
+async function test25_missingExpressionFile_reportShowsFail() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test25-${Date.now()}`);
+  const expressionsDir = path.join(tmpDir, "expressions");
+  mkdirSync(expressionsDir, { recursive: true });
+
+  // Create only neutral.png — missing happy/angry/sad/surprised
+  const validPng = makePngHeaderBuffer(512, 512, 6);
+  writeFileSync(path.join(expressionsDir, "neutral.png"), validPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-25",
+    contractId: "portrait-expression-set-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const { report } = result;
+
+  // Should have file-exists failures for missing expressions
+  const missingChecks = report.checks.filter((c) => c.check === "file-exists" && !c.passed);
+  assert.ok(
+    missingChecks.length >= 4,
+    `Expected at least 4 missing-file failures (happy, angry, sad, surprised). Got ${missingChecks.length}`,
+  );
+  assert.ok(
+    report.failCount > 0,
+    `Expected failCount > 0 for missing expressions. Got failCount=${report.failCount}`,
+  );
+
+  console.log("[PASS] test25: missing expression files → validation fails with file-exists failures");
+}
+
+// ---------------------------------------------------------------------------
+// Test 26: valid fixture passes basic checks
+// ---------------------------------------------------------------------------
+
+async function test26_validFixture_passesBasicChecks() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test26-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  // Create PNG with correct 826x1904 dimensions, colorType=6 (RGBA)
+  const validPng = makePngHeaderBuffer(826, 1904, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), validPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-26",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const { report } = result;
+
+  assert.ok(
+    report.passCount > 0,
+    `Expected passCount > 0 for valid fixture. Got passCount=${report.passCount}`,
+  );
+
+  const dimCheck = report.checks.find((c) => c.check === "dimensions");
+  assert.ok(dimCheck, "Expected a dimensions check in the report");
+  assert.strictEqual(dimCheck.passed, true, "Dimensions check should pass for 826x1904");
+
+  const alphaCheck = report.checks.find((c) => c.check === "alpha-channel");
+  assert.ok(alphaCheck, "Expected an alpha-channel check in the report");
+  assert.strictEqual(alphaCheck.passed, true, "Alpha check should pass for colorType=6");
+
+  console.log("[PASS] test26: valid 826x1904 RGBA fixture passes dimensions and alpha checks");
+}
+
+// ---------------------------------------------------------------------------
+// Test 27: retry-plan.json includes actionable scope field for each failure
+// ---------------------------------------------------------------------------
+
+const VALID_SCOPE_VALUES = [
+  "full-sheet",
+  "row-only",
+  "frame-only",
+  "expression-only",
+  "event-expression-only",
+];
+
+async function test27_retryPlanHasScopeField() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test27-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  // Create PNG with wrong dimensions to force a failure
+  const wrongPng = makePngHeaderBuffer(400, 600, 6);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-combined.png"), wrongPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-27",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+  });
+
+  const { retryPlan } = result;
+
+  assert.ok(
+    retryPlan.failures.length > 0,
+    `Expected at least one failure in retryPlan. Got ${retryPlan.failures.length}`,
+  );
+
+  for (const failure of retryPlan.failures) {
+    assert.ok(
+      typeof failure.scope === "string",
+      `Each failure must have a "scope" string field. Got: ${JSON.stringify(failure)}`,
+    );
+    assert.ok(
+      VALID_SCOPE_VALUES.includes(failure.scope),
+      `failure.scope must be one of ${VALID_SCOPE_VALUES.join(", ")}. Got: "${failure.scope}"`,
+    );
+  }
+
+  console.log("[PASS] test27: retry-plan failures all have a valid scope field");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -891,6 +1109,11 @@ async function main() {
     test20_canonicalTwoSheetContract,
     test21_poCombinedContract,
     test22_expressionContractsRequireAlphaAndTransparency,
+    test23_wrongDimensions_reportShowsFail,
+    test24_missingAlpha_reportShowsFail,
+    test25_missingExpressionFile_reportShowsFail,
+    test26_validFixture_passesBasicChecks,
+    test27_retryPlanHasScopeField,
   ];
 
   for (const test of tests) {
