@@ -25,9 +25,12 @@
  */
 
 import {
+  closeSync,
   existsSync,
   mkdirSync,
+  openSync,
   readFileSync,
+  readSync,
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
@@ -110,6 +113,40 @@ function hasPngSignature(buf) {
     if (buf[i] !== PNG_SIGNATURE[i]) return false;
   }
   return true;
+}
+
+/**
+ * Reads the first 26 bytes of a PNG file to check alpha channel presence.
+ * Returns { hasAlpha, colorType } or null on failure.
+ * colorType 4 (grayscale+alpha) and 6 (RGBA) have alpha.
+ *
+ * @param {string} filePath
+ * @returns {{ hasAlpha: boolean, colorType: number } | null}
+ */
+function readPngAlpha(filePath) {
+  if (!existsSync(filePath)) return null;
+  const buf = Buffer.alloc(26);
+  let fd;
+  try {
+    fd = openSync(filePath, "r");
+    readSync(fd, buf, 0, 26, 0);
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) {
+      try { closeSync(fd); } catch { /* ignore */ }
+    }
+  }
+
+  // Check PNG signature
+  for (let i = 0; i < 8; i++) {
+    if (buf[i] !== PNG_SIGNATURE[i]) return null;
+  }
+
+  // IHDR colorType is at byte 25
+  const colorType = buf[25];
+  const hasAlpha = colorType === 4 || colorType === 6;
+  return { hasAlpha, colorType };
 }
 
 /**
@@ -266,6 +303,35 @@ function findPrimarySprite(assetPaths) {
   return assetPaths["sprite-combined"] ?? assetPaths["sprite-main"] ?? assetPaths["sprite-extended"] ?? null;
 }
 
+const EVENT_EXPRESSIONS = [
+  "neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked",
+];
+
+/**
+ * Checks event standing expressions in incoming/event-expressions/.
+ * @param {string} incomingDir
+ * @returns {{ found: boolean, expressions: Array<{name: string, fileFound: boolean, hasAlpha: boolean|null}> }}
+ */
+function checkEventExpressions(incomingDir) {
+  const eventDir = path.join(incomingDir, "event-expressions");
+  if (!existsSync(eventDir)) {
+    return { found: false, expressions: [] };
+  }
+
+  const expressions = EVENT_EXPRESSIONS.map((name) => {
+    const filePath = path.join(eventDir, `${name}.png`);
+    const fileFound = existsSync(filePath);
+    let hasAlpha = null;
+    if (fileFound) {
+      const alphaInfo = readPngAlpha(filePath);
+      hasAlpha = alphaInfo ? alphaInfo.hasAlpha : null;
+    }
+    return { name, fileFound, hasAlpha };
+  });
+
+  return { found: true, expressions };
+}
+
 // ---------------------------------------------------------------------------
 // HTML generation
 // ---------------------------------------------------------------------------
@@ -301,6 +367,10 @@ function buildIndexHtml({
   expressionManifest,
   iconReport,
   generatedAt,
+  eventExpressionsInfo,
+  contractReport,
+  retryPlan,
+  validationOnlyBridge,
 }) {
   const displayName = meta.displayName ?? slug;
   const personality = meta.personality ?? "—";
@@ -382,6 +452,63 @@ function buildIndexHtml({
   }
   if (validationParts.length > 0) {
     validationHtml = validationParts.join("\n");
+  }
+
+  // Event standing expressions section
+  let eventExpressionsHtml;
+  if (!eventExpressionsInfo || !eventExpressionsInfo.found) {
+    eventExpressionsHtml = `<p class="note">Event standing expressions: not yet generated</p>`;
+  } else {
+    const rows = eventExpressionsInfo.expressions.map((e) => {
+      const foundTd = e.fileFound
+        ? `<td class="status-candidate-ready">yes</td>`
+        : `<td class="status-missing">no</td>`;
+      let alphaTd;
+      if (!e.fileFound) {
+        alphaTd = `<td>—</td>`;
+      } else if (e.hasAlpha === true) {
+        alphaTd = `<td class="status-candidate-ready">yes</td>`;
+      } else if (e.hasAlpha === false) {
+        alphaTd = `<td class="status-missing">no (alpha required)</td>`;
+      } else {
+        alphaTd = `<td class="note">unknown</td>`;
+      }
+      return `<tr><td>${escHtml(e.name)}</td>${foundTd}${alphaTd}</tr>`;
+    });
+    eventExpressionsHtml = `<table class="lane-table">
+      <thead><tr><th>Expression</th><th>File found</th><th>Has alpha</th></tr></thead>
+      <tbody>${rows.join("\n      ")}</tbody>
+    </table>`;
+  }
+
+  // Contract validation status section
+  let contractStatusHtml;
+  if (contractReport) {
+    const passCount = contractReport.passCount ?? 0;
+    const failCount = contractReport.failCount ?? 0;
+    const statusClass = failCount > 0 ? "status-missing" : "status-candidate-ready";
+    contractStatusHtml = `<p class="${statusClass}">Contract validation: ${passCount} passed, ${failCount} failed</p>`;
+    if (contractReport.generatedAt) {
+      contractStatusHtml += `<p class="note">Run at: ${escHtml(contractReport.generatedAt)}</p>`;
+    }
+  } else {
+    contractStatusHtml = `<p class="note">Contract validation: not yet run</p>`;
+  }
+
+  // Retry plan section
+  let retryPlanHtml = "";
+  const hasRetryPlan = retryPlan && contractReport && (contractReport.failCount ?? 0) > 0;
+  if (hasRetryPlan && retryPlan.failures && retryPlan.failures.length > 0) {
+    const rows = retryPlan.failures.map((f) =>
+      `<tr><td>${escHtml(f.lane ?? "")}</td><td>${escHtml(f.reason ?? "")}</td><td>${escHtml(f.action ?? "")}</td></tr>`,
+    );
+    retryPlanHtml = `<div class="card">
+      <h2>リトライ計画</h2>
+      <table class="lane-table">
+        <thead><tr><th>Lane</th><th>Reason</th><th>Action</th></tr></thead>
+        <tbody>${rows.join("\n        ")}</tbody>
+      </table>
+    </div>`;
   }
 
   return `<!DOCTYPE html>
@@ -513,10 +640,28 @@ function buildIndexHtml({
     /* === Footer === */
     .footer { font-size: 0.75rem; color: #999; margin-top: 24px; }
     .note { font-size: 0.85rem; color: #666; font-style: italic; }
+
+    /* === Fake Bridge Warning === */
+    .fake-bridge-banner {
+      background: #f8d7da;
+      border: 2px solid #dc3545;
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 1rem;
+      color: #721c24;
+    }
+
+    /* === Missing status === */
+    .status-missing { color: #dc3545; font-weight: 600; }
   </style>
 </head>
 <body>
   <div class="container">
+
+    <!-- Fake Bridge Warning (shown only when validationOnly) -->
+    ${validationOnlyBridge ? `<div class="fake-bridge-banner">&#9888; FAKE BRIDGE OUTPUT &#8212; NOT PO-REVIEWABLE. This review pack was generated from a fake bridge and is for pipeline validation only.</div>` : ""}
 
     <!-- Safety Banner -->
     <div class="safety-banner">
@@ -583,6 +728,21 @@ function buildIndexHtml({
       <h2>不足アセット</h2>
       ${missingHtml}
     </div>
+
+    <!-- Event Standing Expressions -->
+    <div class="card">
+      <h2>イベント立ち絵表情</h2>
+      ${eventExpressionsHtml}
+    </div>
+
+    <!-- Contract Validation Status -->
+    <div class="card">
+      <h2>コントラクト検証</h2>
+      ${contractStatusHtml}
+    </div>
+
+    <!-- Retry Plan (only shown if failCount > 0 and retry plan exists) -->
+    ${retryPlanHtml}
 
     <!-- Validation Report -->
     <div class="card">
@@ -736,6 +896,18 @@ async function main() {
     const expressionManifest = readJsonSafe(exprManifestPath);
     const iconReport = readJsonSafe(iconReportPath);
 
+    // Load new Sprint10-C data
+    const eventExpressionsInfo = checkEventExpressions(incomingDir);
+    const contractReport = readJsonSafe(path.join(residentDir, "qa", "asset-contract-report.json"));
+    const retryPlan = readJsonSafe(path.join(residentDir, "qa", "retry-plan.json"));
+
+    // Determine validationOnlyBridge (fake bridge produces validationOnly: true)
+    const validationOnlyBridge =
+      (expressionManifest && expressionManifest.candidateEligible === false) ||
+      (iconReport && iconReport.candidateEligible === false) ||
+      (meta.laneState && meta.laneState.validationOnly === true) ||
+      false;
+
     // Prepare output data
     const reviewSummary = buildReviewSummary({
       slug, meta, hasSprite, presentAssets, missingAssets, expressionManifest, iconReport, generatedAt,
@@ -744,6 +916,7 @@ async function main() {
     const poChecklist = buildPoChecklist(slug);
     const htmlContent = buildIndexHtml({
       slug, meta, assetPaths, hasSprite, missingAssets, expressionManifest, iconReport, generatedAt,
+      eventExpressionsInfo, contractReport, retryPlan, validationOnlyBridge,
     });
 
     // Output files

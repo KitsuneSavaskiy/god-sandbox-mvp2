@@ -27,7 +27,9 @@
     "assetgen:test": "node tools/app-server/test-dry-run.mjs",
     "assetgen:review-pack": "node tools/sidekick/build-asset-review-pack.mjs",
     "assetgen:contracts": "node tools/asset-contracts/print-contracts.mjs",
-    "assetgen:validate-contract": "node tools/asset-pipeline/validate-asset-contract.mjs"
+    "assetgen:validate-contract": "node tools/asset-pipeline/validate-asset-contract.mjs",
+    "assetgen:run-bundle": "node tools/sidekick/run-character-asset-bundle.mjs",
+    "assetgen:event-intake": "node tools/sidekick/event-standing-expression-intake.mjs"
   },
   "dependencies": {
     "react": "latest",
