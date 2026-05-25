@@ -35,6 +35,7 @@ import { RosterSurface } from "../features/roster/RosterSurface";
 import { SnapshotSurface } from "../features/snapshot/SnapshotSurface";
 import { StoryLogPanel, type StoryLogEntry } from "../features/story/StoryLogPanel.js";
 import { NewCharacterTutorialSurface } from "../features/tutorial/NewCharacterTutorialSurface.js";
+import { CharacterAssetGenForm } from "../features/asset-generation/CharacterAssetGenForm.js";
 import {
   persistTutorialState,
   readTutorialState,
@@ -389,6 +390,14 @@ export function AppShell() {
               {navRoute.label}
             </Button>
           ))}
+          <Button
+            type="button"
+            variant={route.id === "assetgen" ? "primary" : "ghost"}
+            onClick={() => navigate("/assetgen")}
+            title="キャラ素材自動生成 (Dev / Local AppServer)"
+          >
+            素材生成 [Dev]
+          </Button>
         </nav>
       </header>
 
@@ -629,6 +638,14 @@ function PrimaryRouteSurface({
 
   if (route.id === "dialogue-preview") {
     return <DialoguePreviewSurface state={runtimeState} />;
+  }
+
+  if (route.id === "assetgen") {
+    return (
+      <div className="route-stage">
+        <CharacterAssetGenForm />
+      </div>
+    );
   }
 
   if (route.id === "logs") {

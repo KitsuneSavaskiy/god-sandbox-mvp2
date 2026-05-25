@@ -643,11 +643,118 @@ async function test16_publicArtOutputRejected() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 17: OPTIONS preflight from allowed origin → 204 with CORS headers
+// ---------------------------------------------------------------------------
+
+async function test17_cors_allowedOriginGetsCorsHeaders() {
+  const { spawn } = await import("node:child_process");
+  const serverPath = path.join(repoRoot, "tools", "app-server", "asset-generation-server.mjs");
+
+  // Start server on a throwaway port
+  const port = 18787;
+  const srv = spawn("node", [serverPath, "--port", String(port)], { cwd: repoRoot });
+  await new Promise((res) => setTimeout(res, 600));
+
+  try {
+    const { default: http } = await import("node:http");
+
+    const makeRequest = (method, origin) => new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: "127.0.0.1",
+        port,
+        path: "/api/local/asset-generation/characters",
+        method,
+        headers: {
+          "Origin": origin,
+          "Access-Control-Request-Method": "POST",
+        },
+      }, (res) => {
+        resolve({ status: res.statusCode, headers: res.headers });
+        res.resume();
+      });
+      req.on("error", reject);
+      req.end();
+    });
+
+    // Allowed origin must receive CORS headers
+    const allowed = await makeRequest("OPTIONS", "http://127.0.0.1:5173");
+    assert.strictEqual(allowed.status, 204, `OPTIONS should return 204, got ${allowed.status}`);
+    assert.strictEqual(
+      allowed.headers["access-control-allow-origin"],
+      "http://127.0.0.1:5173",
+      "Allowed origin must be echoed back in Access-Control-Allow-Origin",
+    );
+    assert.ok(
+      allowed.headers["access-control-allow-methods"],
+      "OPTIONS response must include Access-Control-Allow-Methods",
+    );
+
+    // Disallowed origin must NOT receive any CORS header (no wildcard)
+    const disallowed = await makeRequest("OPTIONS", "http://evil.example.com");
+    assert.strictEqual(disallowed.status, 204, `OPTIONS should still return 204 for disallowed origin`);
+    assert.strictEqual(
+      disallowed.headers["access-control-allow-origin"],
+      undefined,
+      "Disallowed origin must NOT receive Access-Control-Allow-Origin",
+    );
+  } finally {
+    srv.kill();
+    await new Promise((res) => setTimeout(res, 200));
+  }
+
+  console.log("[PASS] test17: OPTIONS preflight — allowed origin gets CORS headers, disallowed origin gets none (no wildcard)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 18: GET /healthz from allowed origin → response includes CORS header
+// ---------------------------------------------------------------------------
+
+async function test18_cors_healthzIncludesCorsHeader() {
+  const { spawn } = await import("node:child_process");
+  const serverPath = path.join(repoRoot, "tools", "app-server", "asset-generation-server.mjs");
+
+  const port = 18788;
+  const srv = spawn("node", [serverPath, "--port", String(port)], { cwd: repoRoot });
+  await new Promise((res) => setTimeout(res, 600));
+
+  try {
+    const { default: http } = await import("node:http");
+
+    const res = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: "127.0.0.1",
+        port,
+        path: "/healthz",
+        method: "GET",
+        headers: { "Origin": "http://localhost:5173" },
+      }, (r) => {
+        resolve({ status: r.statusCode, headers: r.headers });
+        r.resume();
+      });
+      req.on("error", reject);
+      req.end();
+    });
+
+    assert.strictEqual(res.status, 200, `GET /healthz should return 200, got ${res.status}`);
+    assert.strictEqual(
+      res.headers["access-control-allow-origin"],
+      "http://localhost:5173",
+      "GET /healthz from allowed origin should include Access-Control-Allow-Origin",
+    );
+  } finally {
+    srv.kill();
+    await new Promise((res) => setTimeout(res, 200));
+  }
+
+  console.log("[PASS] test18: GET /healthz from allowed origin includes Access-Control-Allow-Origin");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8 dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6 dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -668,6 +775,8 @@ async function main() {
     test14_missingIncomingFolder_clearsError,
     test15_fakeMetadataShownAsValidationOnly,
     test16_publicArtOutputRejected,
+    test17_cors_allowedOriginGetsCorsHeaders,
+    test18_cors_healthzIncludesCorsHeader,
   ];
 
   for (const test of tests) {

@@ -43,6 +43,12 @@ const MAX_BODY_BYTES = 1024 * 1024; // 1 MB
 // Loopback addresses that are always permitted
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
+// Allowed CORS origins (Vite dev server origins on the loopback)
+const CORS_ALLOWED_ORIGINS = new Set([
+  "http://127.0.0.1:5173",
+  "http://localhost:5173",
+]);
+
 function ensureDir(dirPath) {
   if (!existsSync(dirPath)) mkdirSync(dirPath, { recursive: true });
 }
@@ -405,6 +411,16 @@ function handleCancelJob(req, res, jobId) {
 // HTTP utilities
 // ---------------------------------------------------------------------------
 
+function applyCorsHeaders(req, res) {
+  const origin = req.headers["origin"];
+  if (origin && CORS_ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+}
+
 function sendJson(res, statusCode, body) {
   const json = JSON.stringify(body);
   res.writeHead(statusCode, {
@@ -429,6 +445,15 @@ function send405(res) {
 async function router(req, res) {
   const url = req.url ?? "/";
   const method = req.method ?? "GET";
+
+  applyCorsHeaders(req, res);
+
+  // Handle CORS preflight
+  if (method === "OPTIONS") {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
 
   try {
     // GET /healthz
