@@ -11,6 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { deflateSync } from "node:zlib";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -1619,11 +1620,357 @@ async function test40_hardGateAndQualityGateStatusInReport() {
 }
 
 // ---------------------------------------------------------------------------
+// Sprint 10-D helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a minimal complete decodable 8-bit RGBA PNG buffer.
+ * @param {number} width
+ * @param {number} height
+ * @param {function(x:number, y:number): [number,number,number,number]} fillFn  Returns [r,g,b,a].
+ * @returns {Buffer}
+ */
+function makeRgbaPng(width, height, fillFn) {
+  const rowStride = 1 + width * 4;
+  const raw = Buffer.alloc(height * rowStride, 0); // filter=0 (None) + rgba pixels
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const [r, g, b, a] = fillFn(x, y);
+      const o = y * rowStride + 1 + x * 4;
+      raw[o] = r; raw[o + 1] = g; raw[o + 2] = b; raw[o + 3] = a;
+    }
+  }
+  const compressed = deflateSync(raw);
+
+  function chk(type, data) {
+    const t = Buffer.from(type, "ascii");
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    return Buffer.concat([len, t, data, Buffer.alloc(4)]); // CRC skipped (validator doesn't check)
+  }
+
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // colorType RGBA
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chk("IHDR", ihdr),
+    chk("IDAT", compressed),
+    chk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Test 41: portrait expression set — all transparent → marginCheckStatus="pass"
+// ---------------------------------------------------------------------------
+
+async function test41_expressionAllTransparentPassesMarginCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+  const { CONTRACTS } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test41-${Date.now()}`);
+  const exprDir = path.join(tmpDir, "expressions");
+  mkdirSync(exprDir, { recursive: true });
+
+  const transparentPng = makeRgbaPng(80, 100, () => [0, 0, 0, 0]);
+  for (const e of ["neutral", "happy", "angry", "sad", "surprised"]) {
+    writeFileSync(path.join(exprDir, `${e}.png`), transparentPng);
+  }
+
+  const result = await validateAssetContract({
+    slug: "test-slug-41",
+    contractId: "portrait-expression-set-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: CONTRACTS,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "pass",
+    `marginCheckStatus should be "pass" for all-transparent images. Got "${result.report.marginCheckStatus}"`,
+  );
+  assert.strictEqual(
+    result.report.checks.filter((c) => c.check === "pixel-margin").length, 0,
+    "No pixel-margin failures expected for all-transparent images",
+  );
+
+  console.log("[PASS] test41: portrait expression set — all-transparent images pass pixel margin check");
+}
+
+// ---------------------------------------------------------------------------
+// Test 42: portrait expression — neutral.png has left-edge pixel → marginCheckStatus="fail"
+// ---------------------------------------------------------------------------
+
+async function test42_expressionEdgePixelFailsMarginCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+  const { CONTRACTS } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test42-${Date.now()}`);
+  const exprDir = path.join(tmpDir, "expressions");
+  mkdirSync(exprDir, { recursive: true });
+
+  const transparent = makeRgbaPng(80, 100, () => [0, 0, 0, 0]);
+  // neutral.png: pixel at x=0, y=50 (left edge, safeMargins.left=8px → actual=0 < 8 → fail)
+  const withEdgePixel = makeRgbaPng(80, 100, (x, y) => (x === 0 && y === 50) ? [255, 0, 0, 255] : [0, 0, 0, 0]);
+  writeFileSync(path.join(exprDir, "neutral.png"), withEdgePixel);
+  for (const e of ["happy", "angry", "sad", "surprised"]) {
+    writeFileSync(path.join(exprDir, `${e}.png`), transparent);
+  }
+
+  const result = await validateAssetContract({
+    slug: "test-slug-42",
+    contractId: "portrait-expression-set-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: CONTRACTS,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "fail",
+    `marginCheckStatus should be "fail" for edge pixel. Got "${result.report.marginCheckStatus}"`,
+  );
+  const leftViolation = result.report.checks.find((c) => c.check === "pixel-margin" && c.side === "left");
+  assert.ok(leftViolation, `Expected a left-side pixel-margin violation in checks[]`);
+  assert.strictEqual(leftViolation.actual, 0, `Left margin actual should be 0. Got ${leftViolation.actual}`);
+
+  console.log("[PASS] test42: portrait neutral.png left-edge pixel → marginCheckStatus=\"fail\", left margin violation actual=0");
+}
+
+// ---------------------------------------------------------------------------
+// Test 43: po-combined all-transparent → marginCheckStatus="pass"
+// ---------------------------------------------------------------------------
+
+async function test43_poCombinedAllTransparentPassesMargin() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  // Mini contract: 2×2 frames of 118×136 = 236×272 for speed
+  const MINI_PO = {
+    "resident-po-combined-preview-v1": {
+      canvasWidth: 236, canvasHeight: 272, columns: 2, rows: 2,
+      frameWidth: 118, frameHeight: 136,
+      safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test43-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-combined.png"),
+    makeRgbaPng(236, 272, () => [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-43",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_PO,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "pass",
+    `marginCheckStatus should be "pass" for all-transparent po-combined. Got "${result.report.marginCheckStatus}"`,
+  );
+
+  console.log("[PASS] test43: po-combined all-transparent → marginCheckStatus=\"pass\"");
+}
+
+// ---------------------------------------------------------------------------
+// Test 44: po-combined — left-edge pixel in frame[row=0,col=0] → row/col violation
+// ---------------------------------------------------------------------------
+
+async function test44_poCombinedEdgePixelReportsRowCol() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_PO = {
+    "resident-po-combined-preview-v1": {
+      canvasWidth: 236, canvasHeight: 272, columns: 2, rows: 2,
+      frameWidth: 118, frameHeight: 136,
+      safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test44-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  // Pixel at x=0, y=68 — inside frame[row=0, col=0], touching left edge (margin 0 < 8)
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-combined.png"),
+    makeRgbaPng(236, 272, (x, y) => (x === 0 && y === 68) ? [255, 0, 0, 255] : [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-44",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_PO,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "fail",
+    `marginCheckStatus should be "fail". Got "${result.report.marginCheckStatus}"`,
+  );
+  const v = result.report.checks.find((c) => c.check === "pixel-margin" && c.side === "left");
+  assert.ok(v, `Expected left-side pixel-margin violation. checks: ${JSON.stringify(result.report.checks.filter((c) => c.check === "pixel-margin"))}`);
+  assert.strictEqual(v.row, 0, `Violation row should be 0. Got ${v.row}`);
+  assert.strictEqual(v.column, 0, `Violation column should be 0. Got ${v.column}`);
+  assert.strictEqual(v.actual, 0, `Left margin actual should be 0 (pixel at x=0). Got ${v.actual}`);
+
+  console.log("[PASS] test44: po-combined left-edge pixel → marginCheckStatus=\"fail\", row=0 col=0 violation");
+}
+
+// ---------------------------------------------------------------------------
+// Test 45: canonical two-sheet all-transparent → marginCheckStatus="pass"
+// ---------------------------------------------------------------------------
+
+async function test45_canonicalAllTransparentPassesMargin() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  // Mini canonical: 2×2 frames per sheet (384×416 = 2*192 × 2*208)
+  const MINI_CANONICAL = {
+    "resident-canonical-two-sheet-v1": {
+      sheets: [
+        { kind: "motion",   canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+        { kind: "extended", canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+      ],
+      safeMargins: { top: 8, bottom: 8, left: 10, right: 10 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test45-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const transparentPng = makeRgbaPng(384, 416, () => [0, 0, 0, 0]);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet.png"), transparentPng);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-extended.png"), transparentPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-45",
+    contractId: "resident-canonical-two-sheet-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_CANONICAL,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "pass",
+    `marginCheckStatus should be "pass" for all-transparent canonical sheets. Got "${result.report.marginCheckStatus}"`,
+  );
+
+  console.log("[PASS] test45: canonical two-sheet all-transparent → marginCheckStatus=\"pass\"");
+}
+
+// ---------------------------------------------------------------------------
+// Test 46: canonical — motion sheet left-edge pixel → violation mentions "motion"
+// ---------------------------------------------------------------------------
+
+async function test46_canonicalEdgePixelReportsSheetKind() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_CANONICAL = {
+    "resident-canonical-two-sheet-v1": {
+      sheets: [
+        { kind: "motion",   canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+        { kind: "extended", canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+      ],
+      safeMargins: { top: 8, bottom: 8, left: 10, right: 10 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test46-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  // Motion sheet: pixel at x=0, y=100 → left margin 0 < 10 → fail
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet.png"),
+    makeRgbaPng(384, 416, (x, y) => (x === 0 && y === 100) ? [255, 0, 0, 255] : [0, 0, 0, 0]),
+  );
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-extended.png"),
+    makeRgbaPng(384, 416, () => [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-46",
+    contractId: "resident-canonical-two-sheet-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_CANONICAL,
+  });
+
+  assert.strictEqual(
+    result.report.marginCheckStatus, "fail",
+    `marginCheckStatus should be "fail". Got "${result.report.marginCheckStatus}"`,
+  );
+  const v = result.report.checks.find((c) => c.check === "pixel-margin" && c.side === "left");
+  assert.ok(v, `Expected left-side pixel-margin violation in canonical sheets`);
+  assert.ok(
+    v.reason.includes("motion") || v.sheetKind === "motion",
+    `Violation must identify motion sheet. Got reason="${v.reason}", sheetKind="${v.sheetKind}"`,
+  );
+
+  console.log("[PASS] test46: canonical motion sheet left-edge pixel → marginCheckStatus=\"fail\", violation identifies \"motion\" sheet");
+}
+
+// ---------------------------------------------------------------------------
+// Test 47: pixel-margin failure appears in retryPlan with scope="frame-only" + promptPatch
+// ---------------------------------------------------------------------------
+
+async function test47_pixelMarginInRetryPlanHasScope() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_PO = {
+    "resident-po-combined-preview-v1": {
+      canvasWidth: 236, canvasHeight: 272, columns: 2, rows: 2,
+      frameWidth: 118, frameHeight: 136,
+      safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test47-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-combined.png"),
+    makeRgbaPng(236, 272, (x, y) => (x === 0 && y === 68) ? [255, 0, 0, 255] : [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-47",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_PO,
+  });
+
+  const marginFailures = result.retryPlan.failures.filter((f) => f.check === "pixel-margin");
+  assert.ok(
+    marginFailures.length >= 1,
+    `Expected ≥1 pixel-margin failure in retryPlan. Got ${marginFailures.length}`,
+  );
+  assert.strictEqual(
+    marginFailures[0].scope, "frame-only",
+    `pixel-margin scope should be "frame-only" for po-combined. Got "${marginFailures[0].scope}"`,
+  );
+  assert.ok(
+    typeof marginFailures[0].promptPatch === "string" && marginFailures[0].promptPatch.length > 20,
+    `pixel-margin failure must have a non-empty promptPatch`,
+  );
+
+  console.log("[PASS] test47: pixel-margin in retryPlan has scope=\"frame-only\" and non-empty promptPatch");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening/10-D dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -1668,6 +2015,13 @@ async function main() {
     test38_failOnViolationExitsNonZero,
     test39_marginCheckStatusNotRun,
     test40_hardGateAndQualityGateStatusInReport,
+    test41_expressionAllTransparentPassesMarginCheck,
+    test42_expressionEdgePixelFailsMarginCheck,
+    test43_poCombinedAllTransparentPassesMargin,
+    test44_poCombinedEdgePixelReportsRowCol,
+    test45_canonicalAllTransparentPassesMargin,
+    test46_canonicalEdgePixelReportsSheetKind,
+    test47_pixelMarginInRetryPlanHasScope,
   ];
 
   for (const test of tests) {
