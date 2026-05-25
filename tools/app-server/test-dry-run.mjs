@@ -1078,11 +1078,310 @@ async function test27_retryPlanHasScopeField() {
 }
 
 // ---------------------------------------------------------------------------
+// Sprint 10-C helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a minimal valid PNG header buffer (26 bytes) for testing.
+ * @param {number} width
+ * @param {number} height
+ * @param {number} colorType  2=RGB, 4=grayscale+alpha, 6=RGBA
+ * @returns {Buffer}
+ */
+function makePngHeaderBuf(width, height, colorType) {
+  const buf = Buffer.alloc(26);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buf, 0);
+  buf.writeUInt32BE(13, 8);       // IHDR chunk length
+  Buffer.from("IHDR").copy(buf, 12);
+  buf.writeUInt32BE(width, 16);
+  buf.writeUInt32BE(height, 20);
+  buf[24] = 8;                    // bit depth
+  buf[25] = colorType;
+  return buf;
+}
+
+// ---------------------------------------------------------------------------
+// Test 28: run-bundle --dry-run prints planned lanes without creating files
+// ---------------------------------------------------------------------------
+
+async function test28_runBundleDryRunPrintsPlan() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "run-character-asset-bundle.mjs");
+  const lockFile = path.join(repoRoot, ".godsandbox", "jobs", "assetgen-active-resident.lock");
+
+  // Ensure no lock exists for this test
+  const { rmSync, existsSync: exists } = await import("node:fs");
+  if (exists(lockFile)) {
+    rmSync(lockFile);
+  }
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", "test",
+      "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+      "--bridge", "fake",
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `run-bundle --dry-run should exit 0. Got: ${result.status}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+  );
+
+  const combined = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    combined.toLowerCase().includes("dry-run") || combined.toLowerCase().includes("planned"),
+    `run-bundle --dry-run should mention "dry-run" or "planned". Got:\n${combined.slice(0, 500)}`,
+  );
+
+  // Lock should NOT be acquired in dry-run
+  assert.ok(
+    !exists(lockFile),
+    `run-bundle --dry-run must not acquire the lock file: ${lockFile}`,
+  );
+
+  console.log("[PASS] test28: run-bundle --dry-run prints planned lanes without creating files");
+}
+
+// ---------------------------------------------------------------------------
+// Test 29: second-resident lock fails with clear message (different slug)
+// ---------------------------------------------------------------------------
+
+async function test29_differentSlugLockFails() {
+  const { spawnSync } = await import("node:child_process");
+  const { writeFileSync, rmSync, existsSync: exists } = await import("node:fs");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "run-character-asset-bundle.mjs");
+  const lockFile = path.join(repoRoot, ".godsandbox", "jobs", "assetgen-active-resident.lock");
+
+  // Write a fake lock for "other-slug"
+  const lockData = {
+    slug: "other-slug",
+    jobId: "other-slug-20260525-testtest",
+    lockedAt: new Date().toISOString(),
+  };
+  mkdirSync(path.dirname(lockFile), { recursive: true });
+  writeFileSync(lockFile, JSON.stringify(lockData, null, 2) + "\n");
+
+  try {
+    const result = spawnSync(
+      "node",
+      [
+        toolPath,
+        "--slug", "different-slug",
+        "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+        "--bridge", "fake",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.notStrictEqual(
+      result.status,
+      0,
+      `run-bundle with different slug should fail when lock exists. Got exit 0.`,
+    );
+
+    const combined = (result.stdout ?? "") + (result.stderr ?? "");
+    assert.ok(
+      combined.includes("other-slug") || combined.toLowerCase().includes("active resident"),
+      `Error message should mention the locked slug "other-slug" or "active resident". Got:\n${combined.slice(0, 400)}`,
+    );
+  } finally {
+    if (exists(lockFile)) rmSync(lockFile);
+  }
+
+  console.log("[PASS] test29: second-resident lock fails with clear message (different slug)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 30: same-slug lock allows resume (dry-run bypasses lock)
+// ---------------------------------------------------------------------------
+
+async function test30_sameSlugLockAllowsResume() {
+  const { spawnSync } = await import("node:child_process");
+  const { writeFileSync, rmSync, existsSync: exists } = await import("node:fs");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "run-character-asset-bundle.mjs");
+  const lockFile = path.join(repoRoot, ".godsandbox", "jobs", "assetgen-active-resident.lock");
+
+  const testSlug = "same-slug";
+
+  // Write a lock for same slug
+  const lockData = {
+    slug: testSlug,
+    jobId: `${testSlug}-20260525-testtest`,
+    lockedAt: new Date().toISOString(),
+  };
+  mkdirSync(path.dirname(lockFile), { recursive: true });
+  writeFileSync(lockFile, JSON.stringify(lockData, null, 2) + "\n");
+
+  try {
+    // dry-run doesn't acquire lock, so it should exit 0 regardless
+    const result = spawnSync(
+      "node",
+      [
+        toolPath,
+        "--slug", testSlug,
+        "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+        "--bridge", "fake",
+        "--dry-run",
+      ],
+      { cwd: repoRoot, encoding: "utf8" },
+    );
+
+    assert.strictEqual(
+      result.status,
+      0,
+      `run-bundle --dry-run with same slug and existing lock should exit 0.\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+    );
+  } finally {
+    if (exists(lockFile)) rmSync(lockFile);
+  }
+
+  console.log("[PASS] test30: same-slug lock allows resume (dry-run exits 0 without lock concern)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 31: event-standing-expression-intake rejects PNG without alpha
+// ---------------------------------------------------------------------------
+
+async function test31_eventIntakeRejectsNoAlpha() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "event-standing-expression-intake.mjs");
+
+  // Create a temp dir with a PNG file that has colorType=2 (RGB, no alpha)
+  const tmpDir = path.join(os.tmpdir(), `gs-event-test31-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  // Write a minimal PNG header with colorType=2 (RGB, no alpha)
+  const pngBuf = makePngHeaderBuf(100, 100, 2);
+  writeFileSync(path.join(tmpDir, "neutral.png"), pngBuf);
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", "test",
+      "--source-dir", tmpDir,
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  // Should exit non-zero because alpha is required
+  assert.notStrictEqual(
+    result.status,
+    0,
+    `event-intake should reject PNG without alpha (colorType=2). Got exit 0.\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+  );
+
+  const combined = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    combined.toLowerCase().includes("alpha") || combined.toLowerCase().includes("rejected") || combined.toLowerCase().includes("colortype"),
+    `Error should mention alpha or rejection. Got:\n${combined.slice(0, 400)}`,
+  );
+
+  console.log("[PASS] test31: event-standing-expression-intake rejects PNG without alpha");
+}
+
+// ---------------------------------------------------------------------------
+// Test 32: event-standing-expression-intake accepts PNG with alpha (dry-run)
+// ---------------------------------------------------------------------------
+
+async function test32_eventIntakeAcceptsAlpha() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "event-standing-expression-intake.mjs");
+
+  // Create a temp dir with all 8 required expression PNGs with colorType=6 (RGBA)
+  const tmpDir = path.join(os.tmpdir(), `gs-event-test32-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+
+  const exprs = ["neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked"];
+  for (const e of exprs) {
+    const pngBuf = makePngHeaderBuf(200, 300, 6); // colorType=6 = RGBA (has alpha)
+    writeFileSync(path.join(tmpDir, `${e}.png`), pngBuf);
+  }
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", "test",
+      "--source-dir", tmpDir,
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `event-intake --dry-run with RGBA PNGs should exit 0.\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+  );
+
+  const combined = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    combined.toLowerCase().includes("neutral") ||
+    combined.toLowerCase().includes("accepted") ||
+    combined.toLowerCase().includes("would copy") ||
+    combined.toLowerCase().includes("dry-run"),
+    `Output should mention neutral expression or dry-run. Got:\n${combined.slice(0, 400)}`,
+  );
+
+  console.log("[PASS] test32: event-standing-expression-intake accepts PNG with alpha (dry-run)");
+}
+
+// ---------------------------------------------------------------------------
+// Test 33: run-bundle --dry-run --bridge fake output mentions fake bridge warning
+// ---------------------------------------------------------------------------
+
+async function test33_runBundleDryRunFakeBridgeWarning() {
+  const { spawnSync } = await import("node:child_process");
+  const { rmSync, existsSync: exists } = await import("node:fs");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "run-character-asset-bundle.mjs");
+  const lockFile = path.join(repoRoot, ".godsandbox", "jobs", "assetgen-active-resident.lock");
+
+  // Ensure no lock
+  if (exists(lockFile)) rmSync(lockFile);
+
+  const result = spawnSync(
+    "node",
+    [
+      toolPath,
+      "--slug", "test",
+      "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+      "--bridge", "fake",
+      "--dry-run",
+    ],
+    { cwd: repoRoot, encoding: "utf8" },
+  );
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `run-bundle --dry-run --bridge fake should exit 0. Got: ${result.status}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+  );
+
+  const combined = (result.stdout ?? "") + (result.stderr ?? "");
+  assert.ok(
+    combined.toLowerCase().includes("fake") ||
+    combined.toLowerCase().includes("validation-only") ||
+    combined.toLowerCase().includes("not po-reviewable") ||
+    combined.toLowerCase().includes("not po reviewable"),
+    `Output should warn about fake bridge. Got:\n${combined.slice(0, 500)}`,
+  );
+
+  console.log("[PASS] test33: run-bundle --dry-run --bridge fake output mentions fake bridge warning");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -1114,6 +1413,12 @@ async function main() {
     test25_missingExpressionFile_reportShowsFail,
     test26_validFixture_passesBasicChecks,
     test27_retryPlanHasScopeField,
+    test28_runBundleDryRunPrintsPlan,
+    test29_differentSlugLockFails,
+    test30_sameSlugLockAllowsResume,
+    test31_eventIntakeRejectsNoAlpha,
+    test32_eventIntakeAcceptsAlpha,
+    test33_runBundleDryRunFakeBridgeWarning,
   ];
 
   for (const test of tests) {
