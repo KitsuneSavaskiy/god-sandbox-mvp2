@@ -28,7 +28,7 @@ const repoRoot = path.resolve(__dirname, "../..");
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
 
-const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon"];
+const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 
 // assets/generated/ is gitignored — safe for prompt-pack staging output
@@ -158,6 +158,17 @@ export async function buildPromptPack(params) {
     }
   }
 
+  // --- Event standing expression prompts — only if event-standing-expressions lane is active ---
+  if (lanes.includes("event-standing-expressions")) {
+    const eventExpressionsDir = path.join(packDir, "event-expressions");
+    ensureDir(eventExpressionsDir);
+    const eventExpressions = ["neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked"];
+    for (const expr of eventExpressions) {
+      const exprPath = path.join(eventExpressionsDir, `${expr}.prompt.md`);
+      write(exprPath, buildEventExpressionPrompt({ CHARACTER, expression: expr, portraitPath }));
+    }
+  }
+
   // --- Sprite sheet prompts — only if resident-sprite-sheet lane is active ---
   // derived-icon is output metadata only; no prompt file to generate
   if (lanes.includes("resident-sprite-sheet")) {
@@ -245,6 +256,45 @@ ${expression.charAt(0).toUpperCase() + expression.slice(1)}: ${desc}
 ## Generation Instructions
 Render ${CHARACTER} with a ${expression} expression.
 Keep all elements identical to the standing base except the facial expression.
+`;
+}
+
+function buildEventExpressionPrompt({ CHARACTER, expression, portraitPath }) {
+  const expressionDescriptions = {
+    neutral: "Calm, composed, default standing expression. Mouth closed.",
+    happy: "Warm smile, relaxed eyes, bright and approachable.",
+    angry: "Furrowed brows, sharp eyes, tense jaw.",
+    sad: "Downturned mouth, drooping eyes, sorrowful brow.",
+    surprised: "Wide open eyes, raised eyebrows, mouth open.",
+    worried: "Creased brow, anxious eyes, mouth slightly downturned.",
+    determined: "Set jaw, focused eyes, confident and resolute expression.",
+    shocked: "Extreme wide eyes, dropped jaw, visible alarm or disbelief.",
+  };
+
+  const desc = expressionDescriptions[expression] ?? "Expression variant.";
+
+  return `# Event Standing Expression Prompt — ${CHARACTER} / ${expression}
+
+## Character Reference
+- Portrait: ${portraitPath}
+- Character: ${CHARACTER}
+
+## Expression Target
+${expression.charAt(0).toUpperCase() + expression.slice(1)}: ${desc}
+
+## Consistency Requirements (mandatory)
+- same character identity as [${CHARACTER}]
+- same hair, costume, body shape, same pose
+- same camera angle and crop as all other event expressions in this set
+- transparent background (alpha channel)
+- only facial expression changes between variants
+- no labels, no text, no frame markers, no watermarks
+- no solid background, no checkerboard background
+
+## Generation Instructions
+Render ${CHARACTER} in a standing pose with a ${expression} expression.
+Keep all elements identical to the other event expressions except the facial expression.
+Framing must be consistent across all 8 expressions for event UI overlay use.
 `;
 }
 

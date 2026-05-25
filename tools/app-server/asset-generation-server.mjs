@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
-const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon"];
+export const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 const VALID_BRIDGE_MODES = ["local-cli", "hot-folder", "manual-drop", "fake"];
 
@@ -283,7 +283,8 @@ async function handlePostCharacters(req, res) {
 
   // Write watcher-compatible request file — .godsandbox/jobs/<jobId>-request.json
   // Using jobId (not slug) as filename so concurrent jobs with the same slug don't overwrite each other.
-  // Fields match what job-watcher.mjs expects: { slug, displayName, personality, tone, age, portraitPath }
+  // jobId is in ASSETGEN_DISCRIMINATOR_FIELDS, so watcher classifies this as an assetgen request.
+  // lanes/previewMode/gen2Bridge are forwarded so watcher passes them through to assetgen:intake.
   const watcherFilePath = path.join(JOBS_WATCHER_DIR, `${jobId}-request.json`);
   safeWriteFile(
     watcherFilePath,
@@ -296,6 +297,9 @@ async function handlePostCharacters(req, res) {
         tone: data.tone,
         age: data.age,
         portraitPath: data.portraitPath,
+        lanes: data.lanes,
+        previewMode: data.previewMode,
+        gen2Bridge: data.gen2Bridge,
       },
       null,
       2,
