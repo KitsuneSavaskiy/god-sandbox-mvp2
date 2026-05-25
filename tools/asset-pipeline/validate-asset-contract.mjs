@@ -235,6 +235,8 @@ function validateResidentPoCombinedPreview(assetDir, contract, slug) {
   const identityConsistencyNeedsHumanReview = false;
   let marginChecked = false;
   let marginViolated = false;
+  let contentChecked = false;
+  let contentFailed = false;
 
   const existsCheck = checkFileExists(filePath, "resident-sprite-sheet-combined.png");
   checks.push(existsCheck);
@@ -270,10 +272,27 @@ function validateResidentPoCombinedPreview(assetDir, contract, slug) {
         });
       }
     }
+
+    const cc = checkImageHasContent(filePath);
+    if (cc.checked) {
+      contentChecked = true;
+      if (!cc.hasContent) {
+        contentFailed = true;
+        checks.push({
+          check: "required-content",
+          scope: "full-sheet",
+          label: "resident-sprite-sheet-combined.png",
+          path: filePath,
+          passed: false,
+          reason: "resident-sprite-sheet-combined.png: sprite sheet is fully transparent (no visible pixels)",
+        });
+      }
+    }
   }
 
   const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
-  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus: "not-run" };
+  const contentCheckStatus = contentChecked ? (contentFailed ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus };
 }
 
 function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
@@ -333,6 +352,8 @@ function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
   const identityConsistencyNeedsHumanReview = false;
   let marginChecked = false;
   let marginViolated = false;
+  let contentChecked = false;
+  let contentFailed = false;
 
   for (const spec of sheetSpecs) {
     const filePath = path.join(assetDir, spec.fileName);
@@ -365,11 +386,29 @@ function validateResidentCanonicalTwoSheet(assetDir, contract, slug) {
           });
         }
       }
+
+      const cc = checkImageHasContent(filePath);
+      if (cc.checked) {
+        contentChecked = true;
+        if (!cc.hasContent) {
+          contentFailed = true;
+          checks.push({
+            check: "required-content",
+            scope: "full-sheet",
+            label: spec.label,
+            path: filePath,
+            sheetKind: spec.sheetKind,
+            passed: false,
+            reason: `${spec.sheetKind} sheet (${spec.fileName}): sprite sheet is fully transparent (no visible pixels)`,
+          });
+        }
+      }
     }
   }
 
   const marginCheckStatus = marginChecked ? (marginViolated ? "fail" : "pass") : "not-run";
-  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus: "not-run" };
+  const contentCheckStatus = contentChecked ? (contentFailed ? "fail" : "pass") : "not-run";
+  return { checks, identityConsistencyNeedsHumanReview, marginCheckStatus, contentCheckStatus };
 }
 
 function validateExpressionSet(assetDir, contract, slug, isEventSet) {

@@ -30,7 +30,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
-const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon"];
+const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 
 const intakeScript = path.join(repoRoot, "tools", "sidekick", "sidekick-intake.mjs");
@@ -53,12 +53,12 @@ Usage:
     --tone <tone> \\
     --age <age> \\
     --portrait <path> \\
-    [--lanes resident-sprite-sheet,portrait-expressions,derived-icon] \\
+    [--lanes resident-sprite-sheet,portrait-expressions,event-standing-expressions,derived-icon] \\
     [--preview-mode po-combined|canonical-two-sheet] \\
     [--dry-run]
 
 Flags:
-  --lanes         Comma-separated list of lanes to activate (default: all three)
+  --lanes         Comma-separated list of lanes to activate (default: resident-sprite-sheet,portrait-expressions,derived-icon)
   --preview-mode  po-combined (default) | canonical-two-sheet
   --dry-run       Validate inputs and print what would be done; do not write files
   --help          Show this help

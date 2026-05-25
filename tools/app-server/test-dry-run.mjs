@@ -2147,6 +2147,294 @@ async function test51_visiblePixelExpressionPassesContentCheck() {
 }
 
 // ---------------------------------------------------------------------------
+// Sprint 10-E follow-up tests (52–56)
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Test 52: character-asset-bundle-intake dry-run accepts event-standing-expressions lane
+// ---------------------------------------------------------------------------
+
+async function test52_intakeAcceptsEventStandingLane() {
+  const { spawnSync } = await import("node:child_process");
+  const toolPath = path.join(repoRoot, "tools", "sidekick", "character-asset-bundle-intake.mjs");
+
+  const result = spawnSync("node", [
+    toolPath,
+    "--slug", "test52",
+    "--name", "TestChar",
+    "--personality", "calm",
+    "--tone", "gentle",
+    "--age", "25",
+    "--portrait", "public/art/apostle/apostle-standing-alpha.png",
+    "--lanes", "event-standing-expressions",
+    "--dry-run",
+  ], { cwd: repoRoot, encoding: "utf8" });
+
+  assert.strictEqual(
+    result.status,
+    0,
+    `intake --dry-run with event-standing-expressions should exit 0. Got: ${result.status}\nstdout: ${result.stdout}\nstderr: ${result.stderr}`,
+  );
+
+  console.log("[PASS] test52: character-asset-bundle-intake accepts event-standing-expressions lane in --dry-run");
+}
+
+// ---------------------------------------------------------------------------
+// Test 53: AppServer watcher request includes lanes when event-standing-expressions is specified
+// ---------------------------------------------------------------------------
+
+async function test53_watcherRequestIncludesLanes() {
+  const { spawn } = await import("node:child_process");
+  const { default: http } = await import("node:http");
+  const { rmSync, existsSync: exists, readFileSync: readFS } = await import("node:fs");
+
+  const serverPath = path.join(repoRoot, "tools", "app-server", "asset-generation-server.mjs");
+  const port = 18790;
+  const srv = spawn("node", [serverPath, "--port", String(port)], { cwd: repoRoot });
+
+  await new Promise((res) => setTimeout(res, 600));
+
+  let jobId = null;
+
+  try {
+    const body = JSON.stringify({
+      displayName: "WatcherTestChar",
+      personality: "calm",
+      tone: "gentle",
+      age: 20,
+      portraitPath: "public/art/apostle/apostle-standing-alpha.png",
+      lanes: ["event-standing-expressions"],
+      previewMode: "po-combined",
+      gen2Bridge: "fake",
+    });
+
+    const res = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: "127.0.0.1",
+        port,
+        path: "/api/local/asset-generation/characters",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          "Origin": "http://127.0.0.1:5173",
+        },
+      }, (r) => {
+        let data = "";
+        r.on("data", (chunk) => data += chunk);
+        r.on("end", () => resolve({ status: r.statusCode, body: data }));
+      });
+      req.on("error", reject);
+      req.write(body);
+      req.end();
+    });
+
+    assert.strictEqual(res.status, 202, `POST should return 202. Got: ${res.status}\nbody: ${res.body}`);
+
+    const resData = JSON.parse(res.body);
+    jobId = resData.jobId;
+    assert.ok(jobId, `Response should include jobId. Got: ${res.body}`);
+
+    await new Promise((res) => setTimeout(res, 100));
+
+    // Watcher may have already moved the file to processing/ or done/
+    const jobsRoot = path.join(repoRoot, ".godsandbox", "jobs");
+    const candidatePaths = [
+      path.join(jobsRoot, `${jobId}-request.json`),
+      path.join(jobsRoot, "processing", `${jobId}-request.json`),
+      path.join(jobsRoot, "done", `${jobId}-request.json`),
+    ];
+    const watcherFile = candidatePaths.find((p) => exists(p));
+    assert.ok(
+      watcherFile,
+      `Watcher request file must exist in jobs/, processing/, or done/. jobId=${jobId}`,
+    );
+
+    const watcherReq = JSON.parse(readFS(watcherFile, "utf8"));
+    assert.ok(
+      Array.isArray(watcherReq.lanes),
+      `Watcher request must include lanes array. Got: ${JSON.stringify(watcherReq)}`,
+    );
+    assert.ok(
+      watcherReq.lanes.includes("event-standing-expressions"),
+      `Watcher request lanes must include "event-standing-expressions". Got: ${JSON.stringify(watcherReq.lanes)}`,
+    );
+
+  } finally {
+    srv.kill();
+    await new Promise((res) => setTimeout(res, 200));
+    if (jobId) {
+      const jobsRoot = path.join(repoRoot, ".godsandbox", "jobs");
+      const candidatePaths = [
+        path.join(jobsRoot, `${jobId}-request.json`),
+        path.join(jobsRoot, "processing", `${jobId}-request.json`),
+        path.join(jobsRoot, "done", `${jobId}-request.json`),
+      ];
+      const statusFile = path.join(jobsRoot, "local-app-server", `${jobId}.json`);
+      for (const p of candidatePaths) {
+        try { if (exists(p)) rmSync(p); } catch {}
+      }
+      try { if (exists(statusFile)) rmSync(statusFile); } catch {}
+    }
+  }
+
+  console.log("[PASS] test53: AppServer watcher request file includes lanes with event-standing-expressions");
+}
+
+// ---------------------------------------------------------------------------
+// Test 54: po-combined all-transparent sprite sheet fails required-content check
+// ---------------------------------------------------------------------------
+
+async function test54_poCombinedAllTransparentFailsContentCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_PO = {
+    "resident-po-combined-preview-v1": {
+      canvasWidth: 236, canvasHeight: 272, columns: 2, rows: 2,
+      frameWidth: 118, frameHeight: 136,
+      safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test54-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-combined.png"),
+    makeRgbaPng(236, 272, () => [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-54",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_PO,
+  });
+
+  assert.strictEqual(
+    result.report.contentCheckStatus,
+    "fail",
+    `contentCheckStatus should be "fail" for all-transparent po-combined sheet. Got "${result.report.contentCheckStatus}"`,
+  );
+
+  const contentFailures = result.report.checks.filter((c) => c.check === "required-content");
+  assert.ok(
+    contentFailures.length >= 1,
+    `Expected ≥1 required-content failure. Got ${contentFailures.length}`,
+  );
+  assert.strictEqual(
+    contentFailures[0].scope,
+    "full-sheet",
+    `required-content scope should be "full-sheet" for sprite sheet. Got "${contentFailures[0].scope}"`,
+  );
+
+  const retryContentFailures = result.retryPlan.failures.filter((f) => f.check === "required-content");
+  assert.ok(retryContentFailures.length >= 1, `retryPlan must include required-content failures`);
+
+  console.log("[PASS] test54: po-combined all-transparent sheet → contentCheckStatus=\"fail\", required-content scope=full-sheet");
+}
+
+// ---------------------------------------------------------------------------
+// Test 55: canonical all-transparent motion + extended sheets fail required-content
+// ---------------------------------------------------------------------------
+
+async function test55_canonicalAllTransparentFailsContentCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_CANONICAL = {
+    "resident-canonical-two-sheet-v1": {
+      sheets: [
+        { kind: "motion",   canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+        { kind: "extended", canvasWidth: 384, canvasHeight: 416, columns: 2, rows: 2, frameWidth: 192, frameHeight: 208 },
+      ],
+      safeMargins: { top: 8, bottom: 8, left: 10, right: 10 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test55-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  const transparentPng = makeRgbaPng(384, 416, () => [0, 0, 0, 0]);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet.png"), transparentPng);
+  writeFileSync(path.join(tmpDir, "resident-sprite-sheet-extended.png"), transparentPng);
+
+  const result = await validateAssetContract({
+    slug: "test-slug-55",
+    contractId: "resident-canonical-two-sheet-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_CANONICAL,
+  });
+
+  assert.strictEqual(
+    result.report.contentCheckStatus,
+    "fail",
+    `contentCheckStatus should be "fail" for all-transparent canonical sheets. Got "${result.report.contentCheckStatus}"`,
+  );
+
+  const contentFailures = result.report.checks.filter((c) => c.check === "required-content");
+  assert.strictEqual(
+    contentFailures.length,
+    2,
+    `Expected 2 required-content failures (motion + extended). Got ${contentFailures.length}: ${JSON.stringify(contentFailures.map(f => f.reason))}`,
+  );
+
+  const motionFailure = contentFailures.find((f) => f.sheetKind === "motion" || (f.reason && f.reason.includes("motion")));
+  assert.ok(motionFailure, `Expected a motion sheet required-content failure`);
+
+  console.log("[PASS] test55: canonical all-transparent sheets → contentCheckStatus=\"fail\", 2 required-content failures");
+}
+
+// ---------------------------------------------------------------------------
+// Test 56: po-combined with visible pixel passes required-content check
+// ---------------------------------------------------------------------------
+
+async function test56_poCombinedWithContentPassesContentCheck() {
+  const { validateAssetContract } = await import("../../tools/asset-pipeline/validate-asset-contract.mjs");
+
+  const MINI_PO = {
+    "resident-po-combined-preview-v1": {
+      canvasWidth: 236, canvasHeight: 272, columns: 2, rows: 2,
+      frameWidth: 118, frameHeight: 136,
+      safeMargins: { top: 8, bottom: 8, left: 8, right: 8 },
+      alphaRequired: true,
+    },
+  };
+
+  const tmpDir = path.join(os.tmpdir(), `gs-test56-${Date.now()}`);
+  mkdirSync(tmpDir, { recursive: true });
+  // One visible pixel well inside safe margins (x=60, y=68)
+  writeFileSync(
+    path.join(tmpDir, "resident-sprite-sheet-combined.png"),
+    makeRgbaPng(236, 272, (x, y) => (x === 60 && y === 68) ? [255, 0, 0, 255] : [0, 0, 0, 0]),
+  );
+
+  const result = await validateAssetContract({
+    slug: "test-slug-56",
+    contractId: "resident-po-combined-preview-v1",
+    assetDir: tmpDir,
+    dryRun: true,
+    contracts: MINI_PO,
+  });
+
+  assert.strictEqual(
+    result.report.contentCheckStatus,
+    "pass",
+    `contentCheckStatus should be "pass" when sheet has visible pixels. Got "${result.report.contentCheckStatus}"`,
+  );
+
+  const contentFailures = result.report.checks.filter((c) => c.check === "required-content");
+  assert.strictEqual(
+    contentFailures.length,
+    0,
+    `Expected 0 required-content failures for sheet with visible pixels. Got ${contentFailures.length}`,
+  );
+
+  console.log("[PASS] test56: po-combined with visible pixel → contentCheckStatus=\"pass\", 0 required-content failures");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
@@ -2207,6 +2495,11 @@ async function main() {
     test49_serverValidLanesIncludesEventStanding,
     test50_allTransparentExpressionFailsContentCheck,
     test51_visiblePixelExpressionPassesContentCheck,
+    test52_intakeAcceptsEventStandingLane,
+    test53_watcherRequestIncludesLanes,
+    test54_poCombinedAllTransparentFailsContentCheck,
+    test55_canonicalAllTransparentFailsContentCheck,
+    test56_poCombinedWithContentPassesContentCheck,
   ];
 
   for (const test of tests) {
