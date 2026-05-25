@@ -750,11 +750,121 @@ async function test18_cors_healthzIncludesCorsHeader() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 19: all 4 contractIds are unique (no duplicates in Object.keys(CONTRACTS))
+// ---------------------------------------------------------------------------
+
+async function test19_contractIdsAreUnique() {
+  const { CONTRACTS } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const ids = Object.keys(CONTRACTS);
+  const uniqueIds = new Set(ids);
+
+  assert.strictEqual(
+    ids.length,
+    uniqueIds.size,
+    `Contract IDs must be unique. Got ${ids.length} keys but only ${uniqueIds.size} unique. IDs: ${JSON.stringify(ids)}`,
+  );
+  assert.strictEqual(
+    ids.length,
+    4,
+    `Expected 4 contracts, got ${ids.length}: ${JSON.stringify(ids)}`,
+  );
+
+  console.log("[PASS] test19: all 4 contractIds are unique (no duplicates in Object.keys(CONTRACTS))");
+}
+
+// ---------------------------------------------------------------------------
+// Test 20: resident-canonical-two-sheet-v1 — sheets[0] is 1536×1872, frameWidth 192,
+//          frameHeight 208, 8 cols, 9 rows, rowManifest length = 9
+// ---------------------------------------------------------------------------
+
+async function test20_canonicalTwoSheetContract() {
+  const { getContract } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const contract = getContract("resident-canonical-two-sheet-v1");
+  const sheet0 = contract.sheets[0];
+
+  assert.strictEqual(sheet0.canvasWidth, 1536, `sheets[0].canvasWidth should be 1536, got ${sheet0.canvasWidth}`);
+  assert.strictEqual(sheet0.canvasHeight, 1872, `sheets[0].canvasHeight should be 1872, got ${sheet0.canvasHeight}`);
+  assert.strictEqual(sheet0.frameWidth, 192, `sheets[0].frameWidth should be 192, got ${sheet0.frameWidth}`);
+  assert.strictEqual(sheet0.frameHeight, 208, `sheets[0].frameHeight should be 208, got ${sheet0.frameHeight}`);
+  assert.strictEqual(sheet0.columns, 8, `sheets[0].columns should be 8, got ${sheet0.columns}`);
+  assert.strictEqual(sheet0.rows, 9, `sheets[0].rows should be 9, got ${sheet0.rows}`);
+  assert.strictEqual(
+    sheet0.rowManifest.length,
+    9,
+    `sheets[0].rowManifest.length should be 9, got ${sheet0.rowManifest.length}: ${JSON.stringify(sheet0.rowManifest)}`,
+  );
+
+  console.log("[PASS] test20: resident-canonical-two-sheet-v1 sheets[0] is 1536x1872, frameWidth 192, frameHeight 208, 8 cols, 9 rows, rowManifest.length=9");
+}
+
+// ---------------------------------------------------------------------------
+// Test 21: resident-po-combined-preview-v1 — canvasWidth 826, canvasHeight 1904,
+//          frameWidth 118, frameHeight 136, columns 7, rows 14, rowManifest.length === 14
+// ---------------------------------------------------------------------------
+
+async function test21_poCombinedContract() {
+  const { getContract } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const contract = getContract("resident-po-combined-preview-v1");
+
+  assert.strictEqual(contract.canvasWidth, 826, `canvasWidth should be 826, got ${contract.canvasWidth}`);
+  assert.strictEqual(contract.canvasHeight, 1904, `canvasHeight should be 1904, got ${contract.canvasHeight}`);
+  assert.strictEqual(contract.frameWidth, 118, `frameWidth should be 118, got ${contract.frameWidth}`);
+  assert.strictEqual(contract.frameHeight, 136, `frameHeight should be 136, got ${contract.frameHeight}`);
+  assert.strictEqual(contract.columns, 7, `columns should be 7, got ${contract.columns}`);
+  assert.strictEqual(contract.rows, 14, `rows should be 14, got ${contract.rows}`);
+  assert.strictEqual(
+    contract.rowManifest.length,
+    14,
+    `rowManifest.length should be 14, got ${contract.rowManifest.length}: ${JSON.stringify(contract.rowManifest)}`,
+  );
+
+  console.log("[PASS] test21: resident-po-combined-preview-v1 canvasWidth 826, canvasHeight 1904, frameWidth 118, frameHeight 136, columns 7, rows 14, rowManifest.length=14");
+}
+
+// ---------------------------------------------------------------------------
+// Test 22: portrait-expression-set-v1 AND event-standing-expression-set-v1
+//          both have transparentBackgroundRequired === true AND alphaRequired === true
+// ---------------------------------------------------------------------------
+
+async function test22_expressionContractsRequireAlphaAndTransparency() {
+  const { getContract } = await import("../../tools/asset-contracts/asset-contract-registry.mjs");
+
+  const portraitContract = getContract("portrait-expression-set-v1");
+  const eventContract = getContract("event-standing-expression-set-v1");
+
+  assert.strictEqual(
+    portraitContract.transparentBackgroundRequired,
+    true,
+    `portrait-expression-set-v1 should have transparentBackgroundRequired: true`,
+  );
+  assert.strictEqual(
+    portraitContract.alphaRequired,
+    true,
+    `portrait-expression-set-v1 should have alphaRequired: true`,
+  );
+  assert.strictEqual(
+    eventContract.transparentBackgroundRequired,
+    true,
+    `event-standing-expression-set-v1 should have transparentBackgroundRequired: true`,
+  );
+  assert.strictEqual(
+    eventContract.alphaRequired,
+    true,
+    `event-standing-expression-set-v1 should have alphaRequired: true`,
+  );
+
+  console.log("[PASS] test22: portrait-expression-set-v1 AND event-standing-expression-set-v1 both have transparentBackgroundRequired === true AND alphaRequired === true");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6 dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -777,6 +887,10 @@ async function main() {
     test16_publicArtOutputRejected,
     test17_cors_allowedOriginGetsCorsHeaders,
     test18_cors_healthzIncludesCorsHeader,
+    test19_contractIdsAreUnique,
+    test20_canonicalTwoSheetContract,
+    test21_poCombinedContract,
+    test22_expressionContractsRequireAlphaAndTransparency,
   ];
 
   for (const test of tests) {

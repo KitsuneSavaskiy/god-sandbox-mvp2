@@ -17,6 +17,11 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getContract } from "../asset-contracts/asset-contract-registry.mjs";
+
+// Load contracts once at module load time
+const poContract = getContract("resident-po-combined-preview-v1");
+const canonContract = getContract("resident-canonical-two-sheet-v1");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
@@ -244,6 +249,8 @@ Keep all elements identical to the standing base except the facial expression.
 }
 
 function buildCombinedSpritePrompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
+  const { canvasWidth, canvasHeight, columns, rows, frameWidth, frameHeight, rowManifest } = poContract;
+  const rowLines = rowManifest.map((name, i) => `- row ${i}: ${name} (${columns} frames)`).join("\n");
   return `# Combined Sprite Sheet Prompt — ${CHARACTER} (PO Combined / po-combined)
 
 ## Character Reference
@@ -254,23 +261,10 @@ function buildCombinedSpritePrompt({ CHARACTER, personality, tone, ageNum, portr
 - Age: ${ageNum}
 
 ## Sheet Layout
-Single combined sheet: 826×1904 px (7 columns × 14 rows, each frame 118×136 px)
+Single combined sheet: ${canvasWidth}×${canvasHeight} px (${columns} columns × ${rows} rows, each frame ${frameWidth}×${frameHeight} px)
 
 Row mapping (po-combined layout):
-- row 0: idle (7 frames)
-- row 1: walk-right (7 frames)
-- row 2: walk-left (7 frames)
-- row 3: waving (7 frames)
-- row 4: jumping (7 frames)
-- row 5: failed (7 frames)
-- row 6: waiting (7 frames)
-- row 7: review (7 frames)
-- row 8: walk-up / walk-back (7 frames)
-- row 9: walk-down / walk-forward (7 frames)
-- row 10: emote-happy (7 frames)
-- row 11: emote-angry (7 frames)
-- row 12: emote-sad (7 frames)
-- row 13: emote-surprised (7 frames)
+${rowLines}
 
 ## Generation Instructions
 - Same character identity as [${CHARACTER}]
@@ -283,6 +277,9 @@ Row mapping (po-combined layout):
 }
 
 function buildSheet1Prompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
+  const sheet1 = canonContract.sheets[0];
+  const { canvasWidth, canvasHeight, columns, rows, frameWidth, frameHeight, rowManifest } = sheet1;
+  const rowLines = rowManifest.map((name, i) => `- row ${i}: ${name} (${columns} frames)`).join("\n");
   return `# Sprite Sheet 1 — Motion (resident-sprite-sheet.png) — ${CHARACTER} (Canonical Two-Sheet)
 
 ## Character Reference
@@ -293,18 +290,10 @@ function buildSheet1Prompt({ CHARACTER, personality, tone, ageNum, portraitPath 
 - Age: ${ageNum}
 
 ## Sheet Layout
-Sheet 1 (motion-sheet, resident-sprite-sheet.png): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
+Sheet 1 (motion-sheet, resident-sprite-sheet.png): ${canvasWidth}×${canvasHeight} px (${columns} columns × ${rows} rows, each frame ${frameWidth}×${frameHeight} px)
 
 Row mapping (canonical motion-sheet):
-- row 0: idle (8 frames)
-- row 1: walk-right (8 frames)
-- row 2: walk-left (8 frames)
-- row 3: waving (8 frames)
-- row 4: jumping (8 frames)
-- row 5: failed (8 frames)
-- row 6: waiting (8 frames)
-- row 7: running (8 frames)
-- row 8: review (8 frames)
+${rowLines}
 
 ## Generation Instructions
 - Same character identity as [${CHARACTER}]
@@ -317,6 +306,14 @@ Row mapping (canonical motion-sheet):
 }
 
 function buildSheet2Prompt({ CHARACTER, personality, tone, ageNum, portraitPath }) {
+  const sheet2 = canonContract.sheets[1];
+  const { canvasWidth, canvasHeight, columns, rows, frameWidth, frameHeight, rowManifest } = sheet2;
+  const rowLines = rowManifest.map((name, i) => {
+    if (name === "spare") {
+      return `- row ${i}: spare (transparent or duplicate row 7)`;
+    }
+    return `- row ${i}: ${name} (${columns} frames)`;
+  }).join("\n");
   return `# Sprite Sheet 2 — Extended (resident-sprite-sheet-extended.png) — ${CHARACTER} (Canonical Two-Sheet)
 
 ## Character Reference
@@ -327,18 +324,10 @@ function buildSheet2Prompt({ CHARACTER, personality, tone, ageNum, portraitPath 
 - Age: ${ageNum}
 
 ## Sheet Layout
-Sheet 2 (extended-sheet, resident-sprite-sheet-extended.png): 1536×1872 px (8 columns × 9 rows, each frame 192×208 px)
+Sheet 2 (extended-sheet, resident-sprite-sheet-extended.png): ${canvasWidth}×${canvasHeight} px (${columns} columns × ${rows} rows, each frame ${frameWidth}×${frameHeight} px)
 
 Row mapping (canonical extended-sheet):
-- row 0: walk-up (8 frames)
-- row 1: walk-down (8 frames)
-- row 2: walk-forward (8 frames)
-- row 3: walk-back (8 frames)
-- row 4: emote-happy (8 frames)
-- row 5: emote-angry (8 frames)
-- row 6: emote-sad (8 frames)
-- row 7: emote-surprised (8 frames)
-- row 8: spare (transparent or duplicate row 7)
+${rowLines}
 
 ## Consistency Requirements (mandatory)
 - same character identity as [${CHARACTER}]
