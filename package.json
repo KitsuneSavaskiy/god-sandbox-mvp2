@@ -26,7 +26,8 @@
     "assetgen:derive-icon": "node tools/sidekick/derive-icon-from-sprite.mjs",
     "assetgen:test": "node tools/app-server/test-dry-run.mjs",
     "assetgen:review-pack": "node tools/sidekick/build-asset-review-pack.mjs",
-    "assetgen:contracts": "node tools/asset-contracts/print-contracts.mjs"
+    "assetgen:contracts": "node tools/asset-contracts/print-contracts.mjs",
+    "assetgen:validate-contract": "node tools/asset-pipeline/validate-asset-contract.mjs"
   },
   "dependencies": {
     "react": "latest",
