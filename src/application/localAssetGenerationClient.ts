@@ -32,6 +32,17 @@ export interface HealthCheckResult {
   error?: string;
 }
 
+export interface JobStatusResult {
+  jobId: string;
+  status: string;
+  assetBundleId?: string;
+  gen2Bridge?: string;
+  lanes?: string[];
+  error?: string;
+  characterProfile?: { displayName: string; [key: string]: unknown };
+  [key: string]: unknown;
+}
+
 const REQUEST_TIMEOUT_MS = 15_000;
 
 function makeAbortController(): { controller: AbortController; timerId: ReturnType<typeof setTimeout> } {
@@ -113,5 +124,22 @@ export function createLocalAssetGenerationClient(baseUrl = "http://127.0.0.1:878
     return { jobId: data.jobId, status: data.status };
   }
 
-  return { checkHealth, createCharacterJob };
+  async function getJobStatus(jobId: string): Promise<JobStatusResult> {
+    const { controller, timerId } = makeAbortController();
+    try {
+      const res = await fetch(
+        `${baseUrl}/api/local/asset-generation/jobs/${encodeURIComponent(jobId)}`,
+        { signal: controller.signal },
+      );
+      clearTimeout(timerId);
+      if (res.status === 404) return { jobId, status: "not-found" };
+      if (!res.ok) return { jobId, status: "error", error: `AppServerエラー (HTTP ${res.status})` };
+      return (await res.json()) as JobStatusResult;
+    } catch (err) {
+      clearTimeout(timerId);
+      return { jobId, status: "error", error: "AppServerへの接続が切れました" };
+    }
+  }
+
+  return { checkHealth, createCharacterJob, getJobStatus };
 }

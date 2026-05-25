@@ -29,7 +29,8 @@
     "assetgen:contracts": "node tools/asset-contracts/print-contracts.mjs",
     "assetgen:validate-contract": "node tools/asset-pipeline/validate-asset-contract.mjs",
     "assetgen:run-bundle": "node tools/sidekick/run-character-asset-bundle.mjs",
-    "assetgen:event-intake": "node tools/sidekick/event-standing-expression-intake.mjs"
+    "assetgen:event-intake": "node tools/sidekick/event-standing-expression-intake.mjs",
+    "assetgen:test-presets": "tsc --ignoreConfig --module NodeNext --moduleResolution NodeNext --target ES2022 --lib ES2022,DOM --strict --skipLibCheck --rootDir src --outDir node_modules/.tmp/presets-test-dist src/features/asset-generation/assetgenPresets.ts src/features/asset-generation/assetgenPresets.test.ts && node node_modules/.tmp/presets-test-dist/features/asset-generation/assetgenPresets.test.js"
   },
   "dependencies": {
     "react": "latest",

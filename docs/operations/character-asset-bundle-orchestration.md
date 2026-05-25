@@ -1,6 +1,6 @@
 # Character Asset Bundle Orchestration
 
-Status: Sprint 10-E — operational guide for `run-character-asset-bundle.mjs`
+Status: Sprint 10-F — operational guide for `run-character-asset-bundle.mjs` and the `/assetgen` guided UI flow
 
 ## Overview
 
@@ -211,3 +211,15 @@ PO Review → approval → separate PBI for ready promotion
 - Modify source code or game state
 
 All generated files go to `assets/generated/` which is gitignored.
+
+## Guided UI Flow (Sprint 10-F)
+
+For a user-facing entry point, see `docs/product/one-portrait-guided-flow.md`.
+
+The `/assetgen` route in the app provides a 3-step guided flow that maps simple
+presets ("まず試す", "イベント用まで作る", "表情だけ作る") to the underlying `lanes[]`
+parameter, checks AppServer health on load, shows job progress with Japanese labels,
+and warns clearly when `gen2Bridge=fake`.
+
+Internal pipeline terms (`lane`, `contract`, `manifest`, `bridge`) are hidden in
+"詳細設定（上級者向け）" and are not shown in primary copy.
