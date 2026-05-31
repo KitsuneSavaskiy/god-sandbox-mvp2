@@ -1,9 +1,10 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSeedRuntimeWorld } from "../application/runtimeBootstrap.js";
 import {
   issueCharacterPassportCommand,
   issueCharacterSnapshotCommand,
   replaceActiveSlotCommand,
+  welcomeCharacterCommand,
 } from "../application/runtimeCommands.js";
 import {
   selectActiveCharacters,
@@ -14,7 +15,10 @@ import {
 } from "../application/runtimeSelectors.js";
 import type { CharacterId } from "../domain/models.js";
 import { addCharacterToRoster } from "../domain/session.js";
-import { CharacterEditor } from "../features/character-creator/CharacterEditor";
+import {
+  CharacterEditor,
+  type WelcomeSlotOption,
+} from "../features/character-creator/CharacterEditor";
 import {
   applyDraftToCharacter,
   createCharacterFromDraft,
@@ -48,8 +52,16 @@ import { Button } from "../ui/Button.js";
 import { Panel } from "../ui/Panel.js";
 
 type PanelId = "roster" | "logs";
+type ProvisionalPortraits = Record<CharacterId, string>;
+
+type WelcomeNotice = {
+  characterId: CharacterId;
+  slotIndex: number;
+};
 
 const PLAYER_DISPLAY_NAME_STORAGE_KEY = "godsandbox.player-display-name.v1";
+const PROVISIONAL_WELCOME_MESSAGE =
+  "まずは仮の姿で箱庭に来ました。動きや表情は候補としてあとから届きます。";
 
 interface SandboxUiState {
   focusedEventId: string | null;
@@ -112,6 +124,9 @@ export function AppShell() {
   }));
   const [storyEntries, setStoryEntries] = useState<StoryLogEntry[]>([]);
   const [activeResidents, setActiveResidents] = useState<ActiveResidentPreview[]>([]);
+  const [provisionalPortraits, setProvisionalPortraits] = useState<ProvisionalPortraits>({});
+  const provisionalPortraitsRef = useRef<ProvisionalPortraits>({});
+  const [welcomeNotice, setWelcomeNotice] = useState<WelcomeNotice | null>(null);
   const [newcomerTutorialCompleted, setNewcomerTutorialCompleted] = useState(
     () => readTutorialState().newcomerCompleted,
   );
@@ -122,6 +137,12 @@ export function AppShell() {
     [manualSweep.enabled],
   );
   const showSandboxDrawerButtons = route.id === "sandbox";
+
+  useEffect(() => {
+    return () => {
+      Object.values(provisionalPortraitsRef.current).forEach(revokeObjectUrl);
+    };
+  }, []);
 
   useEffect(() => {
     if (route.id === "character-editor" && route.params?.characterId === "new") {
@@ -265,24 +286,75 @@ export function AppShell() {
     }));
   }
 
-  function saveCharacterDraft(draft: CharacterDraft, portraitFile?: File) {
+  function storeProvisionalPortrait(characterId: CharacterId, portraitFile?: File) {
+    if (!portraitFile || typeof URL === "undefined" || !URL.createObjectURL) {
+      return;
+    }
+
+    const nextUrl = URL.createObjectURL(portraitFile);
+    revokeObjectUrl(provisionalPortraitsRef.current[characterId]);
+
+    const nextPortraits = {
+      ...provisionalPortraitsRef.current,
+      [characterId]: nextUrl,
+    };
+    provisionalPortraitsRef.current = nextPortraits;
+    setProvisionalPortraits(nextPortraits);
+  }
+
+  function saveCharacterDraft(
+    draft: CharacterDraft,
+    portraitFile?: File,
+    welcomeSlotIndex?: number,
+  ) {
     const now = new Date().toISOString();
 
-    setRuntimeState((current) => {
-      const characters = new Map(current.characters);
+    const existingCharacterId = draft.id;
 
-      if (draft.id && characters.has(draft.id)) {
-        const existing = characters.get(draft.id);
+    if (existingCharacterId) {
+      setRuntimeState((current) => {
+        const characters = new Map(current.characters);
+        const existing = characters.get(existingCharacterId);
         if (!existing) {
           return current;
         }
 
-        characters.set(draft.id, applyDraftToCharacter(existing, draft, LINE3_CHARACTER_TEMPLATE, now));
+        characters.set(
+          existingCharacterId,
+          applyDraftToCharacter(existing, draft, LINE3_CHARACTER_TEMPLATE, now),
+        );
         return createRuntimeWorldState({ ...current, characters });
+      });
+
+      if (sidekickDirHandle) {
+        writeSidekickJobRequest(sidekickDirHandle, {
+          displayName: draft.displayName,
+          personality: draft.personalityNote,
+          tone: draft.speechStyleId,
+          age: draft.age,
+          portraitFile,
+        }).catch((error: unknown) => {
+          console.warn("[sidekick] job request write failed:", error);
+        });
       }
 
-      const characterId = createCharacterId(draft.displayName, now);
-      const character = createCharacterFromDraft(draft, LINE3_CHARACTER_TEMPLATE, characterId, now);
+      navigate("/roster");
+      return;
+    }
+
+    const characterId = createCharacterId(draft.displayName, now);
+    const character = createCharacterFromDraft(draft, LINE3_CHARACTER_TEMPLATE, characterId, now);
+    const shouldWelcome = typeof welcomeSlotIndex === "number";
+
+    setRuntimeState((current) => {
+      if (shouldWelcome) {
+        return welcomeCharacterCommand(current, {
+          character,
+          slotIndex: welcomeSlotIndex,
+        });
+      }
+
+      const characters = new Map(current.characters);
       characters.set(character.id, character);
 
       return createRuntimeWorldState({
@@ -291,6 +363,8 @@ export function AppShell() {
         session: addCharacterToRoster(current.session, character.id),
       });
     });
+
+    storeProvisionalPortrait(character.id, portraitFile);
 
     if (sidekickDirHandle) {
       writeSidekickJobRequest(sidekickDirHandle, {
@@ -302,6 +376,15 @@ export function AppShell() {
       }).catch((error: unknown) => {
         console.warn("[sidekick] job request write failed:", error);
       });
+    }
+
+    if (shouldWelcome) {
+      setWelcomeNotice({
+        characterId: character.id,
+        slotIndex: welcomeSlotIndex,
+      });
+      navigate("/sandbox");
+      return;
     }
 
     navigate("/roster");
@@ -340,6 +423,9 @@ export function AppShell() {
 
   const detailCharacter = uiState.detailCharacterId
     ? runtimeState.characters.get(uiState.detailCharacterId)
+    : undefined;
+  const welcomeCharacter = welcomeNotice
+    ? runtimeState.characters.get(welcomeNotice.characterId)
     : undefined;
 
     if (!playerDisplayName) {
@@ -402,6 +488,7 @@ export function AppShell() {
             route={route}
             runtimeState={runtimeState}
             storyEntries={storyEntries}
+            provisionalPortraits={provisionalPortraits}
             newcomerTutorialCompleted={newcomerTutorialCompleted}
             manualSweepEnabled={manualSweep.enabled}
             manualSweepRuntimeDirectory={manualSweep.runtimeDirectory}
@@ -426,6 +513,21 @@ export function AppShell() {
           />
         </section>
       </main>
+
+      {route.id === "sandbox" && welcomeNotice ? (
+        <aside className="app-welcome-notice" role="status" aria-live="polite">
+          <div>
+            <strong>
+              {welcomeCharacter?.profile.displayName ?? "新しい住民"}が Slot{" "}
+              {welcomeNotice.slotIndex + 1} に来ました
+            </strong>
+            <span>{PROVISIONAL_WELCOME_MESSAGE}</span>
+          </div>
+          <Button type="button" variant="ghost" onClick={() => setWelcomeNotice(null)}>
+            閉じる
+          </Button>
+        </aside>
+      ) : null}
 
       {showSandboxDrawerButtons ? (
         <aside
@@ -489,6 +591,7 @@ type PrimaryRouteSurfaceProps = {
   route: AppRoute;
   runtimeState: RuntimeWorldState;
   storyEntries: StoryLogEntry[];
+  provisionalPortraits: ProvisionalPortraits;
   newcomerTutorialCompleted: boolean;
   manualSweepEnabled: boolean;
   manualSweepRuntimeDirectory: string;
@@ -509,13 +612,18 @@ type PrimaryRouteSurfaceProps = {
   onIssueSnapshot: (input: { characterId: CharacterId; memo?: string; tags: string[] }) => void;
   onNavigate: (path: string) => void;
   onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
-  onSaveCharacter: (draft: CharacterDraft, portraitFile?: File) => void;
+  onSaveCharacter: (
+    draft: CharacterDraft,
+    portraitFile?: File,
+    welcomeSlotIndex?: number,
+  ) => void;
 };
 
 function PrimaryRouteSurface({
   route,
   runtimeState,
   storyEntries,
+  provisionalPortraits,
   newcomerTutorialCompleted,
   manualSweepEnabled,
   manualSweepRuntimeDirectory,
@@ -545,6 +653,7 @@ function PrimaryRouteSurface({
         routePath={route.path}
         manualSweepEnabled={manualSweepEnabled}
         manualSweepRuntimeDirectory={manualSweepRuntimeDirectory}
+        provisionalPortraits={provisionalPortraits}
         onRuntimeStateChange={onRuntimeStateChange}
         onFocusedEventIdChange={onFocusedEventIdChange}
         onStoryEntriesChange={onStoryEntriesChange}
@@ -559,6 +668,7 @@ function PrimaryRouteSurface({
     return (
       <RosterSurface
         state={runtimeState}
+        provisionalPortraits={provisionalPortraits}
         onAddNew={() => onNavigate("/character-editor/new")}
         onEdit={onEdit}
         onOpenDetail={onOpenCharacterDetail}
@@ -594,6 +704,7 @@ function PrimaryRouteSurface({
       <CharacterEditor
         character={character}
         mode={mode}
+        welcomeSlotOptions={createWelcomeSlotOptions(runtimeState)}
         sidekickIsConnected={sidekickIsConnected}
         onCancel={onCancelEditor}
         onOpenSidekickSetup={() => onNavigate("/sidekick-setup")}
@@ -772,6 +883,18 @@ function ShellPanel({
   return <StoryLogPanel entries={storyEntries} />;
 }
 
+function createWelcomeSlotOptions(state: RuntimeWorldState): WelcomeSlotOption[] {
+  return state.session.activeSlots.map((characterId, slotIndex) => {
+    const character = state.characters.get(characterId);
+
+    return {
+      slotIndex,
+      characterId,
+      displayName: character?.profile.displayName ?? "不明な住民",
+    };
+  });
+}
+
 function areResidentPreviewsEqual(
   left: ActiveResidentPreview[],
   right: ActiveResidentPreview[],
@@ -810,6 +933,14 @@ function createCharacterId(displayName: string, now: string): CharacterId {
 
 function createRecordId(prefix: string, sourceId: string): string {
   return `${prefix}_${sourceId.replace(/[^a-zA-Z0-9]+/g, "_")}_${Date.now().toString(36)}`;
+}
+
+function revokeObjectUrl(url: string | undefined) {
+  if (!url || typeof URL === "undefined" || !URL.revokeObjectURL) {
+    return;
+  }
+
+  URL.revokeObjectURL(url);
 }
 
 function createPassportFileNameToken(state: RuntimeWorldState, snapshotId: string): string {

@@ -1,7 +1,12 @@
 import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { createLocalAssetGenerationClient } from "../../application/localAssetGenerationClient.js";
+import {
+  createLocalAssetGenerationClient,
+  LocalAssetGenerationError,
+  type LocalAssetGenerationJobStatus,
+} from "../../application/localAssetGenerationClient.js";
 import { Button } from "../../ui/Button.js";
 import { Panel } from "../../ui/Panel.js";
+import { getAssetProductionMemo, isAssetJobPollingTerminal } from "./assetProductionMemo.js";
 import {
   ASSETGEN_PRESETS,
   DEFAULT_ASSETGEN_PRESET_ID,
@@ -10,7 +15,6 @@ import {
   LOCAL_APP_SERVER_HELP_COMMAND,
   createAssetBundleSlug,
   getAssetGenPreset,
-  getFriendlyJobStatus,
   getPresetLanes,
   type AssetGenLane,
   type AssetGenPresetId,
@@ -30,8 +34,7 @@ type FormStatus =
   | {
       kind: "submitted";
       jobId: string;
-      jobStatus: string;
-      error?: string;
+      jobStatus: LocalAssetGenerationJobStatus;
       portraitPath: string;
       lanes: AssetGenLane[];
       bridgeMode: BridgeMode;
@@ -43,7 +46,13 @@ type FormStatus =
 const LOCAL_APP_SERVER_URL = "http://127.0.0.1:8787";
 const DEFAULT_TONE = "その子らしい自然な話し方";
 const DEFAULT_AGE = 18;
-const FINAL_JOB_STATUSES = new Set(["gen2-dispatched", "watcher-intake-done", "error", "cancelled"]);
+
+function getFriendlyErrorMessage(error: unknown) {
+  if (error instanceof LocalAssetGenerationError) {
+    return error.message;
+  }
+  return error instanceof Error ? error.message : "うまく進めませんでした。";
+}
 
 export function CharacterAssetGenForm() {
   const [displayName, setDisplayName] = useState("");
@@ -79,12 +88,12 @@ export function CharacterAssetGenForm() {
   }, [portraitFile]);
 
   useEffect(() => {
-    if (status.kind !== "submitted" || FINAL_JOB_STATUSES.has(status.jobStatus)) {
+    if (status.kind !== "submitted" || isAssetJobPollingTerminal(status.jobStatus.status)) {
       return undefined;
     }
 
     const timerId = window.setInterval(() => {
-      client.getCharacterJobStatus(status.jobId)
+      client.getJobStatus(status.jobId)
         .then((jobStatus) => {
           setStatus((current) => {
             if (current.kind !== "submitted" || current.jobId !== status.jobId) {
@@ -93,8 +102,7 @@ export function CharacterAssetGenForm() {
 
             return {
               ...current,
-              jobStatus: jobStatus.status,
-              error: jobStatus.error,
+              jobStatus,
             };
           });
         })
@@ -119,9 +127,9 @@ export function CharacterAssetGenForm() {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
+    if (file.type && file.type !== "image/png") {
       setPortraitFile(null);
-      setStatus({ kind: "error", error: "PNG、JPG、WebP などの画像ファイルを選んでください。" });
+      setStatus({ kind: "error", error: "PNGファイルを選んでください。" });
       return;
     }
 
@@ -180,7 +188,14 @@ export function CharacterAssetGenForm() {
       setStatus({
         kind: "submitted",
         jobId: result.jobId,
-        jobStatus: result.status,
+        jobStatus: {
+          jobId: result.jobId,
+          status: result.status,
+          assetBundleId: slug,
+          lanes,
+          previewMode,
+          gen2Bridge: bridgeMode,
+        },
         portraitPath: staged.portraitPath,
         lanes,
         bridgeMode,
@@ -190,10 +205,12 @@ export function CharacterAssetGenForm() {
     } catch (error) {
       setStatus({
         kind: "error",
-        error: error instanceof Error ? error.message : "うまく進めませんでした。",
+        error: getFriendlyErrorMessage(error),
       });
     }
   }
+
+  const productionMemo = status.kind === "submitted" ? getAssetProductionMemo(status.jobStatus) : null;
 
   return (
     <Panel title="この子を箱庭に迎える">
@@ -219,7 +236,7 @@ export function CharacterAssetGenForm() {
                 画像を選ぶ
                 <input
                   type="file"
-                  accept="image/png,.png,image/jpeg,.jpg,.jpeg,image/webp,.webp"
+                  accept="image/png,.png"
                   onChange={handlePortraitFileChange}
                   disabled={isBusy}
                 />
@@ -368,18 +385,28 @@ export function CharacterAssetGenForm() {
 
           {status.kind === "submitted" ? (
             <div className="assetgen-form__progress assetgen-form__progress--success" role="status">
-              <strong>{getFriendlyJobStatus(status.jobStatus)}</strong>
+              <strong>{productionMemo?.progress.title}</strong>
+              <p>{productionMemo?.progress.description}</p>
+              {productionMemo?.warnings.map((warning) => (
+                <p key={warning}>{warning}</p>
+              ))}
+              {productionMemo?.eventExpressions ? (
+                <p>
+                  イベントで使う立ち姿の表情:
+                  {" "}
+                  {productionMemo.eventExpressions.expectedLabels.join(" / ")}
+                </p>
+              ) : null}
               <p>
                 できた候補は自動では採用されません。
                 「候補を見る」で確認してから、この子らしいものだけ使います。
               </p>
-              {status.error ? <p>{status.error}</p> : null}
             </div>
           ) : null}
 
           {status.kind === "error" ? (
             <div className="assetgen-form__notice assetgen-form__notice--error" role="alert">
-              <strong>{getFriendlyJobStatus("error")}</strong>
+              <strong>うまく進めませんでした</strong>
               <p>{status.error}</p>
             </div>
           ) : null}

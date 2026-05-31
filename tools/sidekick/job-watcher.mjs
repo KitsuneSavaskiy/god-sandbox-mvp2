@@ -558,6 +558,10 @@ function main() {
   setInterval(pollJobsDir, 2000);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+const isCliEntrypoint =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isCliEntrypoint) {
   main();
 }

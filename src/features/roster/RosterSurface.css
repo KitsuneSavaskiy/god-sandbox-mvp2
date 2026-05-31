@@ -106,6 +106,19 @@
   line-height: 1.25;
 }
 
+.roster-card__provisional-badge {
+  justify-self: start;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid rgba(138, 102, 39, 0.2);
+  border-radius: 999px;
+  color: #6a4b1d;
+  background: rgba(255, 218, 142, 0.28);
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
 .roster-card__asset-status--ready {
   color: #285a2e;
   background: rgba(115, 169, 91, 0.18);
