@@ -9,8 +9,10 @@ import {
   type MouseEvent,
 } from "react";
 import {
-  isCharacterAnimationReady,
+  resolveCharacterResidentVisual,
   selectActiveCharacterAssetBundleReadModels,
+  type CharacterResidentVisualResolution,
+  type CharacterResidentVisualMode,
 } from "../../application/characterAssetBundles.js";
 import { applyFocusedEventInterventionCommand } from "../../application/runtimeCommands.js";
 import {
@@ -134,7 +136,7 @@ type ResidentViewModel = ActiveResidentPreview & {
   depthClassName: string;
   motion: ResidentMotionKey;
   movement: ResidentMovementState;
-  visualMode: "sprite" | "portrait" | "icon" | "placeholder";
+  visualMode: CharacterResidentVisualMode;
   portraitPath: string | null;
   iconPath: string | null;
   spriteSheetPath: string | null;
@@ -203,6 +205,7 @@ interface EventFirstSandboxProps {
   routePath: string;
   manualSweepEnabled: boolean;
   manualSweepRuntimeDirectory: string;
+  provisionalPortraits?: Record<string, string>;
   onRuntimeStateChange: (state: RuntimeWorldState) => void;
   onFocusedEventIdChange: (focusedEventId: string) => void;
   onStoryEntriesChange: (entries: StoryLogEntry[]) => void;
@@ -380,6 +383,7 @@ export function EventFirstSandbox({
   routePath,
   manualSweepEnabled,
   manualSweepRuntimeDirectory,
+  provisionalPortraits = {},
   onRuntimeStateChange,
   onFocusedEventIdChange,
   onStoryEntriesChange,
@@ -475,27 +479,19 @@ export function EventFirstSandbox({
         const isPrimary = currentEvent.primaryCharacterId === character.id;
         const isSupporting =
           currentEvent.participantCharacterIds.includes(character.id) && !isPrimary;
-        const animationReady = assetBundle
-          ? isCharacterAnimationReady(assetBundle)
-          : false;
-        const spriteSheetPath =
-          animationReady &&
-          assetBundle?.spriteSheet.ready &&
-          assetBundle.spriteSheet.path
-            ? assetBundle.spriteSheet.path
-            : null;
-        const extendedSheetPath =
-          animationReady &&
-          assetBundle?.extendedSheet?.ready &&
-          assetBundle.extendedSheet.path
-            ? assetBundle.extendedSheet.path
-            : null;
-        const portraitPath =
-          assetBundle?.portrait.ready && assetBundle.portrait.path
-            ? assetBundle.portrait.path
-            : null;
-        const iconPath =
-          assetBundle?.icon.ready && assetBundle.icon.path ? assetBundle.icon.path : null;
+        const visual: CharacterResidentVisualResolution = assetBundle
+          ? resolveCharacterResidentVisual(
+              assetBundle,
+              provisionalPortraits[character.id],
+            )
+          : {
+              visualMode: "placeholder",
+              portraitPath: null,
+              iconPath: null,
+              spriteSheetPath: null,
+              extendedSheetPath: null,
+              usesProvisionalPortrait: false,
+            };
         const baseEmote = resolveResidentEmote({
           sandboxStage,
           isPrimary,
@@ -515,12 +511,12 @@ export function EventFirstSandbox({
           movementDirection: movement.direction,
           residentVisualPaused,
         });
-        const spriteSheetMetadata = spriteSheetPath || extendedSheetPath
+        const spriteSheetMetadata = visual.spriteSheetPath || visual.extendedSheetPath
           ? resolveResidentSpriteSheetMetadata(
               assetBundle?.spriteSheet.metadata,
               assetBundle?.extendedSheet?.metadata,
               motion,
-              Boolean(extendedSheetPath),
+              Boolean(visual.extendedSheetPath),
             )
           : null;
 
@@ -537,17 +533,11 @@ export function EventFirstSandbox({
           emote,
           motion,
           movement,
-          visualMode: spriteSheetPath || extendedSheetPath
-            ? "sprite"
-            : portraitPath
-              ? "portrait"
-              : iconPath
-                ? "icon"
-                : "placeholder",
-          portraitPath,
-          iconPath,
-          spriteSheetPath,
-          extendedSheetPath,
+          visualMode: visual.visualMode,
+          portraitPath: visual.portraitPath,
+          iconPath: visual.iconPath,
+          spriteSheetPath: visual.spriteSheetPath,
+          extendedSheetPath: visual.extendedSheetPath,
           spriteSheetMetadata,
           statusSummary: [
             `活力 ${character.state.status.vitality}`,
@@ -561,6 +551,7 @@ export function EventFirstSandbox({
       ambientResidentEmote,
       currentEvent,
       latestOutcome,
+      provisionalPortraits,
       residentMovements,
       residentVisualPaused,
       sandboxStage,

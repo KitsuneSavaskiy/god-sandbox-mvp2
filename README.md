@@ -44,6 +44,7 @@ npm run dev
 | `npm run build` | 本番向けビルド生成 | リリース相当のビルドが成立することを確認するため |
 | `npm run test:domain` | ドメイン層テスト実行 | ゲームの中核ロジック（イベント/介入/状態変化）が壊れていないことを確認するため |
 | `npm run test:ai` | AI 関連テスト実行 | AI 出力のスキーマ/ガード/安全制約が維持されていることを確認するため |
+| `npm run release` | semantic-release 実行 | Conventional Commits に基づき GitHub Releases のリリースノートを自動公開するため |
 
 ## 設計ドキュメント（外部設計 / 内部設計）
 
