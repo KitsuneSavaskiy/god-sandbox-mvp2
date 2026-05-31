@@ -2772,7 +2772,7 @@ async function test62_assetProductionMemoWarningsAndEventExpressions() {
   });
 
   assert.ok(
-    memo.warnings.some((warning) => warning.includes("テスト用の仮連携")),
+    memo.warnings.some((warning) => warning.includes("これは動作確認用です。見た目候補としては使えません。")),
     `fake bridge warning must stay visible. Got: ${JSON.stringify(memo.warnings)}`,
   );
   assert.ok(memo.eventExpressions, "event-standing-expressions should produce an event expression summary");
@@ -2792,27 +2792,34 @@ async function test62_assetProductionMemoWarningsAndEventExpressions() {
 }
 
 // ---------------------------------------------------------------------------
-// Test 63: technical details are behind expandable details
+// Test 63: production memo keeps raw identifiers in technical details
 // ---------------------------------------------------------------------------
 
-async function test63_assetProductionMemoTechnicalDetailsExpandable() {
-  const formPath = path.join(repoRoot, "src", "features", "asset-generation", "CharacterAssetGenForm.tsx");
-  const source = readFileSync(formPath, "utf8");
+async function test63_assetProductionMemoTechnicalDetails() {
+  const { getAssetProductionMemo } = await loadAssetProductionMemoModule();
+  const memo = getAssetProductionMemo({
+    jobId: "memo-job-1",
+    status: "pending",
+    assetBundleId: "ryo",
+    lanes: ["resident-sprite-sheet", "portrait-expressions"],
+    previewMode: "po-combined",
+    gen2Bridge: "fake",
+  });
 
   assert.ok(
-    source.includes("<details className=\"assetgen-form__details\">"),
-    "CharacterAssetGenForm should render technical details in an expandable <details> block",
+    !memo.progress.title.includes("memo-job-1") && !memo.progress.description.includes("memo-job-1"),
+    "friendly progress copy should not expose raw jobId",
   );
   assert.ok(
-    source.includes("開発者向けの詳細"),
-    "CharacterAssetGenForm should label expandable technical details in Japanese",
+    memo.technicalDetails.some((row) => row.label === "jobId" && row.value === "memo-job-1"),
+    "technical details should preserve raw jobId for debugging",
   );
   assert.ok(
-    !source.includes("<dt>Job ID</dt>"),
-    "raw Job ID should not be the primary submitted-state experience",
+    memo.technicalDetails.some((row) => row.label === "lanes" && row.value.includes("resident-sprite-sheet")),
+    "technical details should preserve raw lanes for debugging",
   );
 
-  console.log("[PASS] test63: technical details are expandable and raw Job ID is not primary submitted copy");
+  console.log("[PASS] test63: production memo keeps raw identifiers out of primary copy and in technical details");
 }
 
 // ---------------------------------------------------------------------------
@@ -2887,7 +2894,7 @@ async function main() {
     test60_assetProductionMemoStatusMapping,
     test61_assetProductionMemoValidationFailureTranslator,
     test62_assetProductionMemoWarningsAndEventExpressions,
-    test63_assetProductionMemoTechnicalDetailsExpandable,
+    test63_assetProductionMemoTechnicalDetails,
   ];
 
   for (const test of tests) {

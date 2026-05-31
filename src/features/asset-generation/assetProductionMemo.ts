@@ -385,7 +385,7 @@ function buildWaitingItems(
 function buildWarnings(job: AssetGenerationJobStatus, report: AssetContractReport | undefined): string[] {
   const warnings: string[] = [];
   if (job.gen2Bridge === "fake" || job.validationOnly === true || job.candidateEligible === false) {
-    warnings.push("テスト用の仮連携です。PO確認に使う候補画像は作られません。");
+    warnings.push("これは動作確認用です。見た目候補としては使えません。");
   }
   if (report?.identityConsistencyNeedsHumanReview) {
     warnings.push("表情が同じキャラクターに見えるかは、自動では判断できません。人の確認が必要です。");
