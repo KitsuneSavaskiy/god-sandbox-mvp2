@@ -16,6 +16,10 @@ import { deflateSync } from "node:zlib";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 
+function toPortablePath(value) {
+  return value.split(path.sep).join("/");
+}
+
 // ---------------------------------------------------------------------------
 // Test 1: resolveGen2BridgeConfig('hot-folder') throws when env var not set
 // ---------------------------------------------------------------------------
@@ -1992,16 +1996,17 @@ async function test48_eventStandingLaneGenerates8Prompts() {
   });
 
   const EVENT_EXPRESSIONS = ["neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked"];
+  const portableFiles = result.files.map(toPortablePath);
 
   for (const expr of EVENT_EXPRESSIONS) {
-    const exprFile = result.files.find((f) => f.includes(`event-expressions/${expr}.prompt.md`));
+    const exprFile = portableFiles.find((f) => f.includes(`event-expressions/${expr}.prompt.md`));
     assert.ok(
       exprFile,
       `buildPromptPack should produce event-expressions/${expr}.prompt.md. Got files: ${JSON.stringify(result.files)}`,
     );
   }
 
-  const eventPromptFiles = result.files.filter((f) => f.includes("event-expressions/"));
+  const eventPromptFiles = portableFiles.filter((f) => f.includes("event-expressions/"));
   assert.strictEqual(
     eventPromptFiles.length,
     8,

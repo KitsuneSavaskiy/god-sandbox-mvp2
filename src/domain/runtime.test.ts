@@ -3,9 +3,11 @@ import {
   issueCharacterPassportCommand,
   issueCharacterSnapshotCommand,
   replaceActiveSlotCommand,
+  welcomeCharacterCommand,
 } from "../application/runtimeCommands.js";
 import { createSeedRuntimeWorld } from "../application/runtimeBootstrap.js";
 import {
+  resolveCharacterResidentVisual,
   selectActiveCharacterAssetBundleReadModels,
   selectCharacterAssetBundleReadModel,
   resolveCharacterAssetBundleReadModel,
@@ -302,6 +304,21 @@ function testActiveSlotsInvariantAndRosterReplacement(): void {
     () => replaceActiveSlot(base, 2, "chr_b"),
     /Cannot duplicate active character/,
   );
+}
+
+function testWelcomeCharacterCommandAddsRosterAndReplacesSelectedSlot(): void {
+  const state = worldState();
+  const newcomer = character("chr_new", "Nia");
+  const welcomed = welcomeCharacterCommand(state, {
+    character: newcomer,
+    slotIndex: 3,
+  });
+
+  assert.equal(welcomed.characters.get("chr_new")?.profile.displayName, "Nia");
+  assert.equal(welcomed.session.rosterCharacterIds.includes("chr_new"), true);
+  assert.deepEqual(welcomed.session.activeSlots, ["chr_a", "chr_b", "chr_c", "chr_new"]);
+  assert.equal(welcomed.session.pendingActivationCharacterIds.includes("chr_new"), false);
+  assert.equal(welcomed.session.rosterCharacterIds.includes("chr_d"), true);
 }
 
 function testEventGenerationKeepsFocusedCurrentEvent(): void {
@@ -856,6 +873,35 @@ function testRuntimeSelectorsAndCommands(): void {
   });
   assert.equal(issuedPassport.state.snapshots.size, 1);
   assert.equal(issuedPassport.state.passports.size, 1);
+}
+
+function testResidentVisualUsesProvisionalPortraitWhenManifestAssetMissing(): void {
+  const newcomer = character("chr_new", "Nia");
+  const readModel = resolveCharacterAssetBundleReadModel(newcomer);
+  const visual = resolveCharacterResidentVisual(readModel, "blob:provisional-nia");
+
+  assert.equal(readModel.portrait.ready, false);
+  assert.equal(visual.visualMode, "portrait");
+  assert.equal(visual.portraitPath, "blob:provisional-nia");
+  assert.equal(visual.spriteSheetPath, null);
+  assert.equal(visual.usesProvisionalPortrait, true);
+}
+
+function testResidentVisualReadySpriteKeepsPriorityOverProvisionalPortrait(): void {
+  const state = createSeedRuntimeWorld();
+  const ryoAssetBundle = selectCharacterAssetBundleReadModel(state, "chr_ryo");
+  const visual = resolveCharacterResidentVisual(ryoAssetBundle, "blob:provisional-ryo");
+
+  assert.equal(ryoAssetBundle.portrait.ready, true);
+  assert.equal(ryoAssetBundle.spriteSheet.ready, true);
+  assert.equal(ryoAssetBundle.extendedSheet.ready, true);
+  assert.equal(visual.visualMode, "sprite");
+  assert.equal(
+    visual.spriteSheetPath,
+    "/art/characters/defaults/ryo/sprites/resident-sprite-sheet-combined-preview-v12.png",
+  );
+  assert.equal(visual.portraitPath, "/art/characters/defaults/ryo/portrait.png");
+  assert.equal(visual.usesProvisionalPortrait, false);
 }
 
 function testCharacterAssetReadModelSeparatesIntroductionSources(): void {
@@ -2947,6 +2993,7 @@ function testEventParticipantOverlayViewModel(): void {
 
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
+  ["welcome character adds roster and replaces selected slot", testWelcomeCharacterCommandAddsRosterAndReplacesSelectedSlot],
   ["event generation keeps focused current event", testEventGenerationKeepsFocusedCurrentEvent],
   ["event generation participant variety", testEventGenerationParticipantVariety],
   ["event generation prioritizes active relations", testEventGenerationPrioritizesActiveRelations],
@@ -2956,6 +3003,8 @@ const tests: Array<[string, () => void]> = [
   ["snapshot and passport are separate artifacts", testSnapshotAndPassportAreSeparateArtifacts],
   ["persistence foundations", testPersistenceFoundations],
   ["runtime selectors and commands", testRuntimeSelectorsAndCommands],
+  ["resident visual uses provisional portrait when manifest asset missing", testResidentVisualUsesProvisionalPortraitWhenManifestAssetMissing],
+  ["resident visual ready sprite keeps priority over provisional portrait", testResidentVisualReadySpriteKeepsPriorityOverProvisionalPortrait],
   ["asset read model separates introduction sources", testCharacterAssetReadModelSeparatesIntroductionSources],
   ["invalid sprite metadata falls back to reviewing", testInvalidSpriteMetadataFallsBackToReviewing],
   ["resident sprite manifest read model", testResidentSpriteManifestReadModel],

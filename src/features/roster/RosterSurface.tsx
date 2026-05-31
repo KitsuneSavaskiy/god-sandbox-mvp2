@@ -10,6 +10,7 @@ import "./RosterSurface.css";
 
 type RosterSurfaceProps = {
   state: RuntimeWorldState;
+  provisionalPortraits?: Record<string, string>;
   onAddNew: () => void;
   onEdit: (characterId: CharacterId) => void;
   onOpenDetail: (characterId: CharacterId) => void;
@@ -18,6 +19,7 @@ type RosterSurfaceProps = {
 
 export function RosterSurface({
   state,
+  provisionalPortraits = {},
   onAddNew,
   onEdit,
   onOpenDetail,
@@ -35,8 +37,8 @@ export function RosterSurface({
         <p className="eyebrow">住民管理</p>
         <h2 id="roster-title">住民一覧と箱庭にいる4人を分けて管理する</h2>
         <p>
-          新しい住民はまず住民一覧に保存されます。今の箱庭の4人はすぐには変わらず、
-          入れ替えたい時だけ下の4枠から選びます。
+          新しい住民は住民一覧に保存されます。作成時に選んだ枠へ呼ぶこともでき、
+          あとから下の4枠で戻せます。
         </p>
         <div className="roster-surface__actions">
           <Button type="button" variant="primary" onClick={onAddNew}>
@@ -55,6 +57,7 @@ export function RosterSurface({
               slotIndex={slotIndex}
               roster={roster}
               activeCharacterIds={state.session.activeSlots}
+              provisionalPortraits={provisionalPortraits}
               onOpenDetail={onOpenDetail}
               onReplaceActiveSlot={onReplaceActiveSlot}
             />
@@ -80,6 +83,7 @@ export function RosterSurface({
             <RosterCard
               key={character.id}
               character={character}
+              provisionalPortraits={provisionalPortraits}
               onEdit={onEdit}
               onOpenDetail={onOpenDetail}
             />
@@ -95,6 +99,7 @@ function ActiveSlotCard({
   slotIndex,
   roster,
   activeCharacterIds,
+  provisionalPortraits,
   onOpenDetail,
   onReplaceActiveSlot,
 }: {
@@ -102,6 +107,7 @@ function ActiveSlotCard({
   slotIndex: number;
   roster: Character[];
   activeCharacterIds: readonly CharacterId[];
+  provisionalPortraits: Record<string, string>;
   onOpenDetail: (characterId: CharacterId) => void;
   onReplaceActiveSlot: (slotIndex: number, characterId: CharacterId) => void;
 }) {
@@ -109,6 +115,8 @@ function ActiveSlotCard({
     (candidate) => candidate.id === character.id || !activeCharacterIds.includes(candidate.id),
   );
   const assetStatus = resolveCharacterAnimationAssetStatusForCharacter(character);
+  const hasProvisionalPortrait =
+    Boolean(provisionalPortraits[character.id]) && assetStatus.tone !== "ready";
 
   return (
     <article className="active-slot-card">
@@ -127,8 +135,11 @@ function ActiveSlotCard({
       <span className={`roster-card__asset-status roster-card__asset-status--${assetStatus.tone}`}>
         箱庭アニメ: {assetStatus.label}
       </span>
+      {hasProvisionalPortrait ? (
+        <span className="roster-card__provisional-badge">仮の姿</span>
+      ) : null}
       <p className="active-slot-card__meta">
-        ここは、いま箱庭にいる4人です。新しい住民はまず住民一覧に入り、入れ替えはあとで選べます。
+        ここは、いま箱庭にいる4人です。新しい住民を迎えたあとも、この枠から入れ替えを選べます。
       </p>
       <label>
         <span className="active-slot-card__meta">この枠を入れ替える</span>
@@ -149,14 +160,18 @@ function ActiveSlotCard({
 
 function RosterCard({
   character,
+  provisionalPortraits,
   onEdit,
   onOpenDetail,
 }: {
   character: Character;
+  provisionalPortraits: Record<string, string>;
   onEdit: (characterId: CharacterId) => void;
   onOpenDetail: (characterId: CharacterId) => void;
 }) {
   const assetStatus = resolveCharacterAnimationAssetStatusForCharacter(character);
+  const hasProvisionalPortrait =
+    Boolean(provisionalPortraits[character.id]) && assetStatus.tone !== "ready";
 
   return (
     <article className="roster-card">
@@ -175,6 +190,9 @@ function RosterCard({
       <span className={`roster-card__asset-status roster-card__asset-status--${assetStatus.tone}`}>
         箱庭アニメ: {assetStatus.label}
       </span>
+      {hasProvisionalPortrait ? (
+        <span className="roster-card__provisional-badge">仮の姿</span>
+      ) : null}
       <p className="roster-card__meta roster-card__asset">
         画像: {character.profile.appearance.primaryAssetId}
       </p>

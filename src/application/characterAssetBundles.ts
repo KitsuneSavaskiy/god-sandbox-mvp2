@@ -81,6 +81,17 @@ export type CharacterAssetBundleReadModel = {
   };
 };
 
+export type CharacterResidentVisualMode = "sprite" | "portrait" | "icon" | "placeholder";
+
+export type CharacterResidentVisualResolution = {
+  visualMode: CharacterResidentVisualMode;
+  portraitPath: string | null;
+  iconPath: string | null;
+  spriteSheetPath: string | null;
+  extendedSheetPath: string | null;
+  usesProvisionalPortrait: boolean;
+};
+
 export function selectCharacterAssetBundleReadModel(
   state: RuntimeWorldState,
   characterId: string,
@@ -317,6 +328,54 @@ export function isCharacterAnimationReady(
   readModel: Pick<CharacterAssetBundleReadModel, "spriteSheet" | "extendedSheet">,
 ): boolean {
   return readModel.spriteSheet.ready && readModel.extendedSheet.ready;
+}
+
+export function resolveCharacterResidentVisual(
+  readModel: CharacterAssetBundleReadModel,
+  provisionalPortraitPath?: string | null,
+): CharacterResidentVisualResolution {
+  const animationReady = isCharacterAnimationReady(readModel);
+  const spriteSheetPath =
+    animationReady &&
+    readModel.spriteSheet.ready &&
+    readModel.spriteSheet.path
+      ? readModel.spriteSheet.path
+      : null;
+  const extendedSheetPath =
+    animationReady &&
+    readModel.extendedSheet.ready &&
+    readModel.extendedSheet.path
+      ? readModel.extendedSheet.path
+      : null;
+  const manifestPortraitPath =
+    readModel.portrait.ready && readModel.portrait.path
+      ? readModel.portrait.path
+      : null;
+  const fallbackProvisionalPortraitPath =
+    !readModel.portrait.ready && provisionalPortraitPath
+      ? provisionalPortraitPath
+      : null;
+  const portraitPath = manifestPortraitPath ?? fallbackProvisionalPortraitPath;
+  const iconPath =
+    readModel.icon.ready && readModel.icon.path ? readModel.icon.path : null;
+
+  return {
+    visualMode: spriteSheetPath || extendedSheetPath
+      ? "sprite"
+      : portraitPath
+        ? "portrait"
+        : iconPath
+          ? "icon"
+          : "placeholder",
+    portraitPath,
+    iconPath,
+    spriteSheetPath,
+    extendedSheetPath,
+    usesProvisionalPortrait: Boolean(
+      fallbackProvisionalPortraitPath &&
+        portraitPath === fallbackProvisionalPortraitPath,
+    ),
+  };
 }
 
 function resolveExpressionSlot(

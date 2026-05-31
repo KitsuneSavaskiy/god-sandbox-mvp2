@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import type { Character } from "../../domain/models.js";
+import type { Character, CharacterId } from "../../domain/models.js";
 import { Button } from "../../ui/Button";
 import {
   createCharacterDraftFromCharacter,
@@ -12,13 +12,20 @@ import "./CharacterEditor.css";
 
 type CharacterEditorMode = "initial" | "new" | "edit";
 
+export type WelcomeSlotOption = {
+  slotIndex: number;
+  characterId: CharacterId;
+  displayName: string;
+};
+
 type CharacterEditorProps = {
   character?: Character;
   mode: CharacterEditorMode;
   sidekickIsConnected?: boolean;
+  welcomeSlotOptions?: WelcomeSlotOption[];
   onCancel: () => void;
   onOpenSidekickSetup?: () => void;
-  onSave: (draft: CharacterDraft, portraitFile?: File) => void;
+  onSave: (draft: CharacterDraft, portraitFile?: File, welcomeSlotIndex?: number) => void;
 };
 
 type DirectoryPicker = () => Promise<FileSystemDirectoryHandleLike>;
@@ -51,8 +58,8 @@ const copyByMode: Record<CharacterEditorMode, { title: string; body: string; act
   },
   new: {
     title: "新しい住民を迎える",
-    body: "保存するとまず住民一覧に追加されます。Sidekick設定済みなら制作依頼を渡せます。今の箱庭の4人は自動では入れ替わりません。",
-    action: "住民一覧に保存",
+    body: "保存すると住民一覧に追加し、選んだ枠へ仮の姿で呼びます。Sidekick設定済みなら制作依頼も渡せます。",
+    action: "仮の姿で箱庭へ呼ぶ",
   },
   edit: {
     title: "住民プロフィールを再編集する",
@@ -65,6 +72,7 @@ export function CharacterEditor({
   character,
   mode,
   sidekickIsConnected = false,
+  welcomeSlotOptions = [],
   onCancel,
   onOpenSidekickSetup,
   onSave,
@@ -82,9 +90,16 @@ export function CharacterEditor({
   const [imagePickerMessage, setImagePickerMessage] = useState<string | null>(null);
   const [imageSaveStatus, setImageSaveStatus] = useState<string | null>(null);
   const [imageDraftId, setImageDraftId] = useState(() => createDraftImageId());
+  const defaultWelcomeSlotIndex = welcomeSlotOptions.some((option) => option.slotIndex === 3)
+    ? 3
+    : welcomeSlotOptions[welcomeSlotOptions.length - 1]?.slotIndex ?? 3;
+  const [welcomeSlotIndex, setWelcomeSlotIndex] = useState(defaultWelcomeSlotIndex);
   const validation = validateCharacterDraft(draft);
   const copy = copyByMode[mode];
   const directoryPicker = getDirectoryPicker();
+  const selectedWelcomeSlot = welcomeSlotOptions.find(
+    (option) => option.slotIndex === welcomeSlotIndex,
+  );
 
   useEffect(() => {
     setDraft(initialDraft);
@@ -93,6 +108,12 @@ export function CharacterEditor({
     setImageSaveStatus(null);
     setImageDraftId(createDraftImageId());
   }, [initialDraft, mode]);
+
+  useEffect(() => {
+    if (mode === "new") {
+      setWelcomeSlotIndex(defaultWelcomeSlotIndex);
+    }
+  }, [defaultWelcomeSlotIndex, mode]);
 
   useEffect(() => {
     if (!selectedImageFile) {
@@ -116,7 +137,11 @@ export function CharacterEditor({
       return;
     }
 
-    onSave(draft, selectedImageFile ?? undefined);
+    onSave(
+      draft,
+      selectedImageFile ?? undefined,
+      mode === "new" ? welcomeSlotIndex : undefined,
+    );
   }
 
   function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -134,7 +159,7 @@ export function CharacterEditor({
 
     const nextImageAssetId = createWorkingImageFileName(file, draft, imageDraftId);
     setSelectedImageFile(file);
-    setImagePickerMessage("画像を選択しました。保存すると、この画像を使って見た目の準備が進みます。");
+    setImagePickerMessage("画像を選択しました。保存すると、まず仮の姿として箱庭に表示します。");
     setImageSaveStatus(null);
     updateDraft({ imageAssetId: nextImageAssetId });
   }
@@ -229,7 +254,7 @@ export function CharacterEditor({
                 </strong>
                 <small>
                   {draft.imageAssetId.trim()
-                    ? "保存すると、この画像を使ってスプライト準備へ進みます。"
+                    ? "保存すると、この画像を仮の姿として使い、スプライト準備へ進みます。"
                     : "PNG / JPG / JPEG / WebP に対応しています。個人PCの絶対パスは入力しません。"}
                 </small>
               </div>
@@ -309,6 +334,31 @@ export function CharacterEditor({
         <p className="character-editor__hint">
           ここで設定した5項目は、住民の見た目準備とプロフィール表示のもとになります。
         </p>
+
+        {mode === "new" && welcomeSlotOptions.length > 0 ? (
+          <fieldset className="character-editor__welcome-slot">
+            <legend>箱庭に呼ぶ枠</legend>
+            <label>
+              <span>入れ替える枠</span>
+              <select
+                value={welcomeSlotIndex}
+                onChange={(event) => setWelcomeSlotIndex(Number(event.target.value))}
+              >
+                {welcomeSlotOptions.map((option) => (
+                  <option key={option.slotIndex} value={option.slotIndex}>
+                    Slot {option.slotIndex + 1}: {option.displayName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p>
+              この枠の住民と入れ替わります。あとから戻せます。
+              {selectedWelcomeSlot
+                ? ` 現在は Slot ${selectedWelcomeSlot.slotIndex + 1} の ${selectedWelcomeSlot.displayName} と入れ替わります。`
+                : ""}
+            </p>
+          </fieldset>
+        ) : null}
 
         {!validation.valid ? (
           <div className="character-editor__error-list" role="alert">
