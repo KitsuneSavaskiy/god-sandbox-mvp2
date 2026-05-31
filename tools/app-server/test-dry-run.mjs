@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import os from "node:os";
 import path from "node:path";
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { deflateSync } from "node:zlib";
 
@@ -1992,16 +1992,17 @@ async function test48_eventStandingLaneGenerates8Prompts() {
   });
 
   const EVENT_EXPRESSIONS = ["neutral", "happy", "angry", "sad", "surprised", "worried", "determined", "shocked"];
+  const resultFiles = result.files.map((f) => f.replaceAll("\\", "/"));
 
   for (const expr of EVENT_EXPRESSIONS) {
-    const exprFile = result.files.find((f) => f.includes(`event-expressions/${expr}.prompt.md`));
+    const exprFile = resultFiles.find((f) => f.includes(`event-expressions/${expr}.prompt.md`));
     assert.ok(
       exprFile,
-      `buildPromptPack should produce event-expressions/${expr}.prompt.md. Got files: ${JSON.stringify(result.files)}`,
+      `buildPromptPack should produce event-expressions/${expr}.prompt.md. Got files: ${JSON.stringify(resultFiles)}`,
     );
   }
 
-  const eventPromptFiles = result.files.filter((f) => f.includes("event-expressions/"));
+  const eventPromptFiles = resultFiles.filter((f) => f.includes("event-expressions/"));
   assert.strictEqual(
     eventPromptFiles.length,
     8,
@@ -2518,11 +2519,304 @@ async function test58_intakeAcceptsExplicitEventStandingLane() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 59: AppServer portrait staging endpoint writes only assets/generated PNGs
+// ---------------------------------------------------------------------------
+
+async function test59_portraitStagingEndpointSecurityAndValidation() {
+  const { spawn } = await import("node:child_process");
+  const { default: http } = await import("node:http");
+  const { validatePortraitPathFilesystem } = await import("./portrait-path-validator.mjs");
+
+  const serverPath = path.join(repoRoot, "tools", "app-server", "asset-generation-server.mjs");
+  const port = 18791;
+  const srv = spawn("node", [serverPath, "--port", String(port)], { cwd: repoRoot });
+  await new Promise((res) => setTimeout(res, 600));
+
+  const pngSig = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  const validPng = makeRgbaPng(2, 2, () => [255, 0, 0, 255]);
+  const testSlug = `portrait-stage-${Date.now()}`;
+  const badSlug = `${testSlug}-bad`;
+  const bigSlug = `${testSlug}-big`;
+  let jobId = null;
+
+  const request = (method, requestPath, headers = {}, body = null) => new Promise((resolve, reject) => {
+    const bodyBuffer = body == null ? null : Buffer.isBuffer(body) ? body : Buffer.from(body);
+    const req = http.request({
+      hostname: "127.0.0.1",
+      port,
+      path: requestPath,
+      method,
+      headers: {
+        ...headers,
+        ...(bodyBuffer && headers["Content-Length"] === undefined
+          ? { "Content-Length": Buffer.byteLength(bodyBuffer) }
+          : {}),
+      },
+    }, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () => resolve({
+        status: res.statusCode,
+        headers: res.headers,
+        body: Buffer.concat(chunks).toString("utf8"),
+      }));
+    });
+    req.on("error", reject);
+    if (bodyBuffer) req.write(bodyBuffer);
+    req.end();
+  });
+
+  try {
+    const preflight = await request("OPTIONS", `/api/local/asset-generation/portraits?slug=${testSlug}`, {
+      "Origin": "http://127.0.0.1:5173",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "Content-Type",
+    });
+    assert.strictEqual(preflight.status, 204, `Portrait preflight should return 204. Got ${preflight.status}`);
+    assert.strictEqual(
+      preflight.headers["access-control-allow-origin"],
+      "http://127.0.0.1:5173",
+      "Portrait endpoint must use the existing loopback CORS allow-list",
+    );
+
+    const stageRes = await request("POST", `/api/local/asset-generation/portraits?slug=${testSlug}`, {
+      "Content-Type": "application/octet-stream",
+      "Origin": "http://127.0.0.1:5173",
+    }, validPng);
+    assert.strictEqual(stageRes.status, 201, `Valid portrait upload should return 201. Got ${stageRes.status}: ${stageRes.body}`);
+
+    const stageBody = JSON.parse(stageRes.body);
+    const expectedPortraitPath = `assets/generated/residents/${testSlug}/reference/portrait.png`;
+    assert.deepStrictEqual(
+      {
+        slug: stageBody.slug,
+        portraitPath: stageBody.portraitPath,
+        bytes: stageBody.bytes,
+        status: stageBody.status,
+      },
+      {
+        slug: testSlug,
+        portraitPath: expectedPortraitPath,
+        bytes: validPng.length,
+        status: "staged",
+      },
+      `Staging response should return repo-relative portraitPath. Got: ${stageRes.body}`,
+    );
+
+    const portraitAbsPath = path.join(repoRoot, "assets", "generated", "residents", testSlug, "reference", "portrait.png");
+    assert.ok(existsSync(portraitAbsPath), `Staged portrait should exist at ${portraitAbsPath}`);
+    assert.strictEqual(
+      validatePortraitPathFilesystem(stageBody.portraitPath, repoRoot),
+      null,
+      "Returned portraitPath must pass the existing filesystem validator",
+    );
+
+    const characterReq = JSON.stringify({
+      displayName: "PortraitStageTest",
+      personality: "calm",
+      tone: "gentle",
+      age: 20,
+      portraitPath: stageBody.portraitPath,
+      assetBundleId: testSlug,
+      previewMode: "po-combined",
+      gen2Bridge: "fake",
+    });
+    const characterRes = await request("POST", "/api/local/asset-generation/characters", {
+      "Content-Type": "application/json",
+      "Origin": "http://127.0.0.1:5173",
+    }, characterReq);
+    assert.strictEqual(
+      characterRes.status,
+      202,
+      `Existing character job endpoint should accept staged portraitPath. Got ${characterRes.status}: ${characterRes.body}`,
+    );
+    jobId = JSON.parse(characterRes.body).jobId;
+
+    const invalidRes = await request("POST", `/api/local/asset-generation/portraits?slug=${badSlug}`, {
+      "Content-Type": "image/png",
+    }, Buffer.from("not a png"));
+    assert.strictEqual(invalidRes.status, 422, `Invalid PNG signature should return 422. Got ${invalidRes.status}: ${invalidRes.body}`);
+    assert.strictEqual(
+      existsSync(path.join(repoRoot, "assets", "generated", "residents", badSlug, "reference", "portrait.png")),
+      false,
+      "Invalid PNG upload must not write a portrait file",
+    );
+
+    const traversalSlug = "..%2F..%2F..%2Fpublic%2Fart%2Fportrait-stage-evil";
+    const traversalRes = await request("POST", `/api/local/asset-generation/portraits?slug=${traversalSlug}`, {
+      "Content-Type": "image/png",
+    }, validPng);
+    assert.strictEqual(traversalRes.status, 422, `Traversal slug should return 422. Got ${traversalRes.status}: ${traversalRes.body}`);
+    assert.strictEqual(
+      existsSync(path.join(repoRoot, "public", "art", "portrait-stage-evil", "reference", "portrait.png")),
+      false,
+      "Traversal slug must not create anything under public/art/",
+    );
+
+    const oversized = Buffer.concat([pngSig, Buffer.alloc(10 * 1024 * 1024)]);
+    const oversizedRes = await request("POST", `/api/local/asset-generation/portraits?slug=${bigSlug}`, {
+      "Content-Type": "image/png",
+    }, oversized);
+    assert.strictEqual(oversizedRes.status, 413, `Oversized portrait upload should return 413. Got ${oversizedRes.status}: ${oversizedRes.body}`);
+    assert.strictEqual(
+      existsSync(path.join(repoRoot, "assets", "generated", "residents", bigSlug, "reference", "portrait.png")),
+      false,
+      "Oversized upload must not write a portrait file",
+    );
+  } finally {
+    srv.kill();
+    await new Promise((res) => setTimeout(res, 200));
+
+    for (const slug of [testSlug, badSlug, bigSlug]) {
+      rmSync(path.join(repoRoot, "assets", "generated", "residents", slug), { recursive: true, force: true });
+    }
+    if (jobId) {
+      const jobsRoot = path.join(repoRoot, ".godsandbox", "jobs");
+      rmSync(path.join(jobsRoot, `${jobId}-request.json`), { recursive: true, force: true });
+      rmSync(path.join(jobsRoot, "local-app-server", `${jobId}.json`), { recursive: true, force: true });
+      rmSync(path.join(jobsRoot, "fake", jobId), { recursive: true, force: true });
+    }
+  }
+
+  console.log("[PASS] test59: portrait staging endpoint validates PNG, slug, size, CORS, and returned portraitPath");
+}
+
+async function loadAssetProductionMemoModule() {
+  const ts = await import("typescript");
+  const sourcePath = path.join(repoRoot, "src", "features", "asset-generation", "assetProductionMemo.ts");
+  const source = readFileSync(sourcePath, "utf8");
+  const transpiled = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ES2022,
+      target: ts.ScriptTarget.ES2022,
+    },
+  });
+  const encoded = Buffer.from(transpiled.outputText, "utf8").toString("base64");
+  return import(`data:text/javascript;base64,${encoded}`);
+}
+
+// ---------------------------------------------------------------------------
+// Test 60: UI production memo maps raw job statuses to friendly Japanese copy
+// ---------------------------------------------------------------------------
+
+async function test60_assetProductionMemoStatusMapping() {
+  const { describeAssetJobProgress } = await loadAssetProductionMemoModule();
+  const cases = [
+    ["pending", "制作依頼を受け取りました"],
+    ["prompt-pack-ready", "この子の特徴をまとめています"],
+    ["gen2-dispatched", "ローカル補助に渡しました"],
+    ["watcher-intake-done", "制作の準備が整いました"],
+    ["error", "うまく進めませんでした"],
+  ];
+
+  for (const [status, expectedTitle] of cases) {
+    const progress = describeAssetJobProgress(status);
+    assert.strictEqual(
+      progress.title,
+      expectedTitle,
+      `status "${status}" should map to "${expectedTitle}", got "${progress.title}"`,
+    );
+  }
+
+  console.log("[PASS] test60: asset production memo maps known statuses to friendly Japanese copy");
+}
+
+// ---------------------------------------------------------------------------
+// Test 61: UI production memo translates common validation failures
+// ---------------------------------------------------------------------------
+
+async function test61_assetProductionMemoValidationFailureTranslator() {
+  const { translateValidationFailure } = await loadAssetProductionMemoModule();
+  const cases = [
+    ["required-content", "画像が透明だけです"],
+    ["alpha-channel", "背景が透過されていません"],
+    ["dimensions", "画像サイズが規格と違います"],
+    ["pixel-margin", "端に寄りすぎています"],
+  ];
+
+  for (const [check, expectedTitle] of cases) {
+    const failure = translateValidationFailure({
+      check,
+      label: "neutral.png",
+      reason: `${check} failed`,
+    });
+    assert.strictEqual(
+      failure.title,
+      expectedTitle,
+      `check "${check}" should map to "${expectedTitle}", got "${failure.title}"`,
+    );
+    assert.ok(failure.action.length > 0, `check "${check}" should include a recovery action`);
+  }
+
+  console.log("[PASS] test61: asset production memo translates required-content/alpha/dimensions/pixel-margin");
+}
+
+// ---------------------------------------------------------------------------
+// Test 62: fake bridge warning and event expression labels stay visible
+// ---------------------------------------------------------------------------
+
+async function test62_assetProductionMemoWarningsAndEventExpressions() {
+  const { getAssetProductionMemo, EVENT_STANDING_EXPECTED_LABELS } = await loadAssetProductionMemoModule();
+  const memo = getAssetProductionMemo({
+    jobId: "ui-memo-test",
+    status: "gen2-dispatched",
+    assetBundleId: "ryo",
+    lanes: ["resident-sprite-sheet", "event-standing-expressions"],
+    gen2Bridge: "fake",
+    validationOnly: true,
+    candidateEligible: false,
+  });
+
+  assert.ok(
+    memo.warnings.some((warning) => warning.includes("テスト用の仮連携")),
+    `fake bridge warning must stay visible. Got: ${JSON.stringify(memo.warnings)}`,
+  );
+  assert.ok(memo.eventExpressions, "event-standing-expressions should produce an event expression summary");
+  for (const label of EVENT_STANDING_EXPECTED_LABELS) {
+    assert.ok(
+      memo.eventExpressions.expectedLabels.includes(label),
+      `event expression summary should include "${label}"`,
+    );
+  }
+  assert.strictEqual(
+    memo.reviewPack.command,
+    "npm run assetgen:review-pack -- --slug ryo",
+    `review pack command should be visible. Got: ${memo.reviewPack.command}`,
+  );
+
+  console.log("[PASS] test62: fake bridge warning, event labels, and review-pack command remain visible");
+}
+
+// ---------------------------------------------------------------------------
+// Test 63: technical details are behind expandable details
+// ---------------------------------------------------------------------------
+
+async function test63_assetProductionMemoTechnicalDetailsExpandable() {
+  const formPath = path.join(repoRoot, "src", "features", "asset-generation", "CharacterAssetGenForm.tsx");
+  const source = readFileSync(formPath, "utf8");
+
+  assert.ok(
+    source.includes("<details className=\"assetgen-form__details\">"),
+    "CharacterAssetGenForm should render technical details in an expandable <details> block",
+  );
+  assert.ok(
+    source.includes("開発者向けの詳細"),
+    "CharacterAssetGenForm should label expandable technical details in Japanese",
+  );
+  assert.ok(
+    !source.includes("<dt>Job ID</dt>"),
+    "raw Job ID should not be the primary submitted-state experience",
+  );
+
+  console.log("[PASS] test63: technical details are expandable and raw Job ID is not primary submitted copy");
+}
+
+// ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
 
 async function main() {
-  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening/10-D/10-E dry-run tests...\n");
+  console.log("Running Sprint9-5/9-7/9-8/9-6/10-A/10-B/10-C/10-hardening/10-D/10-E/UI memo dry-run tests...\n");
   let passed = 0;
   let failed = 0;
 
@@ -2585,6 +2879,11 @@ async function main() {
     test56_poCombinedWithContentPassesContentCheck,
     test57_intakeDefaultLanesExcludeEventStanding,
     test58_intakeAcceptsExplicitEventStandingLane,
+    test59_portraitStagingEndpointSecurityAndValidation,
+    test60_assetProductionMemoStatusMapping,
+    test61_assetProductionMemoValidationFailureTranslator,
+    test62_assetProductionMemoWarningsAndEventExpressions,
+    test63_assetProductionMemoTechnicalDetailsExpandable,
   ];
 
   for (const test of tests) {
@@ -2604,6 +2903,7 @@ async function main() {
   if (failed > 0) {
     process.exit(1);
   }
+  process.exit(0);
 }
 
 main().catch((err) => {

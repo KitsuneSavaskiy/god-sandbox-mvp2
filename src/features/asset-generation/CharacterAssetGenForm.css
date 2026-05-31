@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 640px;
+  max-width: 760px;
 }
 
 .assetgen-form__notice {
@@ -15,6 +15,16 @@
   background: #eff6ff;
   border: 1px solid #bfdbfe;
   color: #1e40af;
+}
+
+.assetgen-form__notice--warning {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+}
+
+.assetgen-form__notice p {
+  margin: 0.35rem 0 0;
 }
 
 .assetgen-form__notice ul {
@@ -67,6 +77,30 @@
   gap: 0.25rem;
 }
 
+.assetgen-form__checkbox {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.5rem;
+  align-items: start;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.assetgen-form__checkbox input {
+  margin-top: 0.2rem;
+}
+
+.assetgen-form__checkbox span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.assetgen-form__checkbox small {
+  color: #6b7280;
+  line-height: 1.4;
+}
+
 .assetgen-form__label {
   font-size: 0.875rem;
   font-weight: 500;
@@ -81,6 +115,10 @@
   font-size: 0.875rem;
   background: #fff;
   color: #111827;
+}
+
+.assetgen-form__field input[readonly] {
+  background: #f9fafb;
 }
 
 .assetgen-form__field input:focus,
@@ -98,6 +136,13 @@
 .assetgen-form__actions {
   display: flex;
   gap: 0.75rem;
+}
+
+.assetgen-form__portrait-stage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .assetgen-form__result {
@@ -135,4 +180,179 @@
   font-family: monospace;
   font-size: 0.8125rem;
   word-break: break-all;
+}
+
+.assetgen-form__memo {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  background: #ffffff;
+  color: #111827;
+}
+
+.assetgen-form__memo--working {
+  border-color: #bfdbfe;
+}
+
+.assetgen-form__memo--waiting {
+  border-color: #fde68a;
+}
+
+.assetgen-form__memo--ready {
+  border-color: #bbf7d0;
+}
+
+.assetgen-form__memo--blocked {
+  border-color: #fecaca;
+}
+
+.assetgen-form__memo-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.assetgen-form__memo-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.assetgen-form__memo-header p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.assetgen-form__eyebrow {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.assetgen-form__memo-section {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+
+.assetgen-form__memo-section--alert {
+  border-top-color: #fecaca;
+}
+
+.assetgen-form__memo-section h4 {
+  margin: 0 0 0.4rem;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.assetgen-form__memo-section p {
+  margin: 0.25rem 0;
+  line-height: 1.5;
+}
+
+.assetgen-form__memo-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.assetgen-form__fix-list,
+.assetgen-form__action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  list-style: none;
+  padding-left: 0 !important;
+}
+
+.assetgen-form__fix-list li,
+.assetgen-form__action-list li {
+  border-left: 3px solid #d1d5db;
+  padding-left: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.assetgen-form__fix-list li {
+  border-left-color: #f87171;
+}
+
+.assetgen-form__fix-list span,
+.assetgen-form__action-list span,
+.assetgen-form__fix-list small {
+  color: #4b5563;
+}
+
+.assetgen-form__label-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-left: 0 !important;
+  list-style: none;
+}
+
+.assetgen-form__label-list li {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  background: #f9fafb;
+}
+
+.assetgen-form__path-line {
+  word-break: break-word;
+}
+
+.assetgen-form__path-line code,
+.assetgen-form__action-list code,
+.assetgen-form__inline-details code,
+.assetgen-form__details code {
+  font-family: monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.assetgen-form__details,
+.assetgen-form__inline-details {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.65rem;
+}
+
+.assetgen-form__details summary,
+.assetgen-form__inline-details summary {
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.assetgen-form__details dl {
+  margin: 0.65rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.assetgen-form__detail-row {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.assetgen-form__detail-row dt {
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.assetgen-form__detail-row dd {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .assetgen-form__detail-row {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
 }

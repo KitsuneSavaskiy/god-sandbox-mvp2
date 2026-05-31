@@ -33,12 +33,14 @@ const SLUG_PATTERN = /^[a-z0-9][a-z0-9_-]{0,59}$/;
 export const VALID_LANES = ["resident-sprite-sheet", "portrait-expressions", "derived-icon", "event-standing-expressions"];
 const VALID_PREVIEW_MODES = ["po-combined", "canonical-two-sheet"];
 const VALID_BRIDGE_MODES = ["local-cli", "hot-folder", "manual-drop", "fake"];
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 // .godsandbox/jobs/ is gitignored — safe for ephemeral job state
 const JOBS_APP_SERVER_DIR = path.join(repoRoot, ".godsandbox", "jobs", "local-app-server");
 const JOBS_WATCHER_DIR = path.join(repoRoot, ".godsandbox", "jobs");
 
 const MAX_BODY_BYTES = 1024 * 1024; // 1 MB
+const MAX_PORTRAIT_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
 
 // Loopback addresses that are always permitted
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
@@ -58,18 +60,30 @@ function ensureDir(dirPath) {
  * This prevents generated content from accidentally being written to served assets.
  * @param {string} absPath
  */
-function assertNotPublicArt(absPath) {
+function assertAllowedGeneratedWrite(absPath) {
   const rel = path.relative(repoRoot, absPath).replaceAll("\\", "/");
+  if (rel === ".." || rel.startsWith("../") || path.isAbsolute(rel)) {
+    throw new Error(
+      `SECURITY: Refusing to write outside the repository: ${rel}. ` +
+        "Asset generation output must go to .godsandbox/ or assets/generated/ only.",
+    );
+  }
   if (rel.startsWith("public/art/")) {
     throw new Error(
       `SECURITY: Refusing to write to public/art/: ${rel}. ` +
         "Asset generation output must go to .godsandbox/jobs/ or assets/generated/ only.",
     );
   }
+  if (!rel.startsWith(".godsandbox/") && !rel.startsWith("assets/generated/")) {
+    throw new Error(
+      `SECURITY: Refusing to write outside local staging dirs: ${rel}. ` +
+        "Asset generation output must go to .godsandbox/ or assets/generated/ only.",
+    );
+  }
 }
 
 function safeWriteFile(filePath, content) {
-  assertNotPublicArt(filePath);
+  assertAllowedGeneratedWrite(filePath);
   ensureDir(path.dirname(filePath));
   writeFileSync(filePath, content);
 }
@@ -110,6 +124,44 @@ function readJsonBody(req) {
       }
     });
     req.on("error", reject);
+  });
+}
+
+function readBinaryBody(req, maxBytes) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    const contentLength = parseInt(req.headers["content-length"] ?? "0", 10);
+    if (!isNaN(contentLength) && contentLength > maxBytes) {
+      req.resume();
+      return fail(Object.assign(new Error("Request body too large."), { statusCode: 413 }));
+    }
+
+    const chunks = [];
+    let totalBytes = 0;
+    req.on("data", (chunk) => {
+      if (settled) return;
+      totalBytes += chunk.length;
+      if (totalBytes > maxBytes) {
+        fail(Object.assign(new Error("Request body too large."), { statusCode: 413 }));
+        req.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => {
+      if (settled) return;
+      settled = true;
+      resolve(Buffer.concat(chunks, totalBytes));
+    });
+    req.on("error", (err) => {
+      if (!settled) fail(err);
+    });
   });
 }
 
@@ -194,6 +246,16 @@ function validateCharacterRequestBody(body) {
       gen2Bridge: body.gen2Bridge ?? "fake",
     },
   };
+}
+
+function getMediaType(req) {
+  const raw = req.headers["content-type"];
+  const contentType = Array.isArray(raw) ? raw[0] : raw;
+  return (contentType ?? "").split(";")[0].trim().toLowerCase();
+}
+
+function hasPngSignature(buffer) {
+  return buffer.length >= PNG_SIGNATURE.length && buffer.subarray(0, PNG_SIGNATURE.length).equals(PNG_SIGNATURE);
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +374,63 @@ async function handlePostCharacters(req, res) {
   });
 
   sendJson(res, 202, { jobId, status: "pending" });
+}
+
+async function handlePostPortrait(req, res, requestUrl) {
+  const slug = requestUrl.searchParams.get("slug") ?? "";
+  if (!SLUG_PATTERN.test(slug)) {
+    return sendJson(res, 422, {
+      error: "Validation failed.",
+      details: [`slug must match /^[a-z0-9][a-z0-9_-]{0,59}$/. Got: "${slug}".`],
+    });
+  }
+
+  const mediaType = getMediaType(req);
+  if (mediaType !== "image/png" && mediaType !== "application/octet-stream") {
+    return sendJson(res, 415, {
+      error: "Unsupported Content-Type.",
+      details: ["Content-Type must be image/png or application/octet-stream."],
+    });
+  }
+
+  let body;
+  try {
+    body = await readBinaryBody(req, MAX_PORTRAIT_UPLOAD_BYTES);
+  } catch (err) {
+    const code = err.statusCode === 413 ? 413 : 400;
+    return sendJson(res, code, { error: err.message || "Invalid request body." });
+  }
+
+  if (!hasPngSignature(body)) {
+    return sendJson(res, 422, {
+      error: "PNG validation failed.",
+      details: ["Uploaded portrait does not contain a valid PNG signature."],
+    });
+  }
+
+  const portraitPath = `assets/generated/residents/${slug}/reference/portrait.png`;
+  const portraitAbsPath = path.join(repoRoot, "assets", "generated", "residents", slug, "reference", "portrait.png");
+
+  try {
+    safeWriteFile(portraitAbsPath, body);
+  } catch (err) {
+    return sendJson(res, 500, { error: err.message || "Failed to stage portrait." });
+  }
+
+  const portraitError = validatePortraitPathFilesystem(portraitPath, repoRoot);
+  if (portraitError) {
+    return sendJson(res, 500, {
+      error: "Staged portrait failed filesystem validation.",
+      details: [portraitError],
+    });
+  }
+
+  sendJson(res, 201, {
+    slug,
+    portraitPath,
+    bytes: body.length,
+    status: "staged",
+  });
 }
 
 async function dispatchJob(jobId, assetBundleId, job, data, bridgeConfig, statusFilePath) {
@@ -449,6 +568,8 @@ function send405(res) {
 async function router(req, res) {
   const url = req.url ?? "/";
   const method = req.method ?? "GET";
+  const requestUrl = new URL(url, "http://127.0.0.1");
+  const pathname = requestUrl.pathname;
 
   applyCorsHeaders(req, res);
 
@@ -461,18 +582,24 @@ async function router(req, res) {
 
   try {
     // GET /healthz
-    if (url === "/healthz" && method === "GET") {
+    if (pathname === "/healthz" && method === "GET") {
       return handleHealthz(req, res);
     }
 
     // POST /api/local/asset-generation/characters
-    if (url === "/api/local/asset-generation/characters") {
+    if (pathname === "/api/local/asset-generation/characters") {
       if (method !== "POST") return send405(res);
       return await handlePostCharacters(req, res);
     }
 
+    // POST /api/local/asset-generation/portraits?slug=<slug>
+    if (pathname === "/api/local/asset-generation/portraits") {
+      if (method !== "POST") return send405(res);
+      return await handlePostPortrait(req, res, requestUrl);
+    }
+
     // GET /api/local/asset-generation/jobs/:jobId
-    const jobStatusMatch = url.match(/^\/api\/local\/asset-generation\/jobs\/([^/]+)$/);
+    const jobStatusMatch = pathname.match(/^\/api\/local\/asset-generation\/jobs\/([^/]+)$/);
     if (jobStatusMatch) {
       const jobId = jobStatusMatch[1];
       if (method === "GET") return handleGetJobStatus(req, res, jobId);
@@ -480,7 +607,7 @@ async function router(req, res) {
     }
 
     // POST /api/local/asset-generation/jobs/:jobId/cancel
-    const jobCancelMatch = url.match(/^\/api\/local\/asset-generation\/jobs\/([^/]+)\/cancel$/);
+    const jobCancelMatch = pathname.match(/^\/api\/local\/asset-generation\/jobs\/([^/]+)\/cancel$/);
     if (jobCancelMatch) {
       const jobId = jobCancelMatch[1];
       if (method === "POST") return handleCancelJob(req, res, jobId);
@@ -518,6 +645,7 @@ Environment:
 
 Endpoints:
   GET  /healthz
+  POST /api/local/asset-generation/portraits?slug=<slug>
   POST /api/local/asset-generation/characters
   GET  /api/local/asset-generation/jobs/:jobId
   POST /api/local/asset-generation/jobs/:jobId/cancel
