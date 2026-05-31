@@ -91,7 +91,11 @@ jobs:
           fi
 
       - name: Trigger Cloudflare build hook
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: >-
+          success() && (
+            (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+            (github.event_name == 'pull_request' && github.base_ref == 'main')
+          )
         env:
           CLOUDFLARE_DEPLOY_HOOK_URL: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK_URL }}
         run: |
