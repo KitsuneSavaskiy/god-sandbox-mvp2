@@ -672,6 +672,34 @@ function PrimaryRouteSurface({
     );
   }
 
+  if (route.id === "debugging-version") {
+    const payload = {
+      version: __APP_VERSION__,
+      buildTimestamp: __BUILD_TIMESTAMP__,
+      mode: import.meta.env.MODE,
+      path: route.path,
+      origin: typeof window !== "undefined" ? window.location.origin : "unknown",
+      userAgent:
+        import.meta.env.MODE === "development" && typeof navigator !== "undefined"
+          ? navigator.userAgent
+          : "redacted-in-non-development-mode"
+    };
+
+    return (
+      <Panel title="Debugging API / Version">
+        <div className="route-stack">
+          <p className="panel-note">
+            エンドポイント <code>/sandbox/api/v1/debugging/version</code> のデバッグ情報です。
+          </p>
+          <pre className="dialogue-preview-json">{JSON.stringify(payload, null, 2)}</pre>
+          <Button type="button" variant="ghost" onClick={() => onNavigate("/sandbox")}>
+            箱庭へ戻る
+          </Button>
+        </div>
+      </Panel>
+    );
+  }
+
   if (route.id === "roster") {
     return (
       <RosterSurface
