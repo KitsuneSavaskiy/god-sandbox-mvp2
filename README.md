@@ -46,6 +46,36 @@ npm run dev
 | `npm run test:ai` | AI 関連テスト実行 | AI 出力のスキーマ/ガード/安全制約が維持されていることを確認するため |
 | `npm run release` | semantic-release 実行 | Conventional Commits に基づき GitHub Releases のリリースノートを自動公開するため |
 
+## Debugging Version API の使い方
+
+デプロイ済み Sandbox のバージョン/ビルド情報は、以下のパスで確認できます。
+
+- `GET /sandbox/api/v1/debugging/version`
+- `GET /sandbox/api/v1/debugging/version/`（末尾スラッシュありでも可）
+
+ローカル開発時の例:
+
+```bash
+curl http://127.0.0.1:5173/sandbox/api/v1/debugging/version
+```
+
+レスポンス例:
+
+```json
+{
+  "version": "0.0.0",
+  "buildTimestamp": "2026-05-31T00:00:00.000Z",
+  "mode": "development",
+  "path": "/sandbox/api/v1/debugging/version",
+  "origin": "http://127.0.0.1:5173",
+  "userAgent": "Mozilla/5.0 ..."
+}
+```
+
+- `version`: `package.json.version` を使用（未設定時は `"unknown"`）
+- `buildTimestamp`: `BUILD_TIMESTAMP` を使用（未設定時は `"unknown"`）
+- `userAgent`: development 以外では `"redacted"` を返します
+
 ## 設計ドキュメント（外部設計 / 内部設計）
 
 ### 外部設計（ユーザー体験・仕様）

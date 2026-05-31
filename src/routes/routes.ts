@@ -1,5 +1,6 @@
 export type AppRouteId =
   | "sandbox"
+  | "debugging-version"
   | "roster"
   | "relations"
   | "logs"
@@ -30,6 +31,14 @@ export const navigationRoutes: AppRoute[] = [
 export function parseRoute(pathname: string): AppRoute {
   if (pathname === "/" || pathname === "/sandbox") {
     return { id: "sandbox", path: "/sandbox", label: "箱庭" };
+  }
+
+  if (/^\/sandbox\/api\/v1\/debugging\/version\/?$/.test(pathname)) {
+    return {
+      id: "debugging-version",
+      path: pathname.endsWith("/") ? pathname.slice(0, -1) : pathname,
+      label: "Debugging API / Version"
+    };
   }
 
   if (pathname === "/roster") {
