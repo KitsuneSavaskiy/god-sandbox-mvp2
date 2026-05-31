@@ -1,4 +1,5 @@
-import { replaceActiveSlot } from "../domain/session.js";
+import type { Character } from "../domain/models.js";
+import { addCharacterToRoster, replaceActiveSlot } from "../domain/session.js";
 import type { RuntimeWorldState } from "../state/runtimeState.js";
 import { createRuntimeWorldState } from "../state/runtimeState.js";
 import type { ApplyInterventionCommand } from "./runtimeService.js";
@@ -14,6 +15,30 @@ export type ReplaceActiveSlotCommand = {
   slotIndex: number;
   characterId: string;
 };
+
+export type WelcomeCharacterCommand = {
+  character: Character;
+  slotIndex: number;
+};
+
+export function welcomeCharacterCommand(
+  state: RuntimeWorldState,
+  command: WelcomeCharacterCommand,
+): RuntimeWorldState {
+  const characters = new Map(state.characters);
+  characters.set(command.character.id, command.character);
+  const sessionWithRoster = addCharacterToRoster(state.session, command.character.id);
+
+  return createRuntimeWorldState({
+    ...state,
+    characters,
+    session: replaceActiveSlot(
+      sessionWithRoster,
+      command.slotIndex,
+      command.character.id,
+    ),
+  });
+}
 
 export function replaceActiveSlotCommand(
   state: RuntimeWorldState,
