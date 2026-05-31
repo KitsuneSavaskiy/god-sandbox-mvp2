@@ -117,6 +117,7 @@ import {
   resolveResidentMotion,
   resolveVisibleResidentEmote,
 } from "../features/events/EventFirstSandboxEmotes.js";
+import { parseRoute } from "../routes/routes.js";
 import {
   hasSeenPassportConfirm,
   markPassportConfirmSeen,
@@ -2991,6 +2992,16 @@ function testEventParticipantOverlayViewModel(): void {
   assert.equal(one[0].alt, "aの立ち絵");
 }
 
+function testDebuggingVersionRouteParsing(): void {
+  const withoutTrailingSlash = parseRoute("/sandbox/api/v1/debugging/version");
+  assert.equal(withoutTrailingSlash.id, "debugging-version");
+  assert.equal(withoutTrailingSlash.path, "/sandbox/api/v1/debugging/version");
+
+  const withTrailingSlash = parseRoute("/sandbox/api/v1/debugging/version/");
+  assert.equal(withTrailingSlash.id, "debugging-version");
+  assert.equal(withTrailingSlash.path, "/sandbox/api/v1/debugging/version");
+}
+
 const tests: Array<[string, () => void]> = [
   ["activeSlots invariant and roster replacement", testActiveSlotsInvariantAndRosterReplacement],
   ["welcome character adds roster and replaces selected slot", testWelcomeCharacterCommandAddsRosterAndReplacesSelectedSlot],
@@ -3027,6 +3038,7 @@ const tests: Array<[string, () => void]> = [
   ["event outcome foundation (PBI 9a-core)", testEventOutcomeFoundation],
   ["god point phase recovery (PBI 9f)", testGodPointPhaseRecovery],
   ["event participant overlay view model (PBI 9e-ui)", testEventParticipantOverlayViewModel],
+  ["debugging version route parsing", testDebuggingVersionRouteParsing],
 ];
 
 for (const [name, test] of tests) {
