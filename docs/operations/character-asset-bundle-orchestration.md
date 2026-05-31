@@ -15,6 +15,36 @@ It does NOT:
 
 All output goes to `assets/generated/residents/<slug>/` which is gitignored.
 
+## Local Portrait Staging
+
+Browser-based onboarding should not require the user to type a repo-relative portrait path.
+The Local AppServer stages a selected PNG into the generated workspace and returns the
+path accepted by the existing character job endpoint.
+
+```bash
+curl -s -X POST "http://127.0.0.1:8787/api/local/asset-generation/portraits?slug=my-resident" \
+  -H "Content-Type: image/png" \
+  --data-binary @portrait.png
+```
+
+Response:
+
+```json
+{
+  "slug": "my-resident",
+  "portraitPath": "assets/generated/residents/my-resident/reference/portrait.png",
+  "bytes": 12345,
+  "status": "staged"
+}
+```
+
+Rules:
+- `slug` must match `/^[a-z0-9][a-z0-9_-]{0,59}$/`.
+- Uploads must be `image/png` or `application/octet-stream` and pass PNG signature validation.
+- Upload size is capped at 10MB.
+- The endpoint writes only `assets/generated/residents/<slug>/reference/portrait.png`.
+- It never writes to `public/art/**`, updates ready manifests, or calls external image APIs.
+
 ## Quick Start
 
 ```bash
