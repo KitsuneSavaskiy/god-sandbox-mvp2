@@ -2522,6 +2522,152 @@ async function test58_intakeAcceptsExplicitEventStandingLane() {
   console.log("[PASS] test58: intake --dry-run accepts explicit --lanes event-standing-expressions");
 }
 
+function readRepoText(relPath) {
+  return readFileSync(path.join(repoRoot, relPath), "utf8");
+}
+
+function extractBetween(content, startNeedle, endNeedle) {
+  const start = content.indexOf(startNeedle);
+  assert.ok(start >= 0, `Could not find start marker: ${startNeedle}`);
+  const end = content.indexOf(endNeedle, start + startNeedle.length);
+  assert.ok(end > start, `Could not find end marker: ${endNeedle}`);
+  return content.slice(start, end);
+}
+
+function extractPresetBlock(content, presetId) {
+  const startNeedle = `id: "${presetId}"`;
+  const start = content.indexOf(startNeedle);
+  assert.ok(start >= 0, `Could not find preset id: ${presetId}`);
+  const next = content.indexOf("id: \"", start + startNeedle.length);
+  return content.slice(start, next > start ? next : content.length);
+}
+
+// ---------------------------------------------------------------------------
+// Test 59: first-touch preset A excludes event-standing-expressions
+// ---------------------------------------------------------------------------
+
+async function test59_firstTouchPresetAExcludesEventStanding() {
+  const flow = readRepoText("src/features/asset-generation/characterAssetGenFlow.ts");
+  const welcomePreset = extractPresetBlock(flow, "welcome");
+
+  assert.ok(welcomePreset.includes("resident-sprite-sheet"), "welcome preset should include resident-sprite-sheet");
+  assert.ok(welcomePreset.includes("portrait-expressions"), "welcome preset should include portrait-expressions");
+  assert.ok(welcomePreset.includes("derived-icon"), "welcome preset should include derived-icon");
+  assert.ok(
+    !welcomePreset.includes("event-standing-expressions"),
+    `welcome preset must exclude event-standing-expressions.\nBlock:\n${welcomePreset}`,
+  );
+
+  console.log("[PASS] test59: first-touch preset A excludes event-standing-expressions");
+}
+
+// ---------------------------------------------------------------------------
+// Test 60: first-touch preset C includes event-standing-expressions
+// ---------------------------------------------------------------------------
+
+async function test60_firstTouchPresetCIncludesEventStanding() {
+  const flow = readRepoText("src/features/asset-generation/characterAssetGenFlow.ts");
+  const eventReadyPreset = extractPresetBlock(flow, "event-ready");
+
+  assert.ok(eventReadyPreset.includes("resident-sprite-sheet"), "event-ready preset should include resident-sprite-sheet");
+  assert.ok(eventReadyPreset.includes("portrait-expressions"), "event-ready preset should include portrait-expressions");
+  assert.ok(eventReadyPreset.includes("derived-icon"), "event-ready preset should include derived-icon");
+  assert.ok(
+    eventReadyPreset.includes("event-standing-expressions"),
+    `event-ready preset must include event-standing-expressions.\nBlock:\n${eventReadyPreset}`,
+  );
+
+  console.log("[PASS] test60: first-touch preset C includes event-standing-expressions");
+}
+
+// ---------------------------------------------------------------------------
+// Test 61: AppServer down message is friendly and includes start command
+// ---------------------------------------------------------------------------
+
+async function test61_firstTouchServerDownCopyIncludesCommand() {
+  const flow = readRepoText("src/features/asset-generation/characterAssetGenFlow.ts");
+  const form = readRepoText("src/features/asset-generation/CharacterAssetGenForm.tsx");
+
+  assert.ok(flow.includes('LOCAL_APP_SERVER_DOWN_TITLE = "ローカル補助がまだ準備中です"'));
+  assert.ok(flow.includes('LOCAL_APP_SERVER_HELP_COMMAND = "npm run assetgen:server"'));
+  assert.ok(form.includes("LOCAL_APP_SERVER_DOWN_TITLE"));
+  assert.ok(form.includes("LOCAL_APP_SERVER_HELP_COMMAND"));
+
+  console.log("[PASS] test61: first-touch server-down copy includes npm run assetgen:server");
+}
+
+// ---------------------------------------------------------------------------
+// Test 62: fake bridge warning appears
+// ---------------------------------------------------------------------------
+
+async function test62_firstTouchFakeBridgeWarningAppears() {
+  const flow = readRepoText("src/features/asset-generation/characterAssetGenFlow.ts");
+  const form = readRepoText("src/features/asset-generation/CharacterAssetGenForm.tsx");
+
+  assert.ok(
+    flow.includes("これは動作確認用です。見た目候補としては使えません。"),
+    "fake bridge warning copy must be defined",
+  );
+  assert.ok(form.includes("FAKE_BRIDGE_WARNING"), "form must render the fake bridge warning");
+
+  console.log("[PASS] test62: first-touch fake bridge warning appears");
+}
+
+// ---------------------------------------------------------------------------
+// Test 63: raw internal lane names are not visible in primary simple mode
+// ---------------------------------------------------------------------------
+
+async function test63_firstTouchSimpleModeHidesInternalLaneNames() {
+  const form = readRepoText("src/features/asset-generation/CharacterAssetGenForm.tsx");
+  const simpleMode = extractBetween(
+    form,
+    '<section className="assetgen-form__simple-mode"',
+    '<details className="assetgen-form__technical-details"',
+  );
+
+  for (const internalName of [
+    "resident-sprite-sheet",
+    "portrait-expressions",
+    "derived-icon",
+    "event-standing-expressions",
+    "gen2Bridge",
+    "manifest",
+    "contract",
+    "job queue",
+  ]) {
+    assert.ok(
+      !simpleMode.includes(internalName),
+      `Primary simple mode must not show internal name "${internalName}".`,
+    );
+  }
+
+  console.log("[PASS] test63: first-touch simple mode hides internal lane names");
+}
+
+// ---------------------------------------------------------------------------
+// Test 64: jobId appears only in technical details
+// ---------------------------------------------------------------------------
+
+async function test64_firstTouchJobIdOnlyInTechnicalDetails() {
+  const form = readRepoText("src/features/asset-generation/CharacterAssetGenForm.tsx");
+  const simpleMode = extractBetween(
+    form,
+    '<section className="assetgen-form__simple-mode"',
+    '<details className="assetgen-form__technical-details"',
+  );
+  const technicalDetails = extractBetween(
+    form,
+    '<details className="assetgen-form__technical-details"',
+    "</details>",
+  );
+
+  assert.ok(!simpleMode.includes("jobId"), "Primary simple mode must not show jobId");
+  assert.ok(!simpleMode.includes("Job ID"), "Primary simple mode must not show Job ID");
+  assert.ok(technicalDetails.includes("jobId"), "Technical details should show jobId");
+
+  console.log("[PASS] test64: first-touch jobId appears only in technical details");
+}
+
 // ---------------------------------------------------------------------------
 // Test 59: AppServer portrait staging endpoint writes only assets/generated PNGs
 // ---------------------------------------------------------------------------
@@ -2890,6 +3036,12 @@ async function main() {
     test56_poCombinedWithContentPassesContentCheck,
     test57_intakeDefaultLanesExcludeEventStanding,
     test58_intakeAcceptsExplicitEventStandingLane,
+    test59_firstTouchPresetAExcludesEventStanding,
+    test60_firstTouchPresetCIncludesEventStanding,
+    test61_firstTouchServerDownCopyIncludesCommand,
+    test62_firstTouchFakeBridgeWarningAppears,
+    test63_firstTouchSimpleModeHidesInternalLaneNames,
+    test64_firstTouchJobIdOnlyInTechnicalDetails,
     test59_portraitStagingEndpointSecurityAndValidation,
     test60_assetProductionMemoStatusMapping,
     test61_assetProductionMemoValidationFailureTranslator,
