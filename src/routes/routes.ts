@@ -23,6 +23,7 @@ export interface AppRoute {
 export const navigationRoutes: AppRoute[] = [
   { id: "sandbox", path: "/sandbox", label: "箱庭" },
   { id: "roster", path: "/roster", label: "住民" },
+  { id: "assetgen", path: "/assetgen", label: "この子を箱庭に迎える" },
   { id: "passports", path: "/passports", label: "Passport" },
   { id: "dialogue-preview", path: "/dialogue-preview", label: "発話プレビュー" },
 ];
@@ -69,7 +70,7 @@ export function parseRoute(pathname: string): AppRoute {
   }
 
   if (pathname === "/assetgen") {
-    return { id: "assetgen", path: "/assetgen", label: "キャラ素材生成" };
+    return { id: "assetgen", path: "/assetgen", label: "この子を箱庭に迎える" };
   }
 
   const passportMatch = pathname.match(/^\/passports\/([^/]+)$/);

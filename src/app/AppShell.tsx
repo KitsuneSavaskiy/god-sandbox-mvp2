@@ -476,14 +476,6 @@ export function AppShell() {
               {navRoute.label}
             </Button>
           ))}
-          <Button
-            type="button"
-            variant={route.id === "assetgen" ? "primary" : "ghost"}
-            onClick={() => navigate("/assetgen")}
-            title="キャラ素材自動生成 (Dev / Local AppServer)"
-          >
-            素材生成 [Dev]
-          </Button>
         </nav>
       </header>
 
